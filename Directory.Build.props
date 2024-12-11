@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <EFProject>Tickette.Infrastructure</EFProject>
+    <EFStartupProject>Tickette.API</EFStartupProject>
+  </PropertyGroup>
+</Project>
