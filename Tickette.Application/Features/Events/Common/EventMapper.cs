@@ -1,6 +1,6 @@
 ﻿using Tickette.Domain.Entities;
 
-namespace Tickette.Application.Events.Common;
+namespace Tickette.Application.Features.Events.Common;
 
 public static class EventMapper
 {
@@ -12,7 +12,7 @@ public static class EventMapper
         EndDate = entity.EndDate,
         Location = entity.Address,
         ImageUrl = entity.Banner,
-        EventType = entity.Type.ToString(),
+        Category = entity.Category.Name,
         Committee = new CommitteeInformation()
         {
             Name = entity.Committee.Name,

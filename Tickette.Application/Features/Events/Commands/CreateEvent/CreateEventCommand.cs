@@ -2,11 +2,10 @@
 using Tickette.Application.Common;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
-using Tickette.Application.Events.Common;
+using Tickette.Application.Features.Events.Common;
 using Tickette.Domain.Entities;
-using Tickette.Domain.Enums;
 
-namespace Tickette.Application.Events.Commands.CreateEvent;
+namespace Tickette.Application.Features.Events.Commands.CreateEvent;
 
 public record CreateEventCommand
 {
@@ -14,7 +13,7 @@ public record CreateEventCommand
 
     public string Address { get; set; }
 
-    public EventType Type { get; set; }
+    public Guid CategoryId { get; set; }
 
     public string Description { get; set; }
 
@@ -53,7 +52,7 @@ public class CreateEventCommandHandler : BaseHandler<CreateEventCommandHandler>,
             var entity = Event.CreateEvent(
                 name: request.Name,
                 address: request.Address,
-                type: request.Type,
+                categoryId: request.CategoryId,
                 description: request.Description,
                 logo: request.Logo,
                 banner: request.Banner,

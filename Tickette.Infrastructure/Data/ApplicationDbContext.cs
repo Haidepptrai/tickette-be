@@ -11,6 +11,8 @@ public class ApplicationDbContext : IdentityDbContext<User>, IApplicationDbConte
 {
     public DbSet<Event> Events { get; set; }
     public DbSet<EventCommittee> EventCommittees { get; set; }
+    public DbSet<Category> Categories { get; set; }
+    public DbSet<CommitteeMember> CommitteeMembers { get; set; }
 
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {

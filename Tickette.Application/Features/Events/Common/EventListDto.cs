@@ -1,4 +1,4 @@
-﻿namespace Tickette.Application.Events.Common;
+﻿namespace Tickette.Application.Features.Events.Common;
 
 public class EventListDto
 {
@@ -14,7 +14,7 @@ public class EventListDto
 
     public string ImageUrl { get; set; }
 
-    public string EventType { get; set; }
+    public string Category { get; set; }
 
     public CommitteeInformation Committee { get; set; }
 }

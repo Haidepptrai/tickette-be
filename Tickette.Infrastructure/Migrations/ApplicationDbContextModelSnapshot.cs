@@ -186,6 +186,38 @@ namespace Tickette.Infrastructure.Migrations
                     b.ToTable("identity_user_tokens", (string)null);
                 });
 
+            modelBuilder.Entity("Tickette.Domain.Entities.Category", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_categories");
+
+                    b.ToTable("categories", (string)null);
+                });
+
             modelBuilder.Entity("Tickette.Domain.Entities.Event", b =>
                 {
                     b.Property<Guid>("Id")
@@ -204,7 +236,19 @@ namespace Tickette.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("banner");
 
-                    b.Property<DateTime>("DeletedAt")
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("category_id");
+
+                    b.Property<Guid>("CommitteeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("committee_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
 
@@ -237,12 +281,15 @@ namespace Tickette.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("status");
 
-                    b.Property<int>("Type")
-                        .HasColumnType("integer")
-                        .HasColumnName("type");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
                     b.HasKey("Id")
                         .HasName("pk_events");
+
+                    b.HasIndex("CategoryId")
+                        .HasDatabaseName("ix_events_category_id");
 
                     b.ToTable("events", (string)null);
                 });
@@ -259,6 +306,10 @@ namespace Tickette.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(10000)
@@ -274,6 +325,10 @@ namespace Tickette.Infrastructure.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)")
                         .HasColumnName("name");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
                     b.HasKey("Id")
                         .HasName("pk_event_committees");
@@ -427,6 +482,18 @@ namespace Tickette.Infrastructure.Migrations
                         .HasConstraintName("fk_identity_user_tokens_identity_users_user_id");
                 });
 
+            modelBuilder.Entity("Tickette.Domain.Entities.Event", b =>
+                {
+                    b.HasOne("Tickette.Domain.Entities.Category", "Category")
+                        .WithMany("Events")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_events_categories_category_id");
+
+                    b.Navigation("Category");
+                });
+
             modelBuilder.Entity("Tickette.Domain.Entities.EventCommittee", b =>
                 {
                     b.HasOne("Tickette.Domain.Entities.Event", "Event")
@@ -437,6 +504,11 @@ namespace Tickette.Infrastructure.Migrations
                         .HasConstraintName("fk_event_committees_events_event_id");
 
                     b.Navigation("Event");
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.Category", b =>
+                {
+                    b.Navigation("Events");
                 });
 
             modelBuilder.Entity("Tickette.Domain.Entities.Event", b =>

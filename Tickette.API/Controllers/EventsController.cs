@@ -1,10 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Tickette.Application.Common.CQRS;
-using Tickette.Application.Events.Commands.CreateEvent;
-using Tickette.Application.Events.Common;
-using Tickette.Application.Events.Queries;
+using Tickette.Application.Features.Events.Commands.CreateEvent;
+using Tickette.Application.Features.Events.Common;
+using Tickette.Application.Features.Events.Queries.GetEventByCategory;
 using Tickette.Application.Helpers;
-using Tickette.Domain.Enums;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -23,18 +22,18 @@ namespace Tickette.API.Controllers
             _commandDispatcher = commandDispatcher;
         }
 
-        // GET: api/<EventsController>
-        [HttpGet]
-        public async Task<ResponseDto<IEnumerable<EventListDto>>> GetAllEvents(CancellationToken cancellationToken = default)
+        // GET api/<EventsController>/Category
+        [HttpGet("{category:guid}")]
+        public async Task<ResponseDto<IEnumerable<EventListDto>>> GetEventsByCategory(Guid category, CancellationToken cancellationToken = default)
         {
             try
             {
-                var query = new GetEventByEventType
+                var query = new GetEventByCategory
                 {
-                    Type = EventType.Concert
+                    CategoryId = category
                 };
 
-                var result = await _queryDispatcher.Dispatch<GetEventByEventType, IEnumerable<EventListDto>>(query, cancellationToken);
+                var result = await _queryDispatcher.Dispatch<GetEventByCategory, IEnumerable<EventListDto>>(query, cancellationToken);
                 var response = ResponseHandler.SuccessResponse(result, "Get all events successfully");
                 return response;
             }
@@ -42,13 +41,6 @@ namespace Tickette.API.Controllers
             {
                 return ResponseHandler.ErrorResponse<IEnumerable<EventListDto>>(null, "Internal Server Error", 500);
             }
-        }
-
-        // GET api/<EventsController>/5
-        [HttpGet("{id}")]
-        public string Get(int id)
-        {
-            return "value";
         }
 
         // POST api/<EventsController>

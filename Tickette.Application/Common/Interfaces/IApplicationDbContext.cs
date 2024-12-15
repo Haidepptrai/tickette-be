@@ -9,5 +9,9 @@ public interface IApplicationDbContext
 
     DbSet<EventCommittee> EventCommittees { get; }
 
+    DbSet<CommitteeMember> CommitteeMembers { get; }
+
+    DbSet<Category> Categories { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

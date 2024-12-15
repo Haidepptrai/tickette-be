@@ -3,9 +3,9 @@ using Microsoft.Extensions.Logging;
 using Tickette.Application.Common;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
-using Tickette.Application.Events.Common;
+using Tickette.Application.Features.Events.Common;
 
-namespace Tickette.Application.Events.Queries;
+namespace Tickette.Application.Features.Events.Queries;
 
 public record GetEventInNearbyWeekend
 {
@@ -22,7 +22,7 @@ public class GetEventInNearbyWeekendHandler : BaseHandler<GetEventInNearbyWeeken
         _context = context;
     }
 
-    public async Task<IEnumerable<EventListDto>> Handle(GetEventInNearbyWeekend query, CancellationToken token)
+    public async Task<IEnumerable<EventListDto>> Handle(GetEventInNearbyWeekend query, CancellationToken cancellation)
     {
         return await ExecuteWithErrorHandlingAsync(async () =>
         {
@@ -34,7 +34,7 @@ public class GetEventInNearbyWeekendHandler : BaseHandler<GetEventInNearbyWeeken
             var events = await _context.Events
                 .Where(e => e.StartDate.Date >= saturday && e.StartDate.Date <= sunday)
                 .AsNoTracking()
-                .ToListAsync(token);
+                .ToListAsync(cancellation);
 
             var eventsDto = events.Select(e => e.ToEventListDto());
             return eventsDto;

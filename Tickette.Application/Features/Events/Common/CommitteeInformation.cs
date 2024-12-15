@@ -1,4 +1,4 @@
-﻿namespace Tickette.Application.Events.Common;
+﻿namespace Tickette.Application.Features.Events.Common;
 
 public record CommitteeInformation
 {

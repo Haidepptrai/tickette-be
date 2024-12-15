@@ -3,16 +3,22 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15
-    container_name: postgres_container
+    container_name: tickette_container
     environment:
       POSTGRES_USER: HaiNguyen
       POSTGRES_PASSWORD: root
       POSTGRES_DB: tickette-db
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U HaiNguyen -d tickette-db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:

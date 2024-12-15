@@ -13,24 +13,18 @@ namespace Tickette.Infrastructure.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "events",
+                name: "categories",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
-                    name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    address = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: false),
-                    type = table.Column<int>(type: "integer", nullable: false),
-                    description = table.Column<string>(type: "character varying(10000)", maxLength: 10000, nullable: false),
-                    logo = table.Column<string>(type: "text", nullable: false),
-                    banner = table.Column<string>(type: "text", nullable: false),
-                    start_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    end_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    status = table.Column<int>(type: "integer", nullable: false),
-                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("pk_events", x => x.id);
+                    table.PrimaryKey("pk_categories", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -74,24 +68,33 @@ namespace Tickette.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "event_committees",
+                name: "events",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
-                    event_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    name = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    category_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    address = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: false),
+                    committee_id = table.Column<Guid>(type: "uuid", nullable: false),
                     description = table.Column<string>(type: "character varying(10000)", maxLength: 10000, nullable: false),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    logo = table.Column<string>(type: "text", nullable: false),
+                    banner = table.Column<string>(type: "text", nullable: false),
+                    start_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    end_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    status = table.Column<int>(type: "integer", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("pk_event_committees", x => x.id);
+                    table.PrimaryKey("pk_events", x => x.id);
                     table.ForeignKey(
-                        name: "fk_event_committees_events_event_id",
-                        column: x => x.event_id,
-                        principalTable: "events",
+                        name: "fk_events_categories_category_id",
+                        column: x => x.category_id,
+                        principalTable: "categories",
                         principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -200,11 +203,39 @@ namespace Tickette.Infrastructure.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "event_committees",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    event_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    description = table.Column<string>(type: "character varying(10000)", maxLength: 10000, nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_event_committees", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_event_committees_events_event_id",
+                        column: x => x.event_id,
+                        principalTable: "events",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "ix_event_committees_event_id",
                 table: "event_committees",
                 column: "event_id",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_events_category_id",
+                table: "events",
+                column: "category_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_identity_role_claims_role_id",
@@ -273,6 +304,9 @@ namespace Tickette.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "identity_users");
+
+            migrationBuilder.DropTable(
+                name: "categories");
         }
     }
 }
