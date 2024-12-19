@@ -27,6 +27,7 @@
   <ItemGroup>
     <Folder Include="Data\Configurations\" />
     <Folder Include="Helpers\" />
+    <Folder Include="FileStorage\" />
   </ItemGroup>
 
   <ItemGroup>

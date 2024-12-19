@@ -1,11 +1,10 @@
-﻿using Tickette.Domain.ValueObjects;
+﻿using Tickette.Domain.Common;
+using Tickette.Domain.ValueObjects;
 
 namespace Tickette.Domain.Entities;
 
-public class CommitteeMember
+public class CommitteeMember : BaseEntity
 {
-    public Guid Id { get; private set; }
-
     public Guid UserId { get; private set; }
 
     public Guid EventId { get; private set; }
@@ -17,7 +16,6 @@ public class CommitteeMember
     public CommitteeRole Role { get; private set; }
 
     public Event Event { get; private set; }
-
 
     public CommitteeMember(Guid userId, CommitteeRole role, Guid eventId)
     {

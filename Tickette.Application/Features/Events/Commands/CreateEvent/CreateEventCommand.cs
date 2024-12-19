@@ -7,57 +7,54 @@ using Tickette.Domain.Entities;
 
 namespace Tickette.Application.Features.Events.Commands.CreateEvent;
 
-public record CreateEventCommand
-{
-    public string Name { get; set; }
-
-    public string Address { get; set; }
-
-    public Guid CategoryId { get; set; }
-
-    public string Description { get; set; }
-
-    public string Logo { get; set; }
-
-    public string Banner { get; set; }
-
-    public DateTime StartDate { get; set; }
-
-    public DateTime EndDate { get; set; }
-
-    public CommitteeInformation Committee { get; set; }
-}
+public record CreateEventCommand(
+    string Name,
+    string Address,
+    Guid CategoryId,
+    string Description,
+    DateTime StartDate,
+    DateTime EndDate,
+    CommitteeInformation Committee,
+    IFileUpload LogoFile,
+    IFileUpload BannerFile
+);
 
 public class CreateEventCommandHandler : BaseHandler<CreateEventCommandHandler>, ICommandHandler<CreateEventCommand, Guid>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IFileStorageService _fileStorageService;
 
-    public CreateEventCommandHandler(IApplicationDbContext context, ILogger<CreateEventCommandHandler> logger) : base(logger)
+    public CreateEventCommandHandler(IApplicationDbContext context, ILogger<CreateEventCommandHandler> logger, IFileStorageService fileStorageService) : base(logger)
     {
         _context = context;
+        _fileStorageService = fileStorageService;
     }
 
-    public async Task<Guid> Handle(CreateEventCommand request, CancellationToken cancellationToken)
+    public async Task<Guid> Handle(CreateEventCommand command, CancellationToken cancellationToken)
     {
         return await ExecuteWithErrorHandlingAsync(async () =>
         {
+            // Upload Logo and Banner to S3
+            string logoUrl = await _fileStorageService.UploadFileAsync(command.LogoFile, "logos");
+            string bannerUrl = await _fileStorageService.UploadFileAsync(command.BannerFile, "banners");
+
             var committee = new EventCommittee()
             {
-                Name = request.Committee.Name,
-                Description = request.Committee.Description
+                Name = command.Committee.CommitteeName,
+                Description = command.Committee.ComitteeDescription
             };
 
             _context.EventCommittees.Add(committee);
 
             var entity = Event.CreateEvent(
-                name: request.Name,
-                address: request.Address,
-                categoryId: request.CategoryId,
-                description: request.Description,
-                logo: request.Logo,
-                banner: request.Banner,
-                startDate: request.StartDate,
-                endDate: request.EndDate,
+                name: command.Name,
+                address: command.Address,
+                categoryId: command.CategoryId,
+                description: command.Description,
+                logo: logoUrl,
+                banner: bannerUrl,
+                startDate: command.StartDate,
+                endDate: command.EndDate,
                 committee: committee
             );
 

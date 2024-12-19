@@ -17,6 +17,7 @@ namespace Tickette.API
                 .AddJsonOptions(options =>
                 {
                     options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+                    options.JsonSerializerOptions.WriteIndented = true;
                 });
 
             builder.Services.AddFluentValidationAutoValidation(); // Register auto-validation

@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Tickette.API.Dto;
+using Tickette.API.Helpers;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.Events.Commands.CreateEvent;
 using Tickette.Application.Features.Events.Common;
@@ -45,10 +47,26 @@ namespace Tickette.API.Controllers
 
         // POST api/<EventsController>
         [HttpPost]
-        public async Task<ResponseDto<Guid>> CreateEvent([FromBody] CreateEventCommand command, CancellationToken token)
+        public async Task<ResponseDto<Guid>> CreateEvent(
+            CreateEventCommandDto commandDto, CancellationToken token)
         {
             try
             {
+                var logoFile = new FormFileAdapter(commandDto.LogoFile);
+                var bannerFile = new FormFileAdapter(commandDto.BannerFile);
+
+                var command = new CreateEventCommand(
+                    commandDto.Name,
+                    commandDto.Address,
+                    commandDto.CategoryId,
+                    commandDto.Description,
+                    commandDto.StartDate,
+                    commandDto.EndDate,
+                    commandDto.Committee,
+                    logoFile,
+                    bannerFile
+                );
+
                 var response = await _commandDispatcher.Dispatch<CreateEventCommand, Guid>(command, token);
                 return ResponseHandler.SuccessResponse(response, "Event created successfully");
             }

@@ -7,7 +7,7 @@ using Tickette.Domain.Entities;
 
 namespace Tickette.Infrastructure.Data;
 
-public class ApplicationDbContext : IdentityDbContext<User>, IApplicationDbContext
+public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>, IApplicationDbContext
 {
     public DbSet<Event> Events { get; set; }
     public DbSet<EventCommittee> EventCommittees { get; set; }
@@ -25,12 +25,12 @@ public class ApplicationDbContext : IdentityDbContext<User>, IApplicationDbConte
         builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 
         builder.Entity<User>(b => b.ToTable("identity_users"));
-        builder.Entity<IdentityRole>(b => b.ToTable("identity_roles"));
-        builder.Entity<IdentityUserRole<string>>(b => b.ToTable("identity_user_roles"));
-        builder.Entity<IdentityUserClaim<string>>(b => b.ToTable("identity_user_claims"));
-        builder.Entity<IdentityUserLogin<string>>(b => b.ToTable("identity_user_logins"));
-        builder.Entity<IdentityRoleClaim<string>>(b => b.ToTable("identity_role_claims"));
-        builder.Entity<IdentityUserToken<string>>(b => b.ToTable("identity_user_tokens"));
+        builder.Entity<IdentityRole<Guid>>(b => b.ToTable("identity_roles"));
+        builder.Entity<IdentityUserRole<Guid>>(b => b.ToTable("identity_user_roles"));
+        builder.Entity<IdentityUserClaim<Guid>>(b => b.ToTable("identity_user_claims"));
+        builder.Entity<IdentityUserLogin<Guid>>(b => b.ToTable("identity_user_logins"));
+        builder.Entity<IdentityRoleClaim<Guid>>(b => b.ToTable("identity_role_claims"));
+        builder.Entity<IdentityUserToken<Guid>>(b => b.ToTable("identity_user_tokens"));
 
     }
 }

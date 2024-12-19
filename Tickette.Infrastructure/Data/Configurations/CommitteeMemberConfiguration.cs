@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Tickette.Domain.Entities;
+using Tickette.Domain.ValueObjects;
 
 namespace Tickette.Infrastructure.Data.Configurations;
 
@@ -13,6 +14,10 @@ public class CommitteeMemberConfiguration : IEntityTypeConfiguration<CommitteeMe
         builder.Property(e => e.Id).ValueGeneratedNever().IsRequired();
 
         builder.Property(e => e.Role)
+            .HasConversion(
+                role => role.Name, // Convert to string for storage
+                name => CommitteeRole.FromName(name) // Recreate `CommitteeRole` from the string
+            )
             .IsRequired();
 
         builder.Property(e => e.EventId)

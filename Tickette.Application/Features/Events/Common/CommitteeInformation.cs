@@ -2,6 +2,6 @@
 
 public record CommitteeInformation
 {
-    public string Name { get; set; }
-    public string Description { get; set; }
+    public string CommitteeName { get; set; }
+    public string ComitteeDescription { get; set; }
 }
