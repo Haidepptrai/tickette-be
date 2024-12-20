@@ -10,7 +10,7 @@ public static class CommitteeMemberMappers
         return new CommitteeMemberDto
         {
             Id = entity.Id,
-            Name = entity.User.FirstName + " " + entity.User.LastName,
+            Email = entity.User.Email!,
             Role = entity.Role.Name,
         };
     }

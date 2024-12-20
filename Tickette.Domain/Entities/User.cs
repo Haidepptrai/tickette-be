@@ -5,13 +5,11 @@ namespace Tickette.Domain.Entities;
 
 public class User : IdentityUser<Guid>
 {
-    public string FirstName { get; set; }
+    public string? FullName { get; set; }
 
-    public string LastName { get; set; }
+    public string? ProfilePicture { get; set; }
 
-    public string ProfilePicture { get; set; }
+    public DateTime? DateOfBirth { get; set; }
 
-    public DateTime DoB { get; set; }
-
-    public Gender Gender { get; set; }
+    public Gender Gender { get; set; } = Gender.Other;
 }

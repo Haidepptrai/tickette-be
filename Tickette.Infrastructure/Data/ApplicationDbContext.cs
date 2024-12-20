@@ -31,6 +31,5 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
         builder.Entity<IdentityUserLogin<Guid>>(b => b.ToTable("identity_user_logins"));
         builder.Entity<IdentityRoleClaim<Guid>>(b => b.ToTable("identity_role_claims"));
         builder.Entity<IdentityUserToken<Guid>>(b => b.ToTable("identity_user_tokens"));
-
     }
 }
