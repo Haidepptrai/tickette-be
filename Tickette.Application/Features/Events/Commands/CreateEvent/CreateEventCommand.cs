@@ -4,10 +4,12 @@ using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.Events.Common;
 using Tickette.Domain.Entities;
+using Tickette.Domain.ValueObjects;
 
 namespace Tickette.Application.Features.Events.Commands.CreateEvent;
 
 public record CreateEventCommand(
+    Guid UserId,
     string Name,
     string Address,
     Guid CategoryId,
@@ -38,6 +40,7 @@ public class CreateEventCommandHandler : BaseHandler<CreateEventCommandHandler>,
             string logoUrl = await _fileStorageService.UploadFileAsync(command.LogoFile, "logos");
             string bannerUrl = await _fileStorageService.UploadFileAsync(command.BannerFile, "banners");
 
+            // Create a new event committee
             var committee = new EventCommittee()
             {
                 Name = command.Committee.CommitteeName,
@@ -46,7 +49,9 @@ public class CreateEventCommandHandler : BaseHandler<CreateEventCommandHandler>,
 
             _context.EventCommittees.Add(committee);
 
-            var entity = Event.CreateEvent(
+            // Create a new event
+            //Missing committee id
+            var newEvent = Event.CreateEvent(
                 name: command.Name,
                 address: command.Address,
                 categoryId: command.CategoryId,
@@ -58,11 +63,15 @@ public class CreateEventCommandHandler : BaseHandler<CreateEventCommandHandler>,
                 committee: committee
             );
 
-            _context.Events.Add(entity);
+            _context.Events.Add(newEvent);
+
+            // Add create user as admin of the event
+            var admin = new CommitteeMember(command.UserId, CommitteeRole.Admin, newEvent.Id);
+            _context.CommitteeMembers.Add(admin);
 
             await _context.SaveChangesAsync(cancellationToken);
 
-            return entity.Id;
+            return newEvent.Id;
         }, "Create Event");
     }
 

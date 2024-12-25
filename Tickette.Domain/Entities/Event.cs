@@ -56,8 +56,8 @@ public class Event : BaseEntity
             Description = description,
             Logo = logo,
             Banner = banner,
-            StartDate = startDate,
-            EndDate = endDate,
+            StartDate = DateTime.SpecifyKind(startDate, DateTimeKind.Utc),
+            EndDate = DateTime.SpecifyKind(endDate, DateTimeKind.Utc),
             Status = ApprovalStatus.Pending, // Default status
             Committee = committee,
         };

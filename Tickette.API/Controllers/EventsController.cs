@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using Tickette.API.Dto;
 using Tickette.API.Helpers;
 using Tickette.Application.Common.CQRS;
@@ -47,15 +49,25 @@ namespace Tickette.API.Controllers
 
         // POST api/<EventsController>
         [HttpPost]
+        [Authorize]
         public async Task<ResponseDto<Guid>> CreateEvent(
             CreateEventCommandDto commandDto, CancellationToken token)
         {
             try
             {
+                // Extract the UserId from the JWT token
+                var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return ResponseHandler.ErrorResponse(Guid.Empty, "User Id Not Found", 500);
+                }
+
                 var logoFile = new FormFileAdapter(commandDto.LogoFile);
                 var bannerFile = new FormFileAdapter(commandDto.BannerFile);
 
                 var command = new CreateEventCommand(
+                    Guid.Parse(userId),
                     commandDto.Name,
                     commandDto.Address,
                     commandDto.CategoryId,
@@ -70,9 +82,9 @@ namespace Tickette.API.Controllers
                 var response = await _commandDispatcher.Dispatch<CreateEventCommand, Guid>(command, token);
                 return ResponseHandler.SuccessResponse(response, "Event created successfully");
             }
-            catch
+            catch (Exception ex)
             {
-                return ResponseHandler.ErrorResponse(Guid.Empty, "Internal Server Error", 500);
+                return ResponseHandler.ErrorResponse(Guid.Empty, ex.Message, 500);
             }
         }
 

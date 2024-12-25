@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.Categories.Command.CreateCategory;
 using Tickette.Application.Features.Categories.Command.DeleteCategory;
@@ -34,6 +36,11 @@ namespace Tickette.API.Controllers
 
         // POST: api/Categories
         [HttpPost]
+        [Authorize("Admin")]
+        [SwaggerOperation(
+            Summary = "Create Category",
+            Description = "Create a new Category to the system, required a Name"
+        )]
         public async Task<ResponseDto<Category>> CreateCategory([FromBody] CreateCategoryCommand command, CancellationToken cancellation)
         {
             var result = await _commandDispatcher.Dispatch<CreateCategoryCommand, Category>(command, cancellation);

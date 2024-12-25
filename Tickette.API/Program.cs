@@ -68,6 +68,9 @@ namespace Tickette.API
                         new string[] { }
                     }
                 });
+
+                // Enable Swagger annotations
+                options.EnableAnnotations();
             });
 
 

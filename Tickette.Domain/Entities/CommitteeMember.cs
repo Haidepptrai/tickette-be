@@ -23,7 +23,7 @@ public class CommitteeMember : BaseEntity
         UserId = userId;
         Role = role;
         EventId = eventId;
-        JoinedAt = DateTime.Now;
+        JoinedAt = DateTime.UtcNow;
     }
 
     public void UpdateRole(CommitteeRole role)

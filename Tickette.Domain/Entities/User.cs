@@ -12,4 +12,9 @@ public class User : IdentityUser<Guid>
     public DateTime? DateOfBirth { get; set; }
 
     public Gender Gender { get; set; } = Gender.Other;
+
+    //RefreshToken
+    public string? RefreshToken { get; set; }
+
+    public DateTime? RefreshTokenExpiryTime { get; set; }
 }
