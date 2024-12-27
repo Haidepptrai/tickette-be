@@ -11,6 +11,15 @@ public static class ResponseHandler
     {
         return new ResponseDto<T>(message, data, statusCode, false);
     }
+
+    public static ResponseDto<IEnumerable<T>> PaginatedResponse<T>(
+        IEnumerable<T> data,
+        PaginationMeta meta,
+        string message = "Operation completed successfully.",
+        int statusCode = 200)
+    {
+        return new ResponseDto<IEnumerable<T>>(message, data, statusCode, true, meta);
+    }
 }
 
 public class ResponseDto<T>
@@ -19,12 +28,30 @@ public class ResponseDto<T>
     public T? Data { get; set; }
     public int StatusCode { get; set; }
     public bool Success { get; set; }
+    public PaginationMeta? Meta { get; set; } // Optional pagination metadata
 
-    public ResponseDto(string message, T? data, int statusCode, bool success)
+    public ResponseDto(string message, T? data, int statusCode, bool success, PaginationMeta? meta = null)
     {
-        this.Message = message;
-        this.Data = data;
-        this.StatusCode = statusCode;
-        this.Success = success;
+        Message = message;
+        Data = data;
+        StatusCode = statusCode;
+        Success = success;
+        Meta = meta;
+    }
+}
+
+public class PaginationMeta
+{
+    public int Page { get; set; }
+    public int PerPage { get; set; }
+    public int TotalItems { get; set; }
+    public int TotalPages { get; set; }
+
+    public PaginationMeta(int page, int perPage, int totalItems, int totalPages)
+    {
+        Page = page;
+        PerPage = perPage;
+        TotalItems = totalItems;
+        TotalPages = totalPages;
     }
 }

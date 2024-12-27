@@ -1,16 +1,15 @@
-﻿using Tickette.Domain.Enums;
+﻿using Tickette.Domain.Common;
+using Tickette.Domain.Enums;
 
 namespace Tickette.Domain.Entities;
 
-public class Event
+public class Event : BaseEntity
 {
-    public Guid Id { get; }
+    public Guid CategoryId { get; set; }
 
     public string Name { get; private set; }
 
     public string Address { get; set; }
-
-    public EventType Type { get; set; }
 
     public string Description { get; set; }
 
@@ -24,16 +23,18 @@ public class Event
 
     public ApprovalStatus Status { get; set; }
 
+    public Category Category { get; set; }
+
     public EventCommittee Committee { get; set; }
 
-    public DateTime DeletedAt { get; set; }
+    public ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
 
     private Event() { }
 
     public static Event CreateEvent(
         string name,
         string address,
-        EventType type,
+        Guid categoryId,
         string description,
         string logo,
         string banner,
@@ -51,14 +52,20 @@ public class Event
         {
             Name = name,
             Address = address,
-            Type = type,
+            CategoryId = categoryId,
             Description = description,
             Logo = logo,
             Banner = banner,
-            StartDate = startDate,
-            EndDate = endDate,
+            StartDate = DateTime.SpecifyKind(startDate, DateTimeKind.Utc),
+            EndDate = DateTime.SpecifyKind(endDate, DateTimeKind.Utc),
             Status = ApprovalStatus.Pending, // Default status
             Committee = committee,
         };
+    }
+
+    // Validate if a specific date is within the event period
+    public bool IsDateWithinEvent(DateTime date)
+    {
+        return date >= StartDate && date <= EndDate;
     }
 }

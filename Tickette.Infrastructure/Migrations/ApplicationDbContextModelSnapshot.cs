@@ -22,10 +22,11 @@ namespace Tickette.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("text")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<string>("ConcurrencyStamp")
@@ -53,7 +54,7 @@ namespace Tickette.Infrastructure.Migrations
                     b.ToTable("identity_roles", (string)null);
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -70,9 +71,8 @@ namespace Tickette.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("claim_value");
 
-                    b.Property<string>("RoleId")
-                        .IsRequired()
-                        .HasColumnType("text")
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uuid")
                         .HasColumnName("role_id");
 
                     b.HasKey("Id")
@@ -84,7 +84,7 @@ namespace Tickette.Infrastructure.Migrations
                     b.ToTable("identity_role_claims", (string)null);
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -101,9 +101,8 @@ namespace Tickette.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("claim_value");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text")
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id")
@@ -115,7 +114,7 @@ namespace Tickette.Infrastructure.Migrations
                     b.ToTable("identity_user_claims", (string)null);
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
                 {
                     b.Property<string>("LoginProvider")
                         .HasColumnType("text")
@@ -129,9 +128,8 @@ namespace Tickette.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("provider_display_name");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text")
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
                     b.HasKey("LoginProvider", "ProviderKey")
@@ -143,14 +141,14 @@ namespace Tickette.Infrastructure.Migrations
                     b.ToTable("identity_user_logins", (string)null);
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
                 {
-                    b.Property<string>("UserId")
-                        .HasColumnType("text")
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
-                    b.Property<string>("RoleId")
-                        .HasColumnType("text")
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uuid")
                         .HasColumnName("role_id");
 
                     b.HasKey("UserId", "RoleId")
@@ -162,10 +160,10 @@ namespace Tickette.Infrastructure.Migrations
                     b.ToTable("identity_user_roles", (string)null);
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
                 {
-                    b.Property<string>("UserId")
-                        .HasColumnType("text")
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
                     b.Property<string>("LoginProvider")
@@ -186,6 +184,87 @@ namespace Tickette.Infrastructure.Migrations
                     b.ToTable("identity_user_tokens", (string)null);
                 });
 
+            modelBuilder.Entity("Tickette.Domain.Entities.Category", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_categories");
+
+                    b.ToTable("categories", (string)null);
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.CommitteeMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("event_id");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("joined_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("role");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_committee_members");
+
+                    b.HasIndex("EventId")
+                        .HasDatabaseName("ix_committee_members_event_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_committee_members_user_id");
+
+                    b.ToTable("committee_members", (string)null);
+                });
+
             modelBuilder.Entity("Tickette.Domain.Entities.Event", b =>
                 {
                     b.Property<Guid>("Id")
@@ -204,7 +283,15 @@ namespace Tickette.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("banner");
 
-                    b.Property<DateTime>("DeletedAt")
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("category_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
 
@@ -237,12 +324,15 @@ namespace Tickette.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("status");
 
-                    b.Property<int>("Type")
-                        .HasColumnType("integer")
-                        .HasColumnName("type");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
                     b.HasKey("Id")
                         .HasName("pk_events");
+
+                    b.HasIndex("CategoryId")
+                        .HasDatabaseName("ix_events_category_id");
 
                     b.ToTable("events", (string)null);
                 });
@@ -258,6 +348,10 @@ namespace Tickette.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -275,6 +369,10 @@ namespace Tickette.Infrastructure.Migrations
                         .HasColumnType("character varying(150)")
                         .HasColumnName("name");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.HasKey("Id")
                         .HasName("pk_event_committees");
 
@@ -285,10 +383,92 @@ namespace Tickette.Infrastructure.Migrations
                     b.ToTable("event_committees", (string)null);
                 });
 
+            modelBuilder.Entity("Tickette.Domain.Entities.Ticket", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1500)
+                        .HasColumnType("character varying(1500)")
+                        .HasColumnName("description");
+
+                    b.Property<DateTime>("EventEndTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("event_end_time");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("event_id");
+
+                    b.Property<DateTime>("EventStartTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("event_start_time");
+
+                    b.Property<int>("MaxTicketsPerOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_tickets_per_order");
+
+                    b.Property<int>("MinTicketsPerOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("min_tickets_per_order");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("name");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("price");
+
+                    b.Property<DateTime>("SaleEndTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sale_end_time");
+
+                    b.Property<DateTime>("SaleStartTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sale_start_time");
+
+                    b.Property<string>("TicketImage")
+                        .HasMaxLength(2500)
+                        .HasColumnType("character varying(2500)")
+                        .HasColumnName("ticket_image");
+
+                    b.Property<int>("TotalTickets")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_tickets");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_tickets");
+
+                    b.HasIndex("EventId")
+                        .HasDatabaseName("ix_tickets_event_id");
+
+                    b.ToTable("tickets", (string)null);
+                });
+
             modelBuilder.Entity("Tickette.Domain.Entities.User", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("text")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<int>("AccessFailedCount")
@@ -300,7 +480,12 @@ namespace Tickette.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("concurrency_stamp");
 
+                    b.Property<DateTime?>("DateOfBirth")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("date_of_birth");
+
                     b.Property<string>("Email")
+                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)")
                         .HasColumnName("email");
@@ -308,6 +493,15 @@ namespace Tickette.Infrastructure.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean")
                         .HasColumnName("email_confirmed");
+
+                    b.Property<string>("FullName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("full_name");
+
+                    b.Property<int>("Gender")
+                        .HasColumnType("integer")
+                        .HasColumnName("gender");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean")
@@ -340,9 +534,16 @@ namespace Tickette.Infrastructure.Migrations
                         .HasColumnName("phone_number_confirmed");
 
                     b.Property<string>("ProfilePicture")
-                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("profile_picture");
+
+                    b.Property<string>("RefreshToken")
+                        .HasColumnType("text")
+                        .HasColumnName("refresh_token");
+
+                    b.Property<DateTime?>("RefreshTokenExpiryTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("refresh_token_expiry_time");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text")
@@ -370,9 +571,9 @@ namespace Tickette.Infrastructure.Migrations
                     b.ToTable("identity_users", (string)null);
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -380,7 +581,7 @@ namespace Tickette.Infrastructure.Migrations
                         .HasConstraintName("fk_identity_role_claims_identity_roles_role_id");
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
                 {
                     b.HasOne("Tickette.Domain.Entities.User", null)
                         .WithMany()
@@ -390,7 +591,7 @@ namespace Tickette.Infrastructure.Migrations
                         .HasConstraintName("fk_identity_user_claims_identity_users_user_id");
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
                 {
                     b.HasOne("Tickette.Domain.Entities.User", null)
                         .WithMany()
@@ -400,9 +601,9 @@ namespace Tickette.Infrastructure.Migrations
                         .HasConstraintName("fk_identity_user_logins_identity_users_user_id");
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -417,7 +618,7 @@ namespace Tickette.Infrastructure.Migrations
                         .HasConstraintName("fk_identity_user_roles_identity_users_user_id");
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
                 {
                     b.HasOne("Tickette.Domain.Entities.User", null)
                         .WithMany()
@@ -425,6 +626,39 @@ namespace Tickette.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_identity_user_tokens_identity_users_user_id");
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.CommitteeMember", b =>
+                {
+                    b.HasOne("Tickette.Domain.Entities.Event", "Event")
+                        .WithMany()
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_committee_members_events_event_id");
+
+                    b.HasOne("Tickette.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_committee_members_users_user_id");
+
+                    b.Navigation("Event");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.Event", b =>
+                {
+                    b.HasOne("Tickette.Domain.Entities.Category", "Category")
+                        .WithMany("Events")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_events_categories_category_id");
+
+                    b.Navigation("Category");
                 });
 
             modelBuilder.Entity("Tickette.Domain.Entities.EventCommittee", b =>
@@ -439,10 +673,29 @@ namespace Tickette.Infrastructure.Migrations
                     b.Navigation("Event");
                 });
 
+            modelBuilder.Entity("Tickette.Domain.Entities.Ticket", b =>
+                {
+                    b.HasOne("Tickette.Domain.Entities.Event", "Event")
+                        .WithMany("Tickets")
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_tickets_events_event_id");
+
+                    b.Navigation("Event");
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.Category", b =>
+                {
+                    b.Navigation("Events");
+                });
+
             modelBuilder.Entity("Tickette.Domain.Entities.Event", b =>
                 {
                     b.Navigation("Committee")
                         .IsRequired();
+
+                    b.Navigation("Tickets");
                 });
 #pragma warning restore 612, 618
         }

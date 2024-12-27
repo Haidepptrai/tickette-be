@@ -8,6 +8,9 @@
 
   <ItemGroup>
     <PackageReference Include="EFCore.NamingConventions" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="8.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.1.39" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.11" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
@@ -18,15 +21,16 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.0" />
-    <PackageReference Include="Npgsql" Version="9.0.2" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.2" />
     <PackageReference Include="Scrutor" Version="5.0.2" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Data\Configurations\" />
-    <Folder Include="Helpers\" />
+    <Folder Include="FileStorage\" />
+    <Folder Include="Authentication\" />
   </ItemGroup>
 
   <ItemGroup>
