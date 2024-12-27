@@ -9,6 +9,8 @@ public interface IApplicationDbContext
 
     DbSet<EventCommittee> EventCommittees { get; }
 
+    DbSet<Ticket> Tickets { get; }
+
     DbSet<CommitteeMember> CommitteeMembers { get; }
 
     DbSet<Category> Categories { get; }

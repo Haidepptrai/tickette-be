@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Tickette.Infrastructure.Data;
@@ -11,9 +12,11 @@ using Tickette.Infrastructure.Data;
 namespace Tickette.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241226040328_Remove_Event_Committee_Id")]
+    partial class Remove_Event_Committee_Id
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -383,87 +386,6 @@ namespace Tickette.Infrastructure.Migrations
                     b.ToTable("event_committees", (string)null);
                 });
 
-            modelBuilder.Entity("Tickette.Domain.Entities.Ticket", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(1500)
-                        .HasColumnType("character varying(1500)")
-                        .HasColumnName("description");
-
-                    b.Property<DateTime>("EventEndTime")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("event_end_time");
-
-                    b.Property<Guid>("EventId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("event_id");
-
-                    b.Property<DateTime>("EventStartTime")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("event_start_time");
-
-                    b.Property<int>("MaxTicketsPerOrder")
-                        .HasColumnType("integer")
-                        .HasColumnName("max_tickets_per_order");
-
-                    b.Property<int>("MinTicketsPerOrder")
-                        .HasColumnType("integer")
-                        .HasColumnName("min_tickets_per_order");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(250)
-                        .HasColumnType("character varying(250)")
-                        .HasColumnName("name");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("price");
-
-                    b.Property<DateTime>("SaleEndTime")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("sale_end_time");
-
-                    b.Property<DateTime>("SaleStartTime")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("sale_start_time");
-
-                    b.Property<string>("TicketImage")
-                        .HasMaxLength(2500)
-                        .HasColumnType("character varying(2500)")
-                        .HasColumnName("ticket_image");
-
-                    b.Property<int>("TotalTickets")
-                        .HasColumnType("integer")
-                        .HasColumnName("total_tickets");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id")
-                        .HasName("pk_tickets");
-
-                    b.HasIndex("EventId")
-                        .HasDatabaseName("ix_tickets_event_id");
-
-                    b.ToTable("tickets", (string)null);
-                });
-
             modelBuilder.Entity("Tickette.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -673,18 +595,6 @@ namespace Tickette.Infrastructure.Migrations
                     b.Navigation("Event");
                 });
 
-            modelBuilder.Entity("Tickette.Domain.Entities.Ticket", b =>
-                {
-                    b.HasOne("Tickette.Domain.Entities.Event", "Event")
-                        .WithMany("Tickets")
-                        .HasForeignKey("EventId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_tickets_events_event_id");
-
-                    b.Navigation("Event");
-                });
-
             modelBuilder.Entity("Tickette.Domain.Entities.Category", b =>
                 {
                     b.Navigation("Events");
@@ -694,8 +604,6 @@ namespace Tickette.Infrastructure.Migrations
                 {
                     b.Navigation("Committee")
                         .IsRequired();
-
-                    b.Navigation("Tickets");
                 });
 #pragma warning restore 612, 618
         }

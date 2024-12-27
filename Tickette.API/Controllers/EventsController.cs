@@ -75,6 +75,7 @@ namespace Tickette.API.Controllers
                     commandDto.StartDate,
                     commandDto.EndDate,
                     commandDto.Committee,
+                    commandDto.TicketInformation,
                     logoFile,
                     bannerFile
                 );

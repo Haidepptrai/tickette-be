@@ -89,25 +89,14 @@ public static class DependencyInjection
 
         builder.Services.TryAddScoped<IFileStorageService, S3FileStorageService>();
 
-        //ApplyMigrations(builder);
+
+        // Apply migrations during app initialization
+        using (var scope = builder.Services.BuildServiceProvider().CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            dbContext.Database.Migrate();
+
+            SeedDatabase.SeedCategories(dbContext);
+        }
     }
-
-    //private static void ApplyMigrations(IHostApplicationBuilder builder)
-    //{
-    //    // Create a scope to access the DbContext
-    //    using var scope = builder.Services.BuildServiceProvider().CreateScope();
-    //    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-    //    try
-    //    {
-    //        dbContext.Database.Migrate(); // Apply pending migrations
-    //        SeedDatabase.SeedCategories(dbContext);
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        // Log or handle migration failure
-    //        Console.WriteLine($"An error occurred while applying migrations: {ex.Message}");
-    //        throw; // Optionally rethrow to prevent app startup
-    //    }
-    //}
 }

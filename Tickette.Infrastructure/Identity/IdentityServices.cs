@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using System.Security.Claims;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Models;
 using Tickette.Domain.Entities;
@@ -109,47 +110,45 @@ public class IdentityServices : IIdentityServices
 
     public async Task<(Result Result, string? AccessToken, string? RefreshToken)> RefreshTokenAsync(string token, string refreshToken)
     {
-        // Step 1: Extract user information from the expired access token
+        // Validate the token (optional if you're just replacing the expired Access Token)
         var principal = _tokenService.GetPrincipalFromExpiredToken(token);
-        if (principal == null) // If the token is invalid
+        if (principal == null)
         {
-            return (Result.Failure(new[] { "Invalid access token." }), null, null);
+            return (Result.Failure(["Invalid token."]), null, null);
         }
 
-        // Step 2: Extract user ID from the token claims
-        var userId = principal.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
-        if (userId == null) // If the user ID isn't in the token
+        // Extract the user ID from the claims
+        var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
         {
-            return (Result.Failure(new[] { "Invalid token payload." }), null, null);
+            return (Result.Failure(["Invalid token."]), null, null);
         }
 
-        // Step 3: Find the user in the database
+        // Find the user by ID
         var user = await _userManager.FindByIdAsync(userId);
         if (user == null || user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
         {
-            // If the user does not exist, the refresh token doesn’t match, or it has expired
-            return (Result.Failure(new[] { "Invalid or expired refresh token." }), null, null);
+            return (Result.Failure(["Invalid or expired refresh token."]), null, null);
         }
 
-        // Step 4: Generate a new access token
+        // Generate a new Access Token
         var newAccessToken = _tokenService.GenerateToken(user);
 
-        // Step 5: Generate a new refresh token (for token rotation)
+        // Generate a new Refresh Token
         var newRefreshToken = _tokenService.GenerateRefreshToken();
         user.RefreshToken = newRefreshToken;
-        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7); // Set new expiry time
+        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7); // Adjust the expiration as needed
 
-        // Save the new refresh token in the database
+        // Update the user in the database
         var updateResult = await _userManager.UpdateAsync(user);
-        if (!updateResult.Succeeded) // If updating the user fails
+        if (!updateResult.Succeeded)
         {
             return (Result.Failure(updateResult.Errors.Select(e => e.Description).ToArray()), null, null);
         }
 
-        // Step 6: Return the new tokens
+        // Return the new tokens
         return (Result.Success(), newAccessToken, newRefreshToken);
     }
-
 
     public async Task<Result> DeleteUserAsync(Guid userId)
     {

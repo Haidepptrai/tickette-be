@@ -11,8 +11,6 @@ public class Event : BaseEntity
 
     public string Address { get; set; }
 
-    public Guid CommitteeId { get; set; }
-
     public string Description { get; set; }
 
     public string Logo { get; set; }
@@ -28,6 +26,8 @@ public class Event : BaseEntity
     public Category Category { get; set; }
 
     public EventCommittee Committee { get; set; }
+
+    public ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
 
     private Event() { }
 
@@ -61,5 +61,11 @@ public class Event : BaseEntity
             Status = ApprovalStatus.Pending, // Default status
             Committee = committee,
         };
+    }
+
+    // Validate if a specific date is within the event period
+    public bool IsDateWithinEvent(DateTime date)
+    {
+        return date >= StartDate && date <= EndDate;
     }
 }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Tickette.Infrastructure.Data;
@@ -11,9 +12,11 @@ using Tickette.Infrastructure.Data;
 namespace Tickette.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241227145225_Add_Table_Tickets")]
+    partial class Add_Table_Tickets
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -443,8 +446,8 @@ namespace Tickette.Infrastructure.Migrations
                         .HasColumnName("sale_start_time");
 
                     b.Property<string>("TicketImage")
-                        .HasMaxLength(2500)
-                        .HasColumnType("character varying(2500)")
+                        .IsRequired()
+                        .HasColumnType("text")
                         .HasColumnName("ticket_image");
 
                     b.Property<int>("TotalTickets")

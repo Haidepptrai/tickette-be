@@ -27,6 +27,9 @@ public class CreateEventCommandDto
     [FromForm, JsonPropertyName("committee_information")]
     public CommitteeInformation Committee { get; set; }
 
+    [FromForm, JsonPropertyName("ticket_information")]
+    public required TicketInformation[] TicketInformation { get; set; }
+
     [FromForm, JsonPropertyName("logo_file")]
     public IFormFile LogoFile { get; set; }
 

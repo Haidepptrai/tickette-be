@@ -17,6 +17,7 @@ public record CreateEventCommand(
     DateTime StartDate,
     DateTime EndDate,
     CommitteeInformation Committee,
+    TicketInformation[] TicketInformation,
     IFileUpload LogoFile,
     IFileUpload BannerFile
 );
@@ -44,7 +45,7 @@ public class CreateEventCommandHandler : BaseHandler<CreateEventCommandHandler>,
             var committee = new EventCommittee()
             {
                 Name = command.Committee.CommitteeName,
-                Description = command.Committee.ComitteeDescription
+                Description = command.Committee.CommitteeDescription
             };
 
             _context.EventCommittees.Add(committee);
@@ -64,6 +65,29 @@ public class CreateEventCommandHandler : BaseHandler<CreateEventCommandHandler>,
             );
 
             _context.Events.Add(newEvent);
+
+            // Add ticket information
+            foreach (var ticket in command.TicketInformation)
+            {
+                var ticketImage = await _fileStorageService.UploadFileAsync(ticket.TicketImage, "tickets");
+
+                var ticketInfo = new Ticket(
+                    eventId: newEvent.Id,
+                    name: ticket.Name,
+                    price: ticket.Price,
+                    totalTickets: ticket.TotalTickets,
+                    minTicketsPerOrder: ticket.MinTicketsPerOrder,
+                    maxTicketsPerOrder: ticket.MaxTicketsPerOrder,
+                    saleStartTime: ticket.SaleStartTime,
+                    saleEndTime: ticket.SaleEndTime,
+                    eventStartTime: ticket.EventStartTime,
+                    eventEndTime: ticket.EventEndTime,
+                    description: ticket.Description,
+                    ticketImage: ticketImage
+                );
+
+                _context.Tickets.Add(ticketInfo);
+            }
 
             // Add create user as admin of the event
             var admin = new CommitteeMember(command.UserId, CommitteeRole.Admin, newEvent.Id);

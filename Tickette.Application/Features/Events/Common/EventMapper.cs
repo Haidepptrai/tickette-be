@@ -16,7 +16,7 @@ public static class EventMapper
         Committee = new CommitteeInformation()
         {
             CommitteeName = entity.Committee.Name,
-            ComitteeDescription = entity.Committee.Description
+            CommitteeDescription = entity.Committee.Description
         }
     };
 }
