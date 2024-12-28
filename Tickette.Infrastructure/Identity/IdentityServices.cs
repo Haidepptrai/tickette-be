@@ -91,7 +91,7 @@ public class IdentityServices : IIdentityServices
 
         // Generate a new Refresh Token and set expiry time
         var refreshToken = _tokenService.GenerateRefreshToken();
-        var refreshTokenExpiryTime = DateTime.UtcNow.AddDays(7); // Adjust expiry time as needed
+        var refreshTokenExpiryTime = DateTime.UtcNow.AddMonths(1);
 
         // Update user's Refresh Token and Expiry
         user.RefreshToken = refreshToken;
@@ -137,7 +137,7 @@ public class IdentityServices : IIdentityServices
         // Generate a new Refresh Token
         var newRefreshToken = _tokenService.GenerateRefreshToken();
         user.RefreshToken = newRefreshToken;
-        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7); // Adjust the expiration as needed
+        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddMonths(1);
 
         // Update the user in the database
         var updateResult = await _userManager.UpdateAsync(user);

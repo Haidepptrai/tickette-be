@@ -8,10 +8,7 @@ using Tickette.Application.Features.Events.Common;
 
 namespace Tickette.Application.Features.Events.Queries.GetEventByCategory;
 
-public record GetEventByCategory
-{
-    public Guid CategoryId { get; init; }
-}
+public record GetEventByCategory(Guid CategoryId);
 
 public class GetEventByCategoryHandler : BaseHandler<GetEventByCategoryHandler>, IQueryHandler<GetEventByCategory, IEnumerable<EventListDto>>
 {

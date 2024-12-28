@@ -49,7 +49,7 @@ public class TokenService : ITokenService
             issuer: _configuration["Jwt:Issuer"],
             audience: _configuration["Jwt:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(1), // Token expiry
+            expires: DateTime.UtcNow.AddMonths(1), // Token expiry
             signingCredentials: credits);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
