@@ -11,7 +11,7 @@ public static class CommitteeMemberMappers
         {
             Id = entity.Id,
             Email = entity.User.Email!,
-            Role = entity.Role.Name,
+            Role = entity.CommitteeRole.Name,
         };
     }
 

@@ -25,7 +25,7 @@ public class GetAllCommitteeMemberOfEventHandler : IQueryHandler<GetAllCommittee
         var entities = await _context.CommitteeMembers
             .Where(x => x.EventId == request.EventId)
             .Include(x => x.User)
-            .Include(x => x.Role)
+            .Include(x => x.CommitteeRole)
             .ToListAsync(cancellationToken);
 
         var result = entities.Select(c => c.ToCommitteeMemberDto()).ToList();

@@ -91,12 +91,17 @@ public static class DependencyInjection
 
 
         // Apply migrations during app initialization
+        // ReSharper disable once ConvertToUsingDeclaration
         using (var scope = builder.Services.BuildServiceProvider().CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+
             dbContext.Database.Migrate();
 
-            SeedDatabase.SeedCategories(dbContext);
+            SeedDatabase.SeedCategories(dbContext).Wait();
+            SeedDatabase.SeedRolesAsync(roleManager).Wait();
+            SeedDatabase.SeedRolesAndPermissions(dbContext).Wait();
         }
     }
 }

@@ -1,13 +1,12 @@
 ﻿using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
-using Tickette.Domain.ValueObjects;
 
 namespace Tickette.Application.Features.CommitteeMembers.Command.ChangeCommitteeMemberRole;
 
 public record ChangeCommitteeMemberRoleCommand
 {
     public Guid CommitteeMemberId { get; init; }
-    public CommitteeRole Role { get; init; }
+    public Guid CommitteeRoleId { get; init; }
 }
 
 public class ChangeCommitteeMemberRoleCommandHandler : ICommandHandler<ChangeCommitteeMemberRoleCommand, object>
@@ -23,7 +22,13 @@ public class ChangeCommitteeMemberRoleCommandHandler : ICommandHandler<ChangeCom
     {
         var entity = await _context.CommitteeMembers.FindAsync([request.CommitteeMemberId], cancellationToken);
 
-        entity.UpdateRole(request.Role);
+        if (entity == null)
+        {
+            throw new KeyNotFoundException("Committee Member Not Found");
+
+        }
+
+        entity.ChangeRole(request.CommitteeRoleId);
 
         await _context.SaveChangesAsync(cancellationToken);
 

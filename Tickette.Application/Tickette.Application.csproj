@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Features\Auth\Query\" />
     <Folder Include="Features\Categories\Common\" />
     <Folder Include="Features\CommitteeMembers\Command\AddCommitteeMember\" />
     <Folder Include="Features\CommitteeMembers\Command\ChangeCommitteeMemberRole\" />

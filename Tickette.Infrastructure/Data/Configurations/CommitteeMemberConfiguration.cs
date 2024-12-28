@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Tickette.Domain.Entities;
-using Tickette.Domain.ValueObjects;
 
 namespace Tickette.Infrastructure.Data.Configurations;
 
@@ -9,28 +8,26 @@ public class CommitteeMemberConfiguration : IEntityTypeConfiguration<CommitteeMe
 {
     public void Configure(EntityTypeBuilder<CommitteeMember> builder)
     {
-        builder.HasKey(e => e.Id);
+        builder.HasKey(cm => cm.Id);
 
-        builder.Property(e => e.Id).ValueGeneratedNever().IsRequired();
+        builder.Property(cm => cm.Id).ValueGeneratedNever().IsRequired();
 
-        builder.Property(e => e.Role)
-            .HasConversion(
-                role => role.Name, // Convert to string for storage
-                name => CommitteeRole.FromName(name) // Recreate `CommitteeRole` from the string
-            )
+        builder.HasOne(cm => cm.CommitteeRole)
+            .WithMany(cr => cr.CommitteeMembers)
+            .HasForeignKey(cm => cm.CommitteeRoleId)
+            .OnDelete(DeleteBehavior.Restrict); // Prevent deletion of CommitteeRole if associated with CommitteeMember
+
+        builder.Property(cm => cm.EventId)
             .IsRequired();
 
-        builder.Property(e => e.EventId)
-            .IsRequired();
+        builder.Property(cm => cm.JoinedAt).HasDefaultValueSql("NOW()");
 
-        builder.Property(e => e.JoinedAt).HasDefaultValueSql("NOW()");
-
-        builder.HasOne(e => e.User)
+        builder.HasOne(cm => cm.User)
             .WithMany()
-            .HasForeignKey(e => e.UserId);
+            .HasForeignKey(cm => cm.UserId);
 
-        builder.HasOne(e => e.Event)
+        builder.HasOne(cm => cm.Event)
             .WithMany()
-            .HasForeignKey(e => e.EventId);
+            .HasForeignKey(cm => cm.EventId);
     }
 }
