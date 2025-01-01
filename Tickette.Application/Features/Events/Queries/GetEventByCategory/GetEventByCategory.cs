@@ -24,7 +24,11 @@ public class GetEventByCategoryHandler : BaseHandler<GetEventByCategoryHandler>,
         return await ExecuteWithErrorHandlingAsync(async () =>
         {
             var events = await _context.Events
-                .Where(c => c.CategoryId == query.CategoryId).ToListAsync(cancellation);
+                .Include(ev => ev.Category)
+                .Include(ev => ev.Committee)
+                .Include(ev => ev.Tickets)
+                .Where(c => c.CategoryId == query.CategoryId)
+                .ToListAsync(cancellation);
 
             if (!events.Any())
             {

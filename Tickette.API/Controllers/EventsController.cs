@@ -104,7 +104,7 @@ public class EventsController : ControllerBase
     }
 
     //Update Event Status
-    [HttpPut("{eventId:guid}/status")]
+    [HttpPatch("{eventId:guid}/status")]
     [Authorize]
     public async Task<ResponseDto<Guid>> UpdateEventStatus(Guid eventId, UpdateEventStatusCommand command, CancellationToken token)
     {

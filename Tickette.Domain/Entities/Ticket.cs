@@ -12,6 +12,8 @@ public class Ticket : BaseEntity
 
     public int TotalTickets { get; private set; }
 
+    public int RemainingTickets { get; private set; }
+
     public int MinTicketsPerOrder { get; private set; }
 
     public int MaxTicketsPerOrder { get; private set; }
@@ -48,6 +50,7 @@ public class Ticket : BaseEntity
         Name = name;
         Price = price;
         TotalTickets = totalTickets;
+        RemainingTickets = totalTickets;
         MinTicketsPerOrder = minTicketsPerOrder;
         MaxTicketsPerOrder = maxTicketsPerOrder;
         SaleStartTime = saleStartTime;
@@ -56,5 +59,12 @@ public class Ticket : BaseEntity
         EventEndTime = eventEndTime;
         Description = description;
         TicketImage = ticketImage;
+    }
+
+    public void UpdateRemainingTickets(int quantity)
+    {
+        if (quantity > RemainingTickets)
+            throw new ArgumentException("Quantity exceeds remaining tickets.");
+        RemainingTickets -= quantity;
     }
 }

@@ -4,6 +4,9 @@ public static class Constant
 {
     public static IReadOnlyList<string> APPLICATION_ROLES => new List<string> { "Admin", "User", "Manager", "Moderator" };
 
+    public static string LOCAL_CONNECTION_STRING =
+        "Host=localhost;Port=5432;Database=tickette-db;Username=HaiNguyen;Password=root";
+
     public static class COMMITTEE_MEMBER_ROLES
     {
         public const string EventOwner = "EventOwner";
