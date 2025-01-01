@@ -12,8 +12,8 @@ using Tickette.Infrastructure.Data;
 namespace Tickette.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250101155139_Add_Order_Ticket_Table")]
-    partial class Add_Order_Ticket_Table
+    [Migration("20250101164545_Add_Order_Table")]
+    partial class Add_Order_Table
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -428,6 +428,119 @@ namespace Tickette.Infrastructure.Migrations
                     b.ToTable("event_committees", (string)null);
                 });
 
+            modelBuilder.Entity("Tickette.Domain.Entities.Order", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("BuyerEmail")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("buyer_email");
+
+                    b.Property<string>("BuyerName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("buyer_name");
+
+                    b.Property<string>("BuyerPhone")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)")
+                        .HasColumnName("buyer_phone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("event_id");
+
+                    b.Property<decimal>("FinalPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("final_price");
+
+                    b.Property<decimal>("TotalPrice")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_price");
+
+                    b.Property<int>("TotalQuantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_quantity");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserOrderedId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_ordered_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_orders");
+
+                    b.HasIndex("BuyerEmail")
+                        .HasDatabaseName("IX_TicketOrder_BuyerEmail");
+
+                    b.HasIndex("EventId")
+                        .HasDatabaseName("IX_TicketOrder_EventId");
+
+                    b.HasIndex("UserOrderedId")
+                        .HasDatabaseName("ix_orders_user_ordered_id");
+
+                    b.ToTable("orders", (string)null);
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.OrderItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantity");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ticket_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_order_items");
+
+                    b.HasIndex("OrderId")
+                        .HasDatabaseName("ix_order_items_order_id");
+
+                    b.ToTable("order_items", (string)null);
+                });
+
             modelBuilder.Entity("Tickette.Domain.Entities.Ticket", b =>
                 {
                     b.Property<Guid>("Id")
@@ -511,120 +624,6 @@ namespace Tickette.Infrastructure.Migrations
                         .HasDatabaseName("ix_tickets_event_id");
 
                     b.ToTable("tickets", (string)null);
-                });
-
-            modelBuilder.Entity("Tickette.Domain.Entities.TicketOrder", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("BuyerEmail")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("buyer_email");
-
-                    b.Property<string>("BuyerName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("buyer_name");
-
-                    b.Property<string>("BuyerPhone")
-                        .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("character varying(15)")
-                        .HasColumnName("buyer_phone");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
-
-                    b.Property<Guid>("EventId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("event_id");
-
-                    b.Property<decimal>("FinalPrice")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasColumnName("final_price");
-
-                    b.Property<int>("TotalQuantity")
-                        .HasColumnType("integer")
-                        .HasColumnName("total_quantity");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<Guid>("UserOrderedId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_ordered_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_ticket_orders");
-
-                    b.HasIndex("BuyerEmail")
-                        .HasDatabaseName("IX_TicketOrder_BuyerEmail");
-
-                    b.HasIndex("EventId")
-                        .HasDatabaseName("IX_TicketOrder_EventId");
-
-                    b.HasIndex("UserOrderedId")
-                        .HasDatabaseName("ix_ticket_orders_user_ordered_id");
-
-                    b.ToTable("ticket_orders", (string)null);
-                });
-
-            modelBuilder.Entity("Tickette.Domain.Entities.TicketOrderItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
-
-                    b.Property<Guid>("OrderId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("order_id");
-
-                    b.Property<decimal>("Price")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasColumnName("price");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer")
-                        .HasColumnName("quantity");
-
-                    b.Property<Guid>("TicketId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("ticket_id");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id")
-                        .HasName("pk_ticket_order_items");
-
-                    b.HasIndex("OrderId")
-                        .HasDatabaseName("ix_ticket_order_items_order_id");
-
-                    b.ToTable("ticket_order_items", (string)null);
                 });
 
             modelBuilder.Entity("Tickette.Domain.Entities.User", b =>
@@ -879,6 +878,28 @@ namespace Tickette.Infrastructure.Migrations
                     b.Navigation("Event");
                 });
 
+            modelBuilder.Entity("Tickette.Domain.Entities.Order", b =>
+                {
+                    b.HasOne("Tickette.Domain.Entities.User", "UserOrdered")
+                        .WithMany()
+                        .HasForeignKey("UserOrderedId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_orders_users_user_ordered_id");
+
+                    b.Navigation("UserOrdered");
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.OrderItem", b =>
+                {
+                    b.HasOne("Tickette.Domain.Entities.Order", null)
+                        .WithMany("Items")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_order_items_orders_order_id");
+                });
+
             modelBuilder.Entity("Tickette.Domain.Entities.Ticket", b =>
                 {
                     b.HasOne("Tickette.Domain.Entities.Event", "Event")
@@ -889,28 +910,6 @@ namespace Tickette.Infrastructure.Migrations
                         .HasConstraintName("fk_tickets_events_event_id");
 
                     b.Navigation("Event");
-                });
-
-            modelBuilder.Entity("Tickette.Domain.Entities.TicketOrder", b =>
-                {
-                    b.HasOne("Tickette.Domain.Entities.User", "UserOrdered")
-                        .WithMany()
-                        .HasForeignKey("UserOrderedId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_ticket_orders_users_user_ordered_id");
-
-                    b.Navigation("UserOrdered");
-                });
-
-            modelBuilder.Entity("Tickette.Domain.Entities.TicketOrderItem", b =>
-                {
-                    b.HasOne("Tickette.Domain.Entities.TicketOrder", null)
-                        .WithMany("Items")
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_ticket_order_items_ticket_orders_order_id");
                 });
 
             modelBuilder.Entity("Tickette.Domain.Entities.Category", b =>
@@ -931,7 +930,7 @@ namespace Tickette.Infrastructure.Migrations
                     b.Navigation("Tickets");
                 });
 
-            modelBuilder.Entity("Tickette.Domain.Entities.TicketOrder", b =>
+            modelBuilder.Entity("Tickette.Domain.Entities.Order", b =>
                 {
                     b.Navigation("Items");
                 });

@@ -4,13 +4,12 @@ namespace Tickette.Application.Features.Tickets.Common;
 
 public static class TicketMappers
 {
-    public static TicketOrderItem ToCreateTicketOrderItemDto(this TicketOrderItemDto ticketOrderItem)
+    public static OrderItem ToCreateTicketOrderItemDto(this TicketOrderItemDto ticketOrderItem)
     {
-        return new TicketOrderItem
+        return new OrderItem
         (
             ticketOrderItem.TicketId,
-            ticketOrderItem.Quantity,
-            ticketOrderItem.Price
+            ticketOrderItem.Quantity
         );
 
     }

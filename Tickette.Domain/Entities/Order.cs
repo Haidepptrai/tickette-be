@@ -2,7 +2,7 @@
 
 namespace Tickette.Domain.Entities;
 
-public class TicketOrder : BaseEntity
+public class Order : BaseEntity
 {
     public Guid EventId { get; private set; }
 
@@ -16,21 +16,20 @@ public class TicketOrder : BaseEntity
 
     public string BuyerPhone { get; private set; }
 
-    public ICollection<TicketOrderItem> Items { get; set; }
+    public ICollection<OrderItem> Items { get; set; }
 
-    public decimal TotalPrice => Items.Sum(item => item.GetSubtotal());
+    public decimal TotalPrice { get; private set; }
 
     public decimal FinalPrice { get; private set; }
 
     public User UserOrdered { get; private set; }
 
-    protected TicketOrder() { }
+    protected Order() { }
 
-    public TicketOrder(Guid ticketId, Guid eventId, Guid buyerId, int quantity, string buyerEmail, string buyerName, string buyerPhone)
+    public Order(Guid eventId, Guid buyerId, string buyerEmail, string buyerName, string buyerPhone)
     {
         EventId = eventId;
         UserOrderedId = buyerId;
-        TotalQuantity = quantity;
         BuyerEmail = buyerEmail;
         BuyerName = buyerName;
         BuyerPhone = buyerPhone;
@@ -39,5 +38,11 @@ public class TicketOrder : BaseEntity
     public void SetFinalPrice(decimal price)
     {
         FinalPrice = price;
+    }
+
+    // Count the total quantity of the order
+    public void CountTotalQuantity(int quantity)
+    {
+        TotalQuantity = quantity;
     }
 }

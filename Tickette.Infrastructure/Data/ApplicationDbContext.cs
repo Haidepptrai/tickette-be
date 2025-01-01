@@ -13,8 +13,8 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<EventCommittee> EventCommittees { get; set; }
 
     public DbSet<Ticket> Tickets { get; set; }
-    public DbSet<TicketOrder> TicketOrders { get; set; }
-    public DbSet<TicketOrderItem> TicketOrderItems { get; set; }
+    public DbSet<Order> Orders { get; set; }
+    public DbSet<OrderItem> OrderItems { get; set; }
 
     public DbSet<Category> Categories { get; set; }
     public DbSet<CommitteeMember> CommitteeMembers { get; set; }

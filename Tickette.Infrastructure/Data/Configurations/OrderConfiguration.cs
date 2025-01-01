@@ -4,9 +4,9 @@ using Tickette.Domain.Entities;
 
 namespace Tickette.Infrastructure.Data.Configurations;
 
-public class TicketOrderConfiguration : IEntityTypeConfiguration<TicketOrder>
+public class TicketOrderConfiguration : IEntityTypeConfiguration<Order>
 {
-    public void Configure(EntityTypeBuilder<TicketOrder> builder)
+    public void Configure(EntityTypeBuilder<Order> builder)
     {
         builder.HasKey(e => e.Id);
 

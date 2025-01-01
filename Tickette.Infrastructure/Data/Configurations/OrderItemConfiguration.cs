@@ -4,18 +4,14 @@ using Tickette.Domain.Entities;
 
 namespace Tickette.Infrastructure.Data.Configurations;
 
-public class TicketOrderItemConfiguration : IEntityTypeConfiguration<TicketOrderItem>
+public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
 {
-    public void Configure(EntityTypeBuilder<TicketOrderItem> builder)
+    public void Configure(EntityTypeBuilder<OrderItem> builder)
     {
         builder.Property(e => e.Quantity)
             .IsRequired();
 
-        builder.Property(e => e.Price)
-            .HasPrecision(18, 2)
-            .IsRequired();
-
-        builder.HasOne<TicketOrder>()
+        builder.HasOne<Order>()
             .WithMany(order => order.Items)
             .HasForeignKey(e => e.OrderId)
             .OnDelete(DeleteBehavior.Cascade);

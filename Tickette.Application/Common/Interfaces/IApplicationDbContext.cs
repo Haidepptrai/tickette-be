@@ -17,9 +17,9 @@ public interface IApplicationDbContext
 
     DbSet<Category> Categories { get; }
 
-    DbSet<TicketOrder> TicketOrders { get; }
+    DbSet<Order> Orders { get; }
 
-    DbSet<TicketOrderItem> TicketOrderItems { get; }
+    DbSet<OrderItem> OrderItems { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }
