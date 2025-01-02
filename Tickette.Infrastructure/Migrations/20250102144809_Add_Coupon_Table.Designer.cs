@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Tickette.Infrastructure.Data;
@@ -11,9 +12,11 @@ using Tickette.Infrastructure.Data;
 namespace Tickette.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250102144809_Add_Coupon_Table")]
+    partial class Add_Coupon_Table
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -917,18 +920,6 @@ namespace Tickette.Infrastructure.Migrations
                     b.Navigation("Permissions");
                 });
 
-            modelBuilder.Entity("Tickette.Domain.Entities.Coupon", b =>
-                {
-                    b.HasOne("Tickette.Domain.Entities.Event", "Event")
-                        .WithMany("Coupons")
-                        .HasForeignKey("EventId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_coupons_events_event_id");
-
-                    b.Navigation("Event");
-                });
-
             modelBuilder.Entity("Tickette.Domain.Entities.Event", b =>
                 {
                     b.HasOne("Tickette.Domain.Entities.Category", "Category")
@@ -989,8 +980,6 @@ namespace Tickette.Infrastructure.Migrations
                 {
                     b.Navigation("Committee")
                         .IsRequired();
-
-                    b.Navigation("Coupons");
 
                     b.Navigation("Tickets");
                 });

@@ -25,13 +25,13 @@ public class TicketOrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(e => e.TotalQuantity)
             .IsRequired();
 
-        builder.Property(e => e.FinalPrice)
+        builder.Property(e => e.TotalPrice)
             .HasPrecision(18, 2);
 
         builder.HasMany(e => e.Items)
             .WithOne()
             .HasForeignKey(item => item.OrderId) // Foreign key in TicketOrderItem
-            .OnDelete(DeleteBehavior.Cascade); // Ensures deletion cascades to TicketOrderItem
+            .OnDelete(DeleteBehavior.Cascade);
 
         // Indexes
         builder.HasIndex(e => e.EventId)

@@ -2,13 +2,13 @@
 
 namespace Tickette.Domain.Entities;
 
-public class Order : BaseEntity
+public sealed class Order : BaseEntity
 {
     public Guid EventId { get; private set; }
 
     public Guid UserOrderedId { get; private set; }
 
-    public int TotalQuantity { get; private set; }
+    public Guid CouponId { get; private set; }
 
     public string BuyerEmail { get; private set; }
 
@@ -16,17 +16,20 @@ public class Order : BaseEntity
 
     public string BuyerPhone { get; private set; }
 
-    public ICollection<OrderItem> Items { get; set; }
+    public decimal OriginalPrice { get; private set; }
 
     public decimal TotalPrice { get; private set; }
 
-    public decimal FinalPrice { get; private set; }
+    public decimal DiscountAmount { get; private set; }
 
-    public User UserOrdered { get; private set; }
+    public int TotalQuantity { get; private set; }
+
+    private readonly List<OrderItem> _items = new();
+    public IReadOnlyCollection<OrderItem> Items => _items.AsReadOnly();
 
     protected Order() { }
 
-    public Order(Guid eventId, Guid buyerId, string buyerEmail, string buyerName, string buyerPhone)
+    private Order(Guid eventId, Guid buyerId, string buyerEmail, string buyerName, string buyerPhone)
     {
         EventId = eventId;
         UserOrderedId = buyerId;
@@ -35,14 +38,59 @@ public class Order : BaseEntity
         BuyerPhone = buyerPhone;
     }
 
-    public void SetFinalPrice(decimal price)
+
+    public static Order CreateOrder(Guid eventId, Guid buyerId, string buyerEmail, string buyerName, string buyerPhone)
     {
-        FinalPrice = price;
+        return new Order(eventId, buyerId, buyerEmail, buyerName, buyerPhone);
     }
 
-    // Count the total quantity of the order
-    public void CountTotalQuantity(int quantity)
+    public void AddOrderItem(Guid ticketId, decimal ticketPrice, int quantity)
     {
-        TotalQuantity = quantity;
+        if (quantity <= 0)
+        {
+            throw new ArgumentException("Quantity must be greater than zero.", nameof(quantity));
+        }
+
+        var existingItem = _items.SingleOrDefault(x => x.TicketId == ticketId);
+
+        if (existingItem is not null)
+        {
+            existingItem.AddQuantity(quantity);
+        }
+        else
+        {
+            _items.Add(new OrderItem(ticketId, ticketPrice, quantity));
+        }
+
+        CalculateTotals();
+    }
+
+    public void CalculateTotals()
+    {
+        OriginalPrice = _items.Sum(item => item.CalculateTotalPrice());
+        TotalPrice = OriginalPrice;
+        TotalQuantity = _items.Sum(item => item.Quantity);
+    }
+
+
+    public void ApplyCoupon(Coupon coupon)
+    {
+        if (coupon == null)
+        {
+            throw new ArgumentNullException(nameof(coupon), "Coupon cannot be null.");
+        }
+
+        // Validate and calculate the discount
+        var discount = coupon.CalculateDiscount(OriginalPrice);
+
+        if (discount > OriginalPrice)
+        {
+            discount = OriginalPrice;
+        }
+
+        // Set the coupon details in the order
+        CouponId = coupon.Id;
+        DiscountAmount = discount;
+        TotalPrice = OriginalPrice - discount;
     }
 }

@@ -2,6 +2,7 @@
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.Tickets.Common;
+using Tickette.Application.Helpers;
 using Tickette.Domain.Entities;
 
 namespace Tickette.Application.Features.Tickets.Command;
@@ -13,11 +14,11 @@ public record OrderTicketsCommand
     public string BuyerEmail { get; init; }
     public string BuyerName { get; init; }
     public string BuyerPhone { get; init; }
-
     public required List<TicketOrderItemDto> OrderItems { get; init; }
+    public string? CouponCode { get; init; }
 }
 
-public class OrderTicketsCommandHandler : ICommandHandler<OrderTicketsCommand, ResponseTicketOrderedDto>
+public class OrderTicketsCommandHandler : ICommandHandler<OrderTicketsCommand, ResponseDto<Guid>>
 {
     private readonly IApplicationDbContext _context;
 
@@ -26,77 +27,65 @@ public class OrderTicketsCommandHandler : ICommandHandler<OrderTicketsCommand, R
         _context = context;
     }
 
-    public async Task<ResponseTicketOrderedDto> Handle(OrderTicketsCommand command, CancellationToken cancellation)
+    public async Task<ResponseDto<Guid>> Handle(OrderTicketsCommand command, CancellationToken cancellation)
     {
-        // Check if the event exists
-        var eventEntity = await _context.Events
-            .SingleOrDefaultAsync(e => e.Id == command.EventId, cancellation);
-
-        if (eventEntity == null)
+        try
         {
-            throw new ArgumentException("The event does not exist.", nameof(command.EventId));
-        }
+            // Check if the event exists
+            var eventEntity = await _context.Events
+                .SingleOrDefaultAsync(e => e.Id == command.EventId, cancellation);
 
-        // Create an order record
-        var order = new Order(command.EventId, command.BuyerId, command.BuyerEmail,
-            command.BuyerName, command.BuyerPhone);
-
-        // Fetch valid ticket IDs for the event
-        var validTickets = await _context.Tickets
-            .Where(t => t.EventId == command.EventId)
-            .ToListAsync(cancellation);
-
-        // Validate and calculate price
-        decimal totalPrice = 0;
-        foreach (var item in command.OrderItems)
-        {
-            var ticket = validTickets.SingleOrDefault(t => t.Id == item.TicketId);
-
-            if (ticket == null)
+            if (eventEntity == null)
             {
-                throw new ArgumentException($"Invalid TicketId: {item.TicketId}. The ticket does not exist for the specified event.");
+                throw new ArgumentException("The event does not exist.", nameof(command.EventId));
             }
 
-            totalPrice += ticket.Price * item.Quantity;
+            // Fetch valid ticket IDs and prices for the event
+            var validTickets = await _context.Tickets
+                .Where(t => t.EventId == command.EventId)
+                .ToDictionaryAsync(t => t.Id, t => t.Price, cancellation);
+
+            // Create an Order
+            var order = Order.CreateOrder(command.EventId, command.BuyerId, command.BuyerEmail,
+                command.BuyerName, command.BuyerPhone);
+
+            // Add order items
+            foreach (var item in command.OrderItems)
+            {
+                if (!validTickets.TryGetValue(item.TicketId, out var ticketPrice))
+                {
+                    throw new ArgumentException(
+                        $"Invalid TicketId: {item.TicketId}. The ticket does not exist for the specified event.");
+                }
+
+                order.AddOrderItem(item.TicketId, ticketPrice, item.Quantity);
+            }
+
+            if (command.CouponCode is not null)
+            {
+                // Apply coupon code
+                var coupon = await _context.Coupons
+                    .SingleOrDefaultAsync(c => c.Code == command.CouponCode.ToUpper(), cancellation);
+
+                if (coupon is null)
+                {
+                    throw new ArgumentException("Invalid coupon code.", nameof(command.CouponCode));
+                }
+
+                order.ApplyCoupon(coupon);
+            }
+
+            // Save to the database
+            await _context.Orders.AddAsync(order, cancellation);
+            await _context.SaveChangesAsync(cancellation);
+
+            // Return response
+            return ResponseHandler.SuccessResponse(command.EventId);
+
         }
-
-        order.SetFinalPrice(totalPrice);
-        order.CountTotalQuantity(command.OrderItems.Sum(item => item.Quantity));
-
-        await _context.Orders.AddAsync(order, cancellation);
-
-
-
-        // Add order items
-        foreach (var item in command.OrderItems)
+        catch (Exception ex)
         {
-            // Find the ticket details
-            var ticket = validTickets.SingleOrDefault(t => t.Id == item.TicketId);
-
-            // Validate the ticket
-            if (ticket == null)
-            {
-                throw new ArgumentException($"Invalid TicketId: {item.TicketId}. The ticket does not exist for the specified event.");
-            }
-
-            // Create the OrderItem from the DTO
-            var orderTicketOrderItem = item.ToCreateTicketOrderItemDto();
-            orderTicketOrderItem.SetTicketOrderId(order.Id);
-
-            if (item.Quantity <= 0)
-            {
-                throw new ArgumentException($"Invalid quantity for TicketId: {item.TicketId}. Quantity must be greater than 0.");
-            }
-
-            // Add the OrderItem to the database
-            await _context.OrderItems.AddAsync(orderTicketOrderItem, cancellation);
+            return ResponseHandler.ErrorResponse(Guid.Empty, ex.Message);
         }
-
-
-        // Save changes to the database
-        await _context.SaveChangesAsync(cancellation);
-
-        // Return response
-        return new ResponseTicketOrderedDto(command.EventId);
     }
 }
