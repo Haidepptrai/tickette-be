@@ -21,5 +21,7 @@ public interface IApplicationDbContext
 
     DbSet<OrderItem> OrderItems { get; }
 
+    DbSet<Coupon> Coupons { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

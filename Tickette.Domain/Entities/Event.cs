@@ -31,6 +31,8 @@ public class Event : BaseEntity
 
     public ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
 
+    public ICollection<Coupon> Coupons { get; set; } = new List<Coupon>();
+
     private Event() { }
 
     public static Event CreateEvent(
