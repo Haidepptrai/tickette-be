@@ -1,7 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
+using Tickette.Application.Features.Auth.Command.Login;
+using Tickette.Application.Features.Auth.Common;
 using Tickette.Application.Helpers;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -13,10 +16,12 @@ namespace Tickette.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IIdentityServices _identityServices;
+        private readonly ICommandDispatcher _commandDispatcher;
 
-        public AuthController(IIdentityServices identityServices)
+        public AuthController(IIdentityServices identityServices, ICommandDispatcher commandDispatcher)
         {
             _identityServices = identityServices;
+            _commandDispatcher = commandDispatcher;
         }
 
         [HttpPost("register")]
@@ -33,9 +38,9 @@ namespace Tickette.API.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<ResponseDto<object>> Login([FromBody] LoginModel model)
+        public async Task<ResponseDto<object>> Login([FromBody] LoginCommand command, CancellationToken token = default)
         {
-            var (result, token, refreshToken) = await _identityServices.LoginAsync(model.UserEmail, model.Password);
+            var result = await _commandDispatcher.Dispatch<LoginCommand, LoginResultDto>(command, token);
 
             if (!result.Succeeded)
             {
@@ -44,8 +49,8 @@ namespace Tickette.API.Controllers
 
             var data = new
             {
-                Token = token,
-                RefreshToken = refreshToken
+                Token = result.Token,
+                RefreshToken = result.RefreshToken
             };
 
             return ResponseHandler.SuccessResponse<object>(data, "Login Successfully");
@@ -78,15 +83,6 @@ namespace Tickette.API.Controllers
         }
 
         public class RegisterRequest
-        {
-            [EmailAddress]
-            public string UserEmail { get; set; }
-
-            [PasswordPropertyText]
-            public string Password { get; set; }
-        }
-
-        public class LoginModel
         {
             [EmailAddress]
             public string UserEmail { get; set; }

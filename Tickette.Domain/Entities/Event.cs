@@ -21,6 +21,8 @@ public class Event : BaseEntity
 
     public DateTime EndDate { get; set; }
 
+    public string EventSlug { get; private set; }
+
     public ApprovalStatus Status { get; set; }
 
     public Category Category { get; set; }
@@ -60,12 +62,22 @@ public class Event : BaseEntity
             EndDate = DateTime.SpecifyKind(endDate, DateTimeKind.Utc),
             Status = ApprovalStatus.Pending, // Default status
             Committee = committee,
+            EventSlug = GenerateSlug(name)
         };
     }
 
-    // Validate if a specific date is within the event period
-    public bool IsDateWithinEvent(DateTime date)
+    private static string GenerateSlug(string name)
     {
-        return date >= StartDate && date <= EndDate;
+        if (string.IsNullOrEmpty(name))
+            throw new InvalidOperationException("Name cannot be null or empty when generating a slug.");
+
+        // Replace spaces with hyphens and convert to lowercase for the slug
+        var slugBase = name.Replace(" ", "-").ToLowerInvariant();
+
+        // Generate an 8-character GUID suffix
+        var guidSuffix = Guid.NewGuid().ToString("N")[..8];
+
+        // Combine slug base and GUID suffix
+        return $"{slugBase}-{guidSuffix}";
     }
 }

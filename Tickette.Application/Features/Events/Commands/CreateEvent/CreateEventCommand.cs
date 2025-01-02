@@ -1,10 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
-using Tickette.Application.Common;
+﻿using Microsoft.EntityFrameworkCore;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.Events.Common;
+using Tickette.Domain.Common;
 using Tickette.Domain.Entities;
-using Tickette.Domain.ValueObjects;
 
 namespace Tickette.Application.Features.Events.Commands.CreateEvent;
 
@@ -22,12 +21,12 @@ public record CreateEventCommand(
     IFileUpload BannerFile
 );
 
-public class CreateEventCommandHandler : BaseHandler<CreateEventCommandHandler>, ICommandHandler<CreateEventCommand, Guid>
+public class CreateEventCommandHandler : ICommandHandler<CreateEventCommand, Guid>
 {
     private readonly IApplicationDbContext _context;
     private readonly IFileStorageService _fileStorageService;
 
-    public CreateEventCommandHandler(IApplicationDbContext context, ILogger<CreateEventCommandHandler> logger, IFileStorageService fileStorageService) : base(logger)
+    public CreateEventCommandHandler(IApplicationDbContext context, IFileStorageService fileStorageService)
     {
         _context = context;
         _fileStorageService = fileStorageService;
@@ -35,68 +34,73 @@ public class CreateEventCommandHandler : BaseHandler<CreateEventCommandHandler>,
 
     public async Task<Guid> Handle(CreateEventCommand command, CancellationToken cancellationToken)
     {
-        return await ExecuteWithErrorHandlingAsync(async () =>
+        // Upload Logo and Banner to S3
+        string logoUrl = await _fileStorageService.UploadFileAsync(command.LogoFile, "logos");
+        string bannerUrl = await _fileStorageService.UploadFileAsync(command.BannerFile, "banners");
+
+        // Create a new event committee
+        var committee = new EventCommittee()
         {
-            // Upload Logo and Banner to S3
-            string logoUrl = await _fileStorageService.UploadFileAsync(command.LogoFile, "logos");
-            string bannerUrl = await _fileStorageService.UploadFileAsync(command.BannerFile, "banners");
+            Name = command.Committee.CommitteeName,
+            Description = command.Committee.CommitteeDescription
+        };
 
-            // Create a new event committee
-            var committee = new EventCommittee()
-            {
-                Name = command.Committee.CommitteeName,
-                Description = command.Committee.CommitteeDescription
-            };
+        _context.EventCommittees.Add(committee);
 
-            _context.EventCommittees.Add(committee);
+        // Create a new event
+        //Missing committee id
+        var newEvent = Event.CreateEvent(
+            name: command.Name,
+            address: command.Address,
+            categoryId: command.CategoryId,
+            description: command.Description,
+            logo: logoUrl,
+            banner: bannerUrl,
+            startDate: command.StartDate,
+            endDate: command.EndDate,
+            committee: committee
+        );
 
-            // Create a new event
-            //Missing committee id
-            var newEvent = Event.CreateEvent(
-                name: command.Name,
-                address: command.Address,
-                categoryId: command.CategoryId,
-                description: command.Description,
-                logo: logoUrl,
-                banner: bannerUrl,
-                startDate: command.StartDate,
-                endDate: command.EndDate,
-                committee: committee
+        _context.Events.Add(newEvent);
+
+        // Add ticket information
+        foreach (var ticket in command.TicketInformation)
+        {
+            var ticketImage = await _fileStorageService.UploadFileAsync(ticket.TicketImage, "tickets");
+
+            var ticketInfo = new Ticket(
+                eventId: newEvent.Id,
+                name: ticket.Name,
+                price: ticket.Price,
+                totalTickets: ticket.TotalTickets,
+                minTicketsPerOrder: ticket.MinTicketsPerOrder,
+                maxTicketsPerOrder: ticket.MaxTicketsPerOrder,
+                saleStartTime: ticket.SaleStartTime,
+                saleEndTime: ticket.SaleEndTime,
+                eventStartTime: ticket.EventStartTime,
+                eventEndTime: ticket.EventEndTime,
+                description: ticket.Description,
+                ticketImage: ticketImage
             );
 
-            _context.Events.Add(newEvent);
+            _context.Tickets.Add(ticketInfo);
+        }
 
-            // Add ticket information
-            foreach (var ticket in command.TicketInformation)
-            {
-                var ticketImage = await _fileStorageService.UploadFileAsync(ticket.TicketImage, "tickets");
+        var committeeRole = await _context.CommitteeRoles
+            .SingleOrDefaultAsync(r => r.Name == Constant.COMMITTEE_MEMBER_ROLES.EventOwner, cancellationToken);
 
-                var ticketInfo = new Ticket(
-                    eventId: newEvent.Id,
-                    name: ticket.Name,
-                    price: ticket.Price,
-                    totalTickets: ticket.TotalTickets,
-                    minTicketsPerOrder: ticket.MinTicketsPerOrder,
-                    maxTicketsPerOrder: ticket.MaxTicketsPerOrder,
-                    saleStartTime: ticket.SaleStartTime,
-                    saleEndTime: ticket.SaleEndTime,
-                    eventStartTime: ticket.EventStartTime,
-                    eventEndTime: ticket.EventEndTime,
-                    description: ticket.Description,
-                    ticketImage: ticketImage
-                );
+        if (committeeRole == null)
+        {
+            throw new Exception($"Role '{Constant.COMMITTEE_MEMBER_ROLES.EventOwner}' not found.");
+        }
 
-                _context.Tickets.Add(ticketInfo);
-            }
+        // Add create user as admin of the event
+        var admin = new CommitteeMember(command.UserId, committeeRole.Id, newEvent.Id);
+        _context.CommitteeMembers.Add(admin);
 
-            // Add create user as admin of the event
-            var admin = new CommitteeMember(command.UserId, CommitteeRole.Admin, newEvent.Id);
-            _context.CommitteeMembers.Add(admin);
+        await _context.SaveChangesAsync(cancellationToken);
 
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return newEvent.Id;
-        }, "Create Event");
+        return newEvent.Id;
     }
 
 }

@@ -11,9 +11,14 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
 {
     public DbSet<Event> Events { get; set; }
     public DbSet<EventCommittee> EventCommittees { get; set; }
+
     public DbSet<Ticket> Tickets { get; set; }
+    public DbSet<Order> Orders { get; set; }
+    public DbSet<OrderItem> OrderItems { get; set; }
+
     public DbSet<Category> Categories { get; set; }
     public DbSet<CommitteeMember> CommitteeMembers { get; set; }
+    public DbSet<CommitteeRole> CommitteeRoles { get; set; }
 
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {

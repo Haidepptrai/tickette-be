@@ -23,6 +23,9 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.Property(t => t.TotalTickets)
             .IsRequired();
 
+        builder.Property(t => t.RemainingTickets)
+            .IsRequired();
+
         builder.Property(t => t.MinTicketsPerOrder)
             .IsRequired();
 
@@ -46,6 +49,5 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
 
         builder.Property(t => t.TicketImage)
             .HasMaxLength(2500);
-
     }
 }

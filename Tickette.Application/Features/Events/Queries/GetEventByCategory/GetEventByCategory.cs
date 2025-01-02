@@ -8,10 +8,7 @@ using Tickette.Application.Features.Events.Common;
 
 namespace Tickette.Application.Features.Events.Queries.GetEventByCategory;
 
-public record GetEventByCategory
-{
-    public Guid CategoryId { get; init; }
-}
+public record GetEventByCategory(Guid CategoryId);
 
 public class GetEventByCategoryHandler : BaseHandler<GetEventByCategoryHandler>, IQueryHandler<GetEventByCategory, IEnumerable<EventListDto>>
 {
@@ -27,7 +24,11 @@ public class GetEventByCategoryHandler : BaseHandler<GetEventByCategoryHandler>,
         return await ExecuteWithErrorHandlingAsync(async () =>
         {
             var events = await _context.Events
-                .Where(c => c.CategoryId == query.CategoryId).ToListAsync(cancellation);
+                .Include(ev => ev.Category)
+                .Include(ev => ev.Committee)
+                .Include(ev => ev.Tickets)
+                .Where(c => c.CategoryId == query.CategoryId)
+                .ToListAsync(cancellation);
 
             if (!events.Any())
             {

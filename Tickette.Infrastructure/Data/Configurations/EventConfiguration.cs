@@ -42,6 +42,9 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
         builder.Property(e => e.Status)
             .IsRequired();
 
+        builder.Property(e => e.EventSlug)
+            .IsRequired();
+
         builder.HasOne(e => e.Committee)
             .WithOne(c => c.Event)
             .HasForeignKey<EventCommittee>(c => c.EventId);
