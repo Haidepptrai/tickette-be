@@ -89,6 +89,7 @@ public class EventsController : ControllerBase
                 commandDto.StartDate,
                 commandDto.EndDate,
                 commandDto.Committee,
+                commandDto.Seats,
                 commandDto.TicketInformation,
                 logoFile,
                 bannerFile

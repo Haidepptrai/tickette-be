@@ -16,6 +16,7 @@ public record CreateEventCommand(
     DateTime StartDate,
     DateTime EndDate,
     CommitteeInformation Committee,
+    ICollection<SeatDto> Seats,
     TicketInformation[] TicketInformation,
     IFileUpload LogoFile,
     IFileUpload BannerFile
@@ -35,8 +36,8 @@ public class CreateEventCommandHandler : ICommandHandler<CreateEventCommand, Gui
     public async Task<Guid> Handle(CreateEventCommand command, CancellationToken cancellationToken)
     {
         // Upload Logo and Banner to S3
-        string logoUrl = await _fileStorageService.UploadFileAsync(command.LogoFile, "logos");
-        string bannerUrl = await _fileStorageService.UploadFileAsync(command.BannerFile, "banners");
+        var logoUrl = await _fileStorageService.UploadFileAsync(command.LogoFile, "logos");
+        var bannerUrl = await _fileStorageService.UploadFileAsync(command.BannerFile, "banners");
 
         // Create a new event committee
         var committee = new EventCommittee()
@@ -58,10 +59,15 @@ public class CreateEventCommandHandler : ICommandHandler<CreateEventCommand, Gui
             banner: bannerUrl,
             startDate: command.StartDate,
             endDate: command.EndDate,
-            committee: committee
+            committee: committee,
+            seats: new List<EventSeat>()
         );
 
+
         _context.Events.Add(newEvent);
+
+        var seats = command.Seats.Select(s => s.ToEventSeat(newEvent.Id, s.TicketId)).ToList();
+        newEvent.Seats = seats;
 
         // Add ticket information
         foreach (var ticket in command.TicketInformation)

@@ -48,5 +48,10 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
         builder.HasOne(e => e.Committee)
             .WithOne(c => c.Event)
             .HasForeignKey<EventCommittee>(c => c.EventId);
+
+        builder.HasMany(e => e.Seats)
+            .WithOne(s => s.Event)
+            .HasForeignKey(s => s.EventId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

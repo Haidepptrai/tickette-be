@@ -53,4 +53,9 @@ public static class EventMapper
             TicketImage = ticket.TicketImage
         }).ToList() ?? []
     };
+
+    public static EventSeat ToEventSeat(this SeatDto seat, Guid eventId, Guid ticketId)
+    {
+        return EventSeat.CreateEventSeat(seat.Row, seat.Column, eventId, ticketId);
+    }
 }

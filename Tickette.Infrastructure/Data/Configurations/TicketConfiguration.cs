@@ -49,5 +49,9 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
 
         builder.Property(t => t.TicketImage)
             .HasMaxLength(2500);
+
+        builder.HasMany(t => t.Seats)
+            .WithOne(s => s.Ticket)
+            .HasForeignKey(s => s.TicketId);
     }
 }
