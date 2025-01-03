@@ -11,9 +11,14 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
         builder.Property(e => e.Quantity)
             .IsRequired();
 
-        builder.HasOne<Order>()
+        builder.HasOne(o => o.Order)
             .WithMany(order => order.Items)
             .HasForeignKey(e => e.OrderId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(o => o.Ticket)
+            .WithMany()
+            .HasForeignKey(e => e.TicketId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

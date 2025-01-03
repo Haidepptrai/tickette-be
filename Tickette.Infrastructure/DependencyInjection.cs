@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -69,8 +70,50 @@ public static class DependencyInjection
                     ValidAudience = builder.Configuration["Jwt:Audience"],
                     IssuerSigningKey = new SymmetricSecurityKey(key)
                 };
-            });
 
+                // Disable claim type remapping
+                options.MapInboundClaims = false;
+
+                // Hook into events for custom behavior
+                options.Events = new JwtBearerEvents
+                {
+                    OnChallenge = context =>
+                    {
+                        // Prevent the default behavior (which includes setting WWW-Authenticate header)
+                        context.HandleResponse();
+
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        context.Response.ContentType = "application/json";
+
+                        var problemDetails = new
+                        {
+                            status_code = 401,
+                            message = "Authentication Failed",
+                            detail = "Access denied. Please provide a valid Bearer token.",
+                            type = "https://datatracker.ietf.org/doc/html/rfc7235#section-3.1",
+                        };
+
+                        return context.Response.WriteAsJsonAsync(problemDetails);
+                    },
+                    OnAuthenticationFailed = context =>
+                    {
+                        // Handle token validation failures (e.g., expired tokens)
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        context.Response.ContentType = "application/json";
+
+                        var problemDetails = new
+                        {
+                            status_code = 401,
+                            message = "Authentication Failed",
+                            detail = context.Exception.Message,
+                            type = "https://datatracker.ietf.org/doc/html/rfc7235#section-3.1",
+                        };
+
+                        return context.Response.WriteAsJsonAsync(problemDetails);
+                    }
+                };
+
+            });
 
         builder.Services.TryAddScoped<IQueryDispatcher, QueryDispatcher>();
         builder.Services.TryAddScoped<ICommandDispatcher, CommandDispatcher>();

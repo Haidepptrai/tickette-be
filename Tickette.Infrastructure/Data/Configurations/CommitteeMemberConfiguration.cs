@@ -15,7 +15,7 @@ public class CommitteeMemberConfiguration : IEntityTypeConfiguration<CommitteeMe
         builder.HasOne(cm => cm.CommitteeRole)
             .WithMany(cr => cr.CommitteeMembers)
             .HasForeignKey(cm => cm.CommitteeRoleId)
-            .OnDelete(DeleteBehavior.Restrict); // Prevent deletion of CommitteeRole if associated with CommitteeMember
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.Property(cm => cm.EventId)
             .IsRequired();
@@ -27,7 +27,7 @@ public class CommitteeMemberConfiguration : IEntityTypeConfiguration<CommitteeMe
             .HasForeignKey(cm => cm.UserId);
 
         builder.HasOne(cm => cm.Event)
-            .WithMany()
+            .WithMany(e => e.CommitteeMembers)
             .HasForeignKey(cm => cm.EventId);
     }
 }

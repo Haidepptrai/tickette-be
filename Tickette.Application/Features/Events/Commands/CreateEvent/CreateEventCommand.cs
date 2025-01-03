@@ -16,7 +16,7 @@ public record CreateEventCommand(
     DateTime StartDate,
     DateTime EndDate,
     CommitteeInformation Committee,
-    ICollection<SeatDto> Seats,
+    ICollection<SeatDto>? Seats,
     TicketInformation[] TicketInformation,
     IFileUpload LogoFile,
     IFileUpload BannerFile
@@ -49,7 +49,6 @@ public class CreateEventCommandHandler : ICommandHandler<CreateEventCommand, Gui
         _context.EventCommittees.Add(committee);
 
         // Create a new event
-        //Missing committee id
         var newEvent = Event.CreateEvent(
             name: command.Name,
             address: command.Address,
@@ -60,14 +59,17 @@ public class CreateEventCommandHandler : ICommandHandler<CreateEventCommand, Gui
             startDate: command.StartDate,
             endDate: command.EndDate,
             committee: committee,
+            members: new List<CommitteeMember>(),
             seats: new List<EventSeat>()
         );
 
-
         _context.Events.Add(newEvent);
 
-        var seats = command.Seats.Select(s => s.ToEventSeat(newEvent.Id, s.TicketId)).ToList();
-        newEvent.Seats = seats;
+        if (command.Seats != null)
+        {
+            var seats = command.Seats.Select(s => s.ToEventSeat(newEvent.Id, s.TicketId)).ToList();
+            newEvent.AddSeats(seats);
+        }
 
         // Add ticket information
         foreach (var ticket in command.TicketInformation)
@@ -102,11 +104,10 @@ public class CreateEventCommandHandler : ICommandHandler<CreateEventCommand, Gui
 
         // Add create user as admin of the event
         var admin = new CommitteeMember(command.UserId, committeeRole.Id, newEvent.Id);
-        _context.CommitteeMembers.Add(admin);
+        newEvent.AddDefaultMembers(admin);
 
         await _context.SaveChangesAsync(cancellationToken);
 
         return newEvent.Id;
     }
-
 }

@@ -20,5 +20,9 @@ public class EventCommitteeConfiguration : IEntityTypeConfiguration<EventCommitt
 
         builder.Property(e => e.CreatedAt)
             .ValueGeneratedOnAdd();
+
+        builder.HasOne(e => e.Event)
+            .WithOne(c => c.Committee)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

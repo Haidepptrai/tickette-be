@@ -38,5 +38,5 @@ public class CreateEventCommandDto
     public IFormFile BannerFile { get; set; }
 
     [FromForm, JsonProperty("seat_map")]
-    public ICollection<SeatDto> Seats { get; set; }
+    public ICollection<SeatDto>? Seats { get; set; }
 }

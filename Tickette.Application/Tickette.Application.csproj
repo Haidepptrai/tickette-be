@@ -20,7 +20,7 @@
     <Folder Include="Features\CommitteeMembers\Command\AddCommitteeMember\" />
     <Folder Include="Features\CommitteeMembers\Command\ChangeCommitteeMemberRole\" />
     <Folder Include="Features\CommitteeMembers\Query\GetAllCommitteeMemberOfEvent\" />
-    <Folder Include="Features\Coupons\Common\" />
+    <Folder Include="Features\Orders\Command\" />
     <Folder Include="Features\Tickets\Query\" />
   </ItemGroup>
 

@@ -35,9 +35,11 @@ public class Event : BaseEntity
 
     public ICollection<Coupon> Coupons { get; set; } = new List<Coupon>();
 
+    public ICollection<CommitteeMember> CommitteeMembers { get; set; } = new List<CommitteeMember>();
+
     protected Event() { }
 
-    private Event(string name, string address, Guid categoryId, string description, string logo, string banner, DateTime startDate, DateTime endDate, EventCommittee committee, ICollection<EventSeat> seats)
+    private Event(string name, string address, Guid categoryId, string description, string logo, string banner, DateTime startDate, DateTime endDate, EventCommittee committee, ICollection<CommitteeMember> members, ICollection<EventSeat> seats)
     {
         Name = name;
         Address = address;
@@ -48,6 +50,7 @@ public class Event : BaseEntity
         StartDate = startDate;
         EndDate = endDate;
         Committee = committee;
+        CommitteeMembers = members;
         EventSlug = GenerateSlug(name);
         Status = ApprovalStatus.Pending;
         Seats = seats;
@@ -63,6 +66,7 @@ public class Event : BaseEntity
         DateTime startDate,
         DateTime endDate,
         EventCommittee committee,
+        ICollection<CommitteeMember> members,
         ICollection<EventSeat> seats)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -71,16 +75,19 @@ public class Event : BaseEntity
         if (startDate >= endDate)
             throw new ArgumentException("Start date must be earlier than end date.", nameof(startDate));
 
-        return new Event(name, address, categoryId, description, logo, banner, startDate, endDate, committee, seats);
+        return new Event(name, address, categoryId, description, logo, banner, startDate, endDate, committee, members, seats);
     }
 
 
-    public void AddSeats(EventSeat seats)
+    public void AddSeats(ICollection<EventSeat> seats)
     {
-        Seats.Add(seats);
+        Seats = seats;
     }
 
-
+    public void AddDefaultMembers(CommitteeMember member)
+    {
+        CommitteeMembers.Add(member);
+    }
 
     private static string GenerateSlug(string name)
     {

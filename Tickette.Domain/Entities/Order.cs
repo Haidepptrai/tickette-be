@@ -27,7 +27,7 @@ public sealed class Order : BaseEntity
     private readonly List<OrderItem> _items = new();
     public IReadOnlyCollection<OrderItem> Items => _items.AsReadOnly();
 
-    protected Order() { }
+    private Order() { }
 
     private Order(Guid eventId, Guid buyerId, string buyerEmail, string buyerName, string buyerPhone)
     {
