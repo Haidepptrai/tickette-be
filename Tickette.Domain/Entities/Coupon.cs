@@ -59,6 +59,11 @@ public sealed class Coupon : BaseEntity
         };
     }
 
+    public decimal CalculateFinalPrice(decimal originalPrice)
+    {
+        return originalPrice - CalculateDiscount(originalPrice);
+    }
+
     public void Deactivate()
     {
         IsActive = false;

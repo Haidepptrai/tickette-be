@@ -6,6 +6,7 @@ namespace Tickette.Domain.Entities;
 public class CommitteeRole : BaseEntity
 {
     public string Name { get; private set; }
+
     public List<CommitteeRolePermission> Permissions { get; private set; } = [];
 
     public ICollection<CommitteeMember> CommitteeMembers { get; private set; }

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using System.Text.Json.Serialization;
 using Tickette.Application.Features.Events.Common;
 
@@ -35,4 +36,7 @@ public class CreateEventCommandDto
 
     [FromForm, JsonPropertyName("banner_file")]
     public IFormFile BannerFile { get; set; }
+
+    [FromForm, JsonProperty("seat_map")]
+    public ICollection<SeatDto>? Seats { get; set; }
 }

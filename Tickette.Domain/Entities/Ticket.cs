@@ -30,7 +30,11 @@ public class Ticket : BaseEntity
 
     public string? TicketImage { get; private set; }
 
-    public Event? Event { get; private set; }
+    public Event Event { get; set; }
+
+    public ICollection<EventSeat>? Seats { get; set; } = new List<EventSeat>();
+
+    protected Ticket() { }
 
     public Ticket(
         Guid eventId,

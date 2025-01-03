@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 using Tickette.API.Dto;
 using Tickette.API.Helpers;
 using Tickette.Application.Common.CQRS;
@@ -70,18 +70,18 @@ public class EventsController : ControllerBase
         try
         {
             // Extract the UserId from the JWT token
-            var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub);
 
-            if (string.IsNullOrEmpty(userId))
+            if (userIdClaim == null || string.IsNullOrWhiteSpace(userIdClaim.Value))
             {
-                return ResponseHandler.ErrorResponse(Guid.Empty, "User Id Not Found", 500);
+                return ResponseHandler.ErrorResponse(Guid.Empty, "User ID not found in token", 500);
             }
 
             var logoFile = new FormFileAdapter(commandDto.LogoFile);
             var bannerFile = new FormFileAdapter(commandDto.BannerFile);
 
             var command = new CreateEventCommand(
-                Guid.Parse(userId),
+                Guid.Parse(userIdClaim.Value),
                 commandDto.Name,
                 commandDto.Address,
                 commandDto.CategoryId,
@@ -89,6 +89,7 @@ public class EventsController : ControllerBase
                 commandDto.StartDate,
                 commandDto.EndDate,
                 commandDto.Committee,
+                commandDto.Seats,
                 commandDto.TicketInformation,
                 logoFile,
                 bannerFile

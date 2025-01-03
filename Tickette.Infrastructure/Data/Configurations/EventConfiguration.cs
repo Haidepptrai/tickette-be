@@ -18,11 +18,6 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
             .IsRequired()
             .HasMaxLength(250);
 
-        builder.HasOne(e => e.Category)
-            .WithMany(c => c.Events)
-            .HasForeignKey(e => e.CategoryId)
-            .OnDelete(DeleteBehavior.Restrict);
-
         builder.Property(e => e.Description)
             .IsRequired()
             .HasMaxLength(10000);
@@ -45,8 +40,9 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
         builder.Property(e => e.EventSlug)
             .IsRequired();
 
-        builder.HasOne(e => e.Committee)
-            .WithOne(c => c.Event)
-            .HasForeignKey<EventCommittee>(c => c.EventId);
+        builder.HasOne(e => e.Category)
+            .WithMany(c => c.Events)
+            .HasForeignKey(e => e.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

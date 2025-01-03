@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Tickette.Infrastructure.Data;
@@ -11,9 +12,11 @@ using Tickette.Infrastructure.Data;
 namespace Tickette.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250102163949_Seat_Feature_For_Event")]
+    partial class Seat_Feature_For_Event
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -530,10 +533,6 @@ namespace Tickette.Infrastructure.Migrations
                     b.HasIndex("TicketId")
                         .HasDatabaseName("ix_event_seat_ticket_id");
 
-                    b.HasIndex("Row", "Column", "EventId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_event_seat_row_column_event_id");
-
                     b.ToTable("event_seat", (string)null);
                 });
 
@@ -655,9 +654,6 @@ namespace Tickette.Infrastructure.Migrations
 
                     b.HasIndex("OrderId")
                         .HasDatabaseName("ix_order_items_order_id");
-
-                    b.HasIndex("TicketId")
-                        .HasDatabaseName("ix_order_items_ticket_id");
 
                     b.ToTable("order_items", (string)null);
                 });
@@ -921,7 +917,7 @@ namespace Tickette.Infrastructure.Migrations
                         .HasConstraintName("fk_committee_members_committee_roles_committee_role_id");
 
                     b.HasOne("Tickette.Domain.Entities.Event", "Event")
-                        .WithMany("CommitteeMembers")
+                        .WithMany()
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
@@ -1016,7 +1012,7 @@ namespace Tickette.Infrastructure.Migrations
                     b.HasOne("Tickette.Domain.Entities.Event", "Event")
                         .WithMany("Seats")
                         .HasForeignKey("EventId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_event_seat_events_event_id");
 
@@ -1034,23 +1030,12 @@ namespace Tickette.Infrastructure.Migrations
 
             modelBuilder.Entity("Tickette.Domain.Entities.OrderItem", b =>
                 {
-                    b.HasOne("Tickette.Domain.Entities.Order", "Order")
+                    b.HasOne("Tickette.Domain.Entities.Order", null)
                         .WithMany("Items")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_order_items_orders_order_id");
-
-                    b.HasOne("Tickette.Domain.Entities.Ticket", "Ticket")
-                        .WithMany()
-                        .HasForeignKey("TicketId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_order_items_tickets_ticket_id");
-
-                    b.Navigation("Order");
-
-                    b.Navigation("Ticket");
                 });
 
             modelBuilder.Entity("Tickette.Domain.Entities.Ticket", b =>
@@ -1079,8 +1064,6 @@ namespace Tickette.Infrastructure.Migrations
                 {
                     b.Navigation("Committee")
                         .IsRequired();
-
-                    b.Navigation("CommitteeMembers");
 
                     b.Navigation("Coupons");
 

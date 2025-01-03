@@ -31,9 +31,30 @@ public class Event : BaseEntity
 
     public ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
 
+    public ICollection<EventSeat> Seats { get; set; } = new List<EventSeat>();
+
     public ICollection<Coupon> Coupons { get; set; } = new List<Coupon>();
 
-    private Event() { }
+    public ICollection<CommitteeMember> CommitteeMembers { get; set; } = new List<CommitteeMember>();
+
+    protected Event() { }
+
+    private Event(string name, string address, Guid categoryId, string description, string logo, string banner, DateTime startDate, DateTime endDate, EventCommittee committee, ICollection<CommitteeMember> members, ICollection<EventSeat> seats)
+    {
+        Name = name;
+        Address = address;
+        CategoryId = categoryId;
+        Description = description;
+        Logo = logo;
+        Banner = banner;
+        StartDate = startDate;
+        EndDate = endDate;
+        Committee = committee;
+        CommitteeMembers = members;
+        EventSlug = GenerateSlug(name);
+        Status = ApprovalStatus.Pending;
+        Seats = seats;
+    }
 
     public static Event CreateEvent(
         string name,
@@ -44,7 +65,9 @@ public class Event : BaseEntity
         string banner,
         DateTime startDate,
         DateTime endDate,
-        EventCommittee committee)
+        EventCommittee committee,
+        ICollection<CommitteeMember> members,
+        ICollection<EventSeat> seats)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Event name cannot be empty.", nameof(name));
@@ -52,20 +75,18 @@ public class Event : BaseEntity
         if (startDate >= endDate)
             throw new ArgumentException("Start date must be earlier than end date.", nameof(startDate));
 
-        return new Event
-        {
-            Name = name,
-            Address = address,
-            CategoryId = categoryId,
-            Description = description,
-            Logo = logo,
-            Banner = banner,
-            StartDate = DateTime.SpecifyKind(startDate, DateTimeKind.Utc),
-            EndDate = DateTime.SpecifyKind(endDate, DateTimeKind.Utc),
-            Status = ApprovalStatus.Pending, // Default status
-            Committee = committee,
-            EventSlug = GenerateSlug(name)
-        };
+        return new Event(name, address, categoryId, description, logo, banner, startDate, endDate, committee, members, seats);
+    }
+
+
+    public void AddSeats(ICollection<EventSeat> seats)
+    {
+        Seats = seats;
+    }
+
+    public void AddDefaultMembers(CommitteeMember member)
+    {
+        CommitteeMembers.Add(member);
     }
 
     private static string GenerateSlug(string name)
