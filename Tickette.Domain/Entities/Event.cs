@@ -3,7 +3,7 @@ using Tickette.Domain.Enums;
 
 namespace Tickette.Domain.Entities;
 
-public class Event : BaseEntity
+public sealed class Event : BaseEntity
 {
     public Guid CategoryId { get; set; }
 

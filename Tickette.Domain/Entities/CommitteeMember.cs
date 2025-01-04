@@ -2,7 +2,7 @@
 
 namespace Tickette.Domain.Entities;
 
-public class CommitteeMember : BaseEntity
+public sealed class CommitteeMember : BaseEntity
 {
     public Guid UserId { get; private set; }
 

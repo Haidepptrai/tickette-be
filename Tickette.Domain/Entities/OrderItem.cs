@@ -2,7 +2,7 @@
 
 namespace Tickette.Domain.Entities;
 
-public class OrderItem : BaseEntity
+public sealed class OrderItem : BaseEntity
 {
     public Guid OrderId { get; private set; }
 
