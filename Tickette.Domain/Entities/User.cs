@@ -3,7 +3,7 @@ using Tickette.Domain.Enums;
 
 namespace Tickette.Domain.Entities;
 
-public class User : IdentityUser<Guid>
+public sealed class User : IdentityUser<Guid>
 {
     public string? FullName { get; set; }
 

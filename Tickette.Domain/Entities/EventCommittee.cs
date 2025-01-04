@@ -2,7 +2,7 @@
 
 namespace Tickette.Domain.Entities;
 
-public class EventCommittee : BaseEntity
+public sealed class EventCommittee : BaseEntity
 {
     public Guid EventId { get; set; }
 

@@ -58,8 +58,32 @@ public class OrderTicketsCommandHandler : ICommandHandler<OrderTicketsCommand, R
                         $"Invalid TicketId: {item.TicketId}. The ticket does not exist for the specified event.");
                 }
 
-                order.AddOrderItem(item.TicketId, ticketPrice, item.Quantity);
+                // Fetch the selected seats from the database
+                List<EventSeat>? selectedSeats = null;
+
+                if (item.SelectedSeats != null && item.SelectedSeats.Any())
+                {
+                    selectedSeats = await _context.EventSeats
+                        .Where(seat => item.SelectedSeats.Contains(seat.Id) && seat.IsAvailable)
+                        .ToListAsync(cancellation);
+
+                    if (selectedSeats.Count != item.SelectedSeats.Count)
+                    {
+                        throw new InvalidOperationException("One or more selected seats are not available.");
+                    }
+
+                    // Mark the seats as reserved (IsAvailable = false)
+                    foreach (var seat in selectedSeats)
+                    {
+                        seat.SetAsReserved();
+                    }
+
+                }
+
+                // Add the order item with the selected seats
+                order.AddOrderItem(item.TicketId, ticketPrice, item.Quantity, selectedSeats);
             }
+
 
             if (command.CouponCode is not null)
             {

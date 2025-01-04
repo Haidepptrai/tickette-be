@@ -27,6 +27,10 @@ public sealed class Order : BaseEntity
     private readonly List<OrderItem> _items = new();
     public IReadOnlyCollection<OrderItem> Items => _items.AsReadOnly();
 
+    public Event Event { get; private set; }
+
+    public User UserOrdered { get; private set; }
+
     private Order() { }
 
     private Order(Guid eventId, Guid buyerId, string buyerEmail, string buyerName, string buyerPhone)
@@ -44,7 +48,7 @@ public sealed class Order : BaseEntity
         return new Order(eventId, buyerId, buyerEmail, buyerName, buyerPhone);
     }
 
-    public void AddOrderItem(Guid ticketId, decimal ticketPrice, int quantity)
+    public void AddOrderItem(Guid ticketId, decimal ticketPrice, int quantity, List<EventSeat>? seats)
     {
         if (quantity <= 0)
         {
@@ -59,7 +63,7 @@ public sealed class Order : BaseEntity
         }
         else
         {
-            _items.Add(new OrderItem(ticketId, ticketPrice, quantity));
+            _items.Add(new OrderItem(ticketId, ticketPrice, quantity, seats));
         }
 
         CalculateTotals();

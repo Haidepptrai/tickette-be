@@ -23,5 +23,7 @@ public interface IApplicationDbContext
 
     DbSet<Coupon> Coupons { get; }
 
+    DbSet<EventSeat> EventSeats { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

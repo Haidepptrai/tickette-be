@@ -3,7 +3,7 @@ using Tickette.Domain.ValueObjects;
 
 namespace Tickette.Domain.Entities;
 
-public class CommitteeRole : BaseEntity
+public sealed class CommitteeRole : BaseEntity
 {
     public string Name { get; private set; }
 

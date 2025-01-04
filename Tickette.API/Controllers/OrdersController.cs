@@ -4,6 +4,9 @@ using System.IdentityModel.Tokens.Jwt;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Application.Features.Orders.Query.ReviewOrders;
+using Tickette.Application.Features.QRCode.Common;
+using Tickette.Application.Features.QRCode.Queries;
+using Tickette.Application.Features.QRCode.Queries.ValidateQrCode;
 using Tickette.Application.Features.Tickets.Command;
 using Tickette.Application.Helpers;
 
@@ -58,6 +61,64 @@ namespace Tickette.API.Controllers
                 return BadRequest(ResponseHandler.ErrorResponse<List<OrderedTicketGroupListDto>>(null, ex.Message));
             }
         }
+
+        [HttpGet("detail/get-qrcode/{orderItemId:guid}")]
+        [Authorize]
+        public async Task<IActionResult> GetQrCode(Guid orderItemId, CancellationToken cancellation)
+        {
+            try
+            {
+                // Extract UserId from JWT token claims
+                var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub);
+
+                if (userIdClaim == null || string.IsNullOrWhiteSpace(userIdClaim.Value))
+                {
+                    return BadRequest(ResponseHandler.ErrorResponse<byte[]>(null, "User ID not found in token."));
+                }
+
+                // Set the UserId and OrderItemId in the query object
+                var query = new GetQrCodeQuery
+                {
+                    UserId = Guid.Parse(userIdClaim.Value),
+                    OrderItemId = orderItemId
+                };
+
+                // Dispatch the query
+                var response = await _queryDispatcher.Dispatch<GetQrCodeQuery, ResponseDto<byte[]>>(query, cancellation);
+                if (!response.Success)
+                {
+                    return BadRequest(response);
+                }
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ResponseHandler.ErrorResponse<byte[]>(null, ex.Message));
+            }
+        }
+
+        [HttpPost("validate-qrcode")]
+        [Authorize]
+        public async Task<IActionResult> ValidateQrCode([FromBody] ValidateQrCodeQuery query, CancellationToken cancellation)
+        {
+            try
+            {
+                var response = await _queryDispatcher.Dispatch<ValidateQrCodeQuery, ResponseDto<DataRetrievedFromQrCode>>(query, cancellation);
+
+                if (!response.Success)
+                {
+                    return BadRequest(response);
+                }
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ResponseHandler.ErrorResponse(false, ex.Message));
+            }
+        }
+
+
 
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] OrderTicketsCommand command, CancellationToken cancellation)
