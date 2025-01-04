@@ -16,6 +16,7 @@ using Tickette.Infrastructure.CQRS;
 using Tickette.Infrastructure.Data;
 using Tickette.Infrastructure.FileStorage;
 using Tickette.Infrastructure.Identity;
+using Tickette.Infrastructure.Services;
 
 namespace Tickette.Infrastructure;
 
@@ -131,6 +132,7 @@ public static class DependencyInjection
             .WithScopedLifetime());
 
         builder.Services.TryAddScoped<IFileStorageService, S3FileStorageService>();
+        builder.Services.TryAddScoped<IQrCodeService, QrCodeService>();
 
 
         // Apply migrations during app initialization

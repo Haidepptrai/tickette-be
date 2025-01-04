@@ -16,6 +16,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
     public DbSet<Coupon> Coupons { get; set; }
+    public DbSet<EventSeat> EventSeats { get; set; }
 
     public DbSet<Category> Categories { get; set; }
     public DbSet<CommitteeMember> CommitteeMembers { get; set; }

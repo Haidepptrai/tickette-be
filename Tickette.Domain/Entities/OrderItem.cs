@@ -12,13 +12,20 @@ public sealed class OrderItem : BaseEntity
 
     public decimal Price { get; private set; } // Price of the ticket at the time of the order
 
+    public bool IsScanned { get; private set; }
+
+    public DateTime? ScannedAt { get; private set; } // Later we will update of who in the event committee scanned the ticket
+
     public Order Order { get; private set; }
 
     public Ticket Ticket { get; private set; }
 
-    protected OrderItem() { }
+    public ICollection<EventSeat> Seats = new List<EventSeat>();
 
-    public OrderItem(Guid ticketId, decimal price, int quantity)
+
+    private OrderItem() { }
+
+    public OrderItem(Guid ticketId, decimal price, int quantity, List<EventSeat>? seats)
     {
         if (quantity <= 0)
         {
@@ -28,11 +35,14 @@ public sealed class OrderItem : BaseEntity
         TicketId = ticketId;
         Price = price;
         Quantity = quantity;
+        Seats = seats ?? [];
+        IsScanned = false;
     }
 
-    public void SetTicketOrderId(Guid orderId)
+    public void SetAsScanned()
     {
-        OrderId = orderId;
+        IsScanned = true;
+        ScannedAt = DateTime.UtcNow;
     }
 
     public void AddQuantity(int quantity)

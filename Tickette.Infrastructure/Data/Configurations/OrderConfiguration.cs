@@ -28,6 +28,16 @@ public class TicketOrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(e => e.TotalPrice)
             .HasPrecision(18, 2);
 
+        builder.HasOne(e => e.Event)
+            .WithMany()
+            .HasForeignKey(e => e.EventId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.UserOrdered)
+            .WithMany()
+            .HasForeignKey(e => e.UserOrderedId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // Indexes
         builder.HasIndex(e => e.EventId)
             .HasDatabaseName("IX_TicketOrder_EventId");
