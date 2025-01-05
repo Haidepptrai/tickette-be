@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -12,11 +13,14 @@ using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Domain.Entities;
 using Tickette.Infrastructure.Authentication;
+using Tickette.Infrastructure.Authorization.Handlers;
+using Tickette.Infrastructure.Authorization.Requirements;
 using Tickette.Infrastructure.CQRS;
 using Tickette.Infrastructure.Data;
 using Tickette.Infrastructure.FileStorage;
 using Tickette.Infrastructure.Identity;
 using Tickette.Infrastructure.Services;
+using static Tickette.Domain.Common.Constant;
 
 namespace Tickette.Infrastructure;
 
@@ -78,6 +82,7 @@ public static class DependencyInjection
                 // Hook into events for custom behavior
                 options.Events = new JwtBearerEvents
                 {
+                    // Customize the 401 Unauthorized response
                     OnChallenge = context =>
                     {
                         // Prevent the default behavior (which includes setting WWW-Authenticate header)
@@ -96,6 +101,8 @@ public static class DependencyInjection
 
                         return context.Response.WriteAsJsonAsync(problemDetails);
                     },
+
+                    // Handle token validation failures
                     OnAuthenticationFailed = context =>
                     {
                         // Handle token validation failures (e.g., expired tokens)
@@ -111,10 +118,54 @@ public static class DependencyInjection
                         };
 
                         return context.Response.WriteAsJsonAsync(problemDetails);
+                    },
+
+                    // Customize the 403 Forbidden response
+                    OnForbidden = context =>
+                    {
+                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        context.Response.ContentType = "application/json";
+
+                        var problemDetails = new
+                        {
+                            status_code = 403,
+                            message = "Authorization Failed",
+                            detail = "You do not have permission to access this resource.",
+                            type = "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.3"
+                        };
+
+                        return context.Response.WriteAsJsonAsync(problemDetails);
                     }
                 };
 
             });
+
+        builder.Services.AddAuthorization(options =>
+        {
+            // Dynamic policy for EventOwner
+            options.AddPolicy(COMMITTEE_MEMBER_ROLES.EventOwner, policy =>
+                policy.Requirements.Add(new EventRoleRequirement(COMMITTEE_MEMBER_ROLES.EventOwner)));
+
+            // Dynamic policy for Admin
+            options.AddPolicy(COMMITTEE_MEMBER_ROLES.Admin, policy =>
+                policy.Requirements.Add(new EventRoleRequirement(COMMITTEE_MEMBER_ROLES.Admin)));
+
+            // Dynamic policy for Manager
+            options.AddPolicy(COMMITTEE_MEMBER_ROLES.Manager, policy =>
+                policy.Requirements.Add(new EventRoleRequirement(COMMITTEE_MEMBER_ROLES.Manager)));
+
+            // Dynamic policy for CheckInStaff
+            options.AddPolicy(COMMITTEE_MEMBER_ROLES.CheckInStaff, policy =>
+                policy.Requirements.Add(new EventRoleRequirement(COMMITTEE_MEMBER_ROLES.CheckInStaff)));
+
+            // Dynamic policy for CheckOutStaff
+            options.AddPolicy(COMMITTEE_MEMBER_ROLES.CheckOutStaff, policy =>
+                policy.Requirements.Add(new EventRoleRequirement(COMMITTEE_MEMBER_ROLES.CheckOutStaff)));
+
+            // Dynamic policy for RedeemStaff
+            options.AddPolicy(COMMITTEE_MEMBER_ROLES.RedeemStaff, policy =>
+                policy.Requirements.Add(new EventRoleRequirement(COMMITTEE_MEMBER_ROLES.RedeemStaff)));
+        });
 
         builder.Services.TryAddScoped<IQueryDispatcher, QueryDispatcher>();
         builder.Services.TryAddScoped<ICommandDispatcher, CommandDispatcher>();
@@ -133,8 +184,9 @@ public static class DependencyInjection
 
         builder.Services.TryAddScoped<IFileStorageService, S3FileStorageService>();
         builder.Services.TryAddScoped<IQrCodeService, QrCodeService>();
-
-
+        // Register the custom handler and HttpContextAccessor
+        builder.Services.AddScoped<IAuthorizationHandler, EventRoleHandler>();
+        builder.Services.AddHttpContextAccessor();
         // Apply migrations during app initialization
         // ReSharper disable once ConvertToUsingDeclaration
         using (var scope = builder.Services.BuildServiceProvider().CreateScope())

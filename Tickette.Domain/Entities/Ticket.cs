@@ -36,19 +36,19 @@ public sealed class Ticket : BaseEntity
 
     protected Ticket() { }
 
-    public Ticket(
-        Guid eventId,
-        string name,
-        decimal price,
-        int totalTickets,
-        int minTicketsPerOrder,
-        int maxTicketsPerOrder,
-        DateTime saleStartTime,
-        DateTime saleEndTime,
-        DateTime eventStartTime,
-        DateTime eventEndTime,
-        string description,
-        string? ticketImage)
+    private Ticket(
+    Guid eventId,
+    string name,
+    decimal price,
+    int totalTickets,
+    int minTicketsPerOrder,
+    int maxTicketsPerOrder,
+    DateTime saleStartTime,
+    DateTime saleEndTime,
+    DateTime eventStartTime,
+    DateTime eventEndTime,
+    string description,
+    string? ticketImage)
     {
         EventId = eventId;
         Name = name;
@@ -64,6 +64,62 @@ public sealed class Ticket : BaseEntity
         Description = description;
         TicketImage = ticketImage;
     }
+
+    public static Ticket Create(
+        Guid eventId,
+        string name,
+        decimal price,
+        int totalTickets,
+        int minTicketsPerOrder,
+        int maxTicketsPerOrder,
+        DateTime saleStartTime,
+        DateTime saleEndTime,
+        DateTime eventStartTime,
+        DateTime eventEndTime,
+        string description,
+        string? ticketImage)
+    {
+        // Business rule validations
+        if (eventId == Guid.Empty)
+            throw new ArgumentException("Event ID cannot be empty.");
+
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Name cannot be empty.");
+
+        if (price < 0)
+            throw new ArgumentException("Price must be a positive value.");
+
+        if (totalTickets <= 0)
+            throw new ArgumentException("Total tickets must be greater than zero.");
+
+        if (minTicketsPerOrder < 0 || maxTicketsPerOrder < minTicketsPerOrder)
+            throw new ArgumentException("Invalid ticket order limits.");
+
+        if (saleStartTime >= saleEndTime)
+            throw new ArgumentException("Sale start time must be before sale end time.");
+
+        if (eventStartTime >= eventEndTime)
+            throw new ArgumentException("Event start time must be before event end time.");
+
+        if (saleEndTime > eventStartTime)
+            throw new ArgumentException("Sale end time must be before the event start time.");
+
+        // Create and return a valid Ticket object
+        return new Ticket(
+            eventId,
+            name,
+            price,
+            totalTickets,
+            minTicketsPerOrder,
+            maxTicketsPerOrder,
+            saleStartTime,
+            saleEndTime,
+            eventStartTime,
+            eventEndTime,
+            description,
+            ticketImage);
+    }
+
 
     public void UpdateRemainingTickets(int quantity)
     {

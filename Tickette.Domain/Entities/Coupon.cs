@@ -21,11 +21,6 @@ public sealed class Coupon : BaseEntity
 
     private Coupon(Guid eventId, string code, decimal discountValue, DiscountType discountType, DateTime expiryDate)
     {
-        if (discountValue <= 0)
-        {
-            throw new ArgumentException("Discount value must be greater than zero.", nameof(discountValue));
-        }
-
         EventId = eventId;
         Code = code.ToUpper();
         DiscountValue = discountValue;
@@ -36,6 +31,22 @@ public sealed class Coupon : BaseEntity
 
     public static Coupon CreateCoupon(Guid eventId, string code, decimal discountValue, DiscountType discountType, DateTime expiryDate)
     {
+        //Conditional check
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            throw new ArgumentException("Coupon code is required.", nameof(code));
+        }
+
+        if (DateTime.UtcNow > expiryDate)
+        {
+            throw new ArgumentException("Expiry date must be in the future.", nameof(expiryDate));
+        }
+
+        if (discountValue <= 0)
+        {
+            throw new ArgumentException("Discount value must be greater than zero.", nameof(discountValue));
+        }
+
         return new Coupon(eventId, code, discountValue, discountType, expiryDate);
     }
 

@@ -30,4 +30,12 @@ public static class Constant
         public const string Summary = "Summary";
         public const string Voucher = "Voucher";
     }
+
+    public static class APPLICATION_ROLE
+    {
+        public const string Admin = "Admin";
+        public const string User = "User";
+        public const string Manager = "Manager";
+        public const string Moderator = "Moderator";
+    }
 }

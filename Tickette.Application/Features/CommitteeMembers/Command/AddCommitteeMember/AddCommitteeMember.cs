@@ -22,7 +22,7 @@ public class AddCommitteeMemberCommandHandler : ICommandHandler<AddCommitteeMemb
 
     public async Task<object> Handle(AddCommitteeMemberCommand request, CancellationToken cancellationToken)
     {
-        var entity = new CommitteeMember(request.UserId, request.CommitteeMemberRoleId, request.EventId);
+        var entity = CommitteeMember.Create(request.UserId, request.CommitteeMemberRoleId, request.EventId);
 
         _context.CommitteeMembers.Add(entity);
 

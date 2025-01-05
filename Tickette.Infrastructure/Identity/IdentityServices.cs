@@ -10,50 +10,21 @@ namespace Tickette.Infrastructure.Identity;
 public class IdentityServices : IIdentityServices
 {
     private readonly UserManager<User> _userManager;
-    private readonly IUserClaimsPrincipalFactory<User> _userClaimsPrincipalFactory;
-    private readonly IAuthorizationService _authorizationService;
     private readonly ITokenService _tokenService;
     private readonly SignInManager<User> _signInManager;
+    private readonly RoleManager<IdentityRole<Guid>> _roleManager;
 
     public IdentityServices(
         UserManager<User> userManager,
         IUserClaimsPrincipalFactory<User> userClaimsPrincipalFactory,
         IAuthorizationService authorizationService,
         ITokenService tokenService,
-        SignInManager<User> signInManager)
+        SignInManager<User> signInManager, RoleManager<IdentityRole<Guid>> roleManager)
     {
         _userManager = userManager;
-        _authorizationService = authorizationService;
-        _userClaimsPrincipalFactory = userClaimsPrincipalFactory;
         _tokenService = tokenService;
         _signInManager = signInManager;
-    }
-
-    public async Task<bool> IsInRoleAsync(Guid userId, string role)
-    {
-        var user = await _userManager.FindByIdAsync(userId.ToString());
-        if (user == null)
-        {
-            return false;
-        }
-
-        return await _userManager.IsInRoleAsync(user, role);
-    }
-
-    public async Task<bool> AuthorizeAsync(Guid userId, string policyName)
-    {
-        var user = await _userManager.FindByIdAsync(userId.ToString());
-
-        if (user == null)
-        {
-            return false;
-        }
-
-        var principal = await _userClaimsPrincipalFactory.CreateAsync(user);
-
-        var result = await _authorizationService.AuthorizeAsync(principal, policyName);
-
-        return result.Succeeded;
+        _roleManager = roleManager;
     }
 
     public async Task<(Result Result, Guid UserId)> CreateUserAsync(string userEmail, string password)
@@ -87,7 +58,7 @@ public class IdentityServices : IIdentityServices
         }
 
         // Generate Access Token
-        var accessToken = _tokenService.GenerateToken(user);
+        var accessToken = await _tokenService.GenerateToken(user);
 
         // Generate a new Refresh Token and set expiry time
         var refreshToken = _tokenService.GenerateRefreshToken();
@@ -108,6 +79,7 @@ public class IdentityServices : IIdentityServices
         return (Result.Success(), accessToken, refreshToken);
     }
 
+    // Get New Refresh Token Method
     public async Task<(Result Result, string? AccessToken, string? RefreshToken)> RefreshTokenAsync(string token, string refreshToken)
     {
         // Validate the token (optional if you're just replacing the expired Access Token)
@@ -132,7 +104,7 @@ public class IdentityServices : IIdentityServices
         }
 
         // Generate a new Access Token
-        var newAccessToken = _tokenService.GenerateToken(user);
+        var newAccessToken = await _tokenService.GenerateToken(user);
 
         // Generate a new Refresh Token
         var newRefreshToken = _tokenService.GenerateRefreshToken();
@@ -148,6 +120,26 @@ public class IdentityServices : IIdentityServices
 
         // Return the new tokens
         return (Result.Success(), newAccessToken, newRefreshToken);
+    }
+
+    public async Task<Result> AssignToRoleAsync(Guid userId, Guid roleId)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+
+        if (user == null)
+        {
+            return Result.Failure(["User not found."]);
+        }
+
+        var role = await _roleManager.FindByIdAsync(roleId.ToString());
+
+        if (role == null)
+        {
+            return Result.Failure(["Role not found."]);
+        }
+
+        var result = await _userManager.AddToRoleAsync(user, role.Name!);
+        return result.ToApplicationResult();
     }
 
     public async Task<Result> DeleteUserAsync(Guid userId)

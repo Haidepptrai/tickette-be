@@ -10,6 +10,7 @@ using Tickette.Application.Features.Events.Common;
 using Tickette.Application.Features.Events.Queries.GetEventByCategory;
 using Tickette.Application.Features.Events.Queries.GetEventById;
 using Tickette.Application.Helpers;
+using Tickette.Domain.Common;
 
 namespace Tickette.API.Controllers;
 
@@ -106,7 +107,7 @@ public class EventsController : ControllerBase
 
     //Update Event Status
     [HttpPatch("{eventId:guid}/status")]
-    [Authorize]
+    [Authorize(Roles = Constant.APPLICATION_ROLE.Admin)]
     public async Task<ResponseDto<Guid>> UpdateEventStatus(Guid eventId, UpdateEventStatusCommand command, CancellationToken token)
     {
         try

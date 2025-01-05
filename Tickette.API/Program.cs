@@ -65,7 +65,7 @@ namespace Tickette.API
                             In = ParameterLocation.Header,
 
                         },
-                        new string[] { }
+                        []
                     }
                 });
 
