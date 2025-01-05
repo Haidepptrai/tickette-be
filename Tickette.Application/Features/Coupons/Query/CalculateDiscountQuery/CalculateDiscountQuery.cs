@@ -43,9 +43,9 @@ public class CalculateDiscountQueryHandler : IQueryHandler<CalculateDiscountQuer
 
             return ResponseHandler.SuccessResponse(priceDiscountInfo, "Retrieve Discount Successfully");
         }
-        catch
+        catch (Exception ex)
         {
-            throw new Exception("An unexpected error occurred while processing the request.");
+            throw new Exception(ex.Message);
         }
     }
 }

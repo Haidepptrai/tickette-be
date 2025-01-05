@@ -78,6 +78,10 @@ public sealed class Event : BaseEntity
         return new Event(name, address, categoryId, description, logo, banner, startDate, endDate, committee, members, seats);
     }
 
+    public void AddTicket(Ticket ticket)
+    {
+        Tickets.Add(ticket);
+    }
 
     public void AddSeats(ICollection<EventSeat> seats)
     {

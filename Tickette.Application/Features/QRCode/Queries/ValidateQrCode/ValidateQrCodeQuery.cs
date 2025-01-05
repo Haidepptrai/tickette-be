@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Tickette.Application.Common.CQRS;
+using Tickette.Application.Common.Exceptions;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.QRCode.Common;
 using Tickette.Application.Helpers;
@@ -50,10 +51,7 @@ public class ValidateQrCodeQueryHandler : IQueryHandler<ValidateQrCodeQuery, Res
             // if the order item is already scanned, return an error
             if (orderItem.IsScanned)
             {
-                return ResponseHandler.ErrorResponse(
-                    new DataRetrievedFromQrCode { IsValid = false },
-                    "QR Code already scanned"
-                );
+                throw new QrCodeAlreadyScannedException();
             }
 
             orderItem.SetAsScanned();
@@ -69,6 +67,10 @@ public class ValidateQrCodeQueryHandler : IQueryHandler<ValidateQrCodeQuery, Res
             await _context.SaveChangesAsync(cancellation);
 
             return ResponseHandler.SuccessResponse(responseDto, "QR Code validated successfully.");
+        }
+        catch (QrCodeAlreadyScannedException ex)
+        {
+            throw new QrCodeAlreadyScannedException();
         }
         catch (Exception ex)
         {

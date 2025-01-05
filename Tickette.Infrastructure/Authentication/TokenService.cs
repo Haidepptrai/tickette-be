@@ -21,7 +21,7 @@ public class TokenService : ITokenService
         _userManager = userManager;
     }
 
-    public string GenerateToken(User user)
+    public async Task<string> GenerateToken(User user)
     {
         // Define the claims for the JWT token
         var claims = new List<Claim>
@@ -33,12 +33,9 @@ public class TokenService : ITokenService
 
         // Add roles as claims
 
-        var roles = _userManager.GetRolesAsync(user).Result;
+        var roles = await _userManager.GetRolesAsync(user);
 
-        foreach (var role in roles)
-        {
-            claims.Add(new Claim(ClaimTypes.Role, role));
-        }
+        claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
         // Create the security key
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? throw new InvalidOperationException("No Key Provided")));

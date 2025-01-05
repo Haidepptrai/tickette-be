@@ -9,9 +9,7 @@ public interface IIdentityServices
 
     Task<(Result Result, string? AccessToken, string? RefreshToken)> RefreshTokenAsync(string token, string refreshToken);
 
-    Task<bool> IsInRoleAsync(Guid userId, string role);
-
-    Task<bool> AuthorizeAsync(Guid userId, string policyName);
+    Task<Result> AssignToRoleAsync(Guid userId, Guid roleId);
 
     Task<Result> DeleteUserAsync(Guid userId);
 

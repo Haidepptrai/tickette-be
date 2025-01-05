@@ -17,19 +17,6 @@ public sealed class CommitteeRole : BaseEntity
         Name = name;
     }
 
-    // Predefined roles with permissions
-    public static CommitteeRole EventOwner => new CommitteeRole(Constant.COMMITTEE_MEMBER_ROLES.EventOwner);
-
-    public static CommitteeRole Admin => new CommitteeRole(Constant.COMMITTEE_MEMBER_ROLES.Admin);
-
-    public static CommitteeRole Manager => new CommitteeRole(Constant.COMMITTEE_MEMBER_ROLES.Manager);
-
-    public static CommitteeRole CheckInStaff => new CommitteeRole(Constant.COMMITTEE_MEMBER_ROLES.CheckInStaff);
-
-    public static CommitteeRole CheckOutStaff => new CommitteeRole(Constant.COMMITTEE_MEMBER_ROLES.CheckOutStaff);
-
-    public static CommitteeRole RedeemStaff => new CommitteeRole(Constant.COMMITTEE_MEMBER_ROLES.RedeemStaff);
-
     // Method to add permissions
     public CommitteeRole WithPermissions(params string[] permissions)
     {
@@ -44,10 +31,10 @@ public sealed class CommitteeRole : BaseEntity
         return this;
     }
 
-    public void AddPermission(CommitteeRolePermission permission)
+    // Check if role has a specific permission
+    public bool HasPermission(string permissionName)
     {
-        if (!Permissions.Contains(permission))
-            Permissions.Add(permission);
+        return Permissions.Any(p => p.Name == permissionName);
     }
 }
 

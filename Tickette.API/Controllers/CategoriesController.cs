@@ -36,7 +36,7 @@ namespace Tickette.API.Controllers
 
         // POST: api/Categories
         [HttpPost]
-        [Authorize("Admin")]
+        [Authorize(Roles = "Admin")]
         [SwaggerOperation(
             Summary = "Create Category",
             Description = "Create a new Category to the system, required a Name"
@@ -50,6 +50,7 @@ namespace Tickette.API.Controllers
 
         // PUT: api/Categories/guid
         [HttpPut("{id:guid}")]
+        [Authorize(Roles = "Admin")]
         public async Task<object> UpdateCategory(Guid id, [FromBody] UpdateCategoryCommand command, CancellationToken cancellation)
         {
             // Dispatch the update command
@@ -61,6 +62,7 @@ namespace Tickette.API.Controllers
 
         // DELETE: api/Categories/guid
         [HttpDelete("{id:guid}")]
+        [Authorize(Roles = "Admin")]
         public async Task<object> DeleteCategory(Guid id, CancellationToken cancellation)
         {
             // Dispatch the delete command

@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.Coupons.Command.CreateCoupon;
 using Tickette.Application.Features.Coupons.Common;
 using Tickette.Application.Features.Coupons.Query.CalculateDiscountQuery;
 using Tickette.Application.Helpers;
+using Constant = Tickette.Domain.Common.Constant;
 
 namespace Tickette.API.Controllers
 {
@@ -26,6 +28,7 @@ namespace Tickette.API.Controllers
             Summary = "Create Coupon",
             Description = "Create a new coupon for an event"
         )]
+        [Authorize(Policy = Constant.COMMITTEE_MEMBER_ROLES.EventOwner)]
         public async Task<IActionResult> CreateCoupon([FromBody] CreateCouponCommand command, CancellationToken cancellation = default)
         {
             try
@@ -50,6 +53,7 @@ namespace Tickette.API.Controllers
             Summary = "Calculate Discount",
             Description = "Calculate discount based on the given coupon code"
         )]
+        [Authorize(Policy = "EventOwnerPolicy")]
         public async Task<IActionResult> CalculateDiscount([FromBody] CalculateDiscountQuery query, CancellationToken cancellation = default)
         {
             try

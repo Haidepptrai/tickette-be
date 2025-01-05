@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using Tickette.Application.Common.CQRS;
@@ -54,10 +55,10 @@ namespace Tickette.API.Controllers
             };
 
             return ResponseHandler.SuccessResponse<object>(data, "Login Successfully");
-
         }
 
         [HttpPost("refresh-token")]
+        [Authorize]
         public async Task<ResponseDto<object>> RefreshToken([FromBody] RefreshTokenRequest request)
         {
             var (result, token, refreshToken) = await _identityServices.RefreshTokenAsync(request.Token, request.RefreshToken);
@@ -91,20 +92,22 @@ namespace Tickette.API.Controllers
             public string Password { get; set; }
         }
 
-        [HttpGet("{userId:guid}/role/{role}")]
-        public async Task<IActionResult> IsInRole(Guid userId, string role)
+        [HttpPost("assign-role")]
+        public async Task<IActionResult> AssignRole([FromBody] AssignRoleRequest request)
         {
-            var isInRole = await _identityServices.IsInRoleAsync(userId, role);
-            return Ok(new { IsInRole = isInRole });
+            var result = await _identityServices.AssignToRoleAsync(request.UserId, request.RoleId);
+            if (result.Succeeded)
+            {
+                return Ok("Role assigned successfully.");
+            }
+            return BadRequest(result.Errors);
         }
 
-        [HttpGet("{userId:guid}/authorize/{policyName}")]
-        public async Task<IActionResult> Authorize(Guid userId, string policyName)
+        public class AssignRoleRequest
         {
-            var isAuthorized = await _identityServices.AuthorizeAsync(userId, policyName);
-            return Ok(new { IsAuthorized = isAuthorized });
+            public Guid UserId { get; set; }
+            public Guid RoleId { get; set; }
         }
-
 
         [HttpDelete("{userId:guid}")]
         public async Task<IActionResult> DeleteUser(Guid userId)

@@ -23,6 +23,7 @@
     <Folder Include="Features\Orders\Command\" />
     <Folder Include="Features\QRCode\Commands\" />
     <Folder Include="Features\Tickets\Query\" />
+    <Folder Include="DTOs\" />
   </ItemGroup>
 
 </Project>
