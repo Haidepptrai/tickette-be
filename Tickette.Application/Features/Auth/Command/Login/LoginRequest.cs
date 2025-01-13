@@ -6,7 +6,7 @@ using Tickette.Application.Features.Auth.Common;
 
 namespace Tickette.Application.Features.Auth.Command.Login;
 
-public record LoginCommand([EmailAddress] string UserEmail, [PasswordPropertyText] string Password);
+public record LoginCommand([EmailAddress] string Email, [PasswordPropertyText] string Password);
 
 public class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResultDto>
 {
@@ -19,12 +19,12 @@ public class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResultDto>
 
     public async Task<LoginResultDto> Handle(LoginCommand command, CancellationToken cancellationToken)
     {
-        var (result, token, refreshToken) = await _identityServices.LoginAsync(command.UserEmail, command.Password);
+        var (result, token, refreshToken) = await _identityServices.LoginAsync(command.Email, command.Password);
 
         return new LoginResultDto
         {
             Succeeded = result.Succeeded,
-            Token = token,
+            AccessToken = token,
             RefreshToken = refreshToken,
             Errors = result.Succeeded ? Enumerable.Empty<string>() : result.Errors
         };

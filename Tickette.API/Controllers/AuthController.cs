@@ -50,7 +50,7 @@ namespace Tickette.API.Controllers
 
             var data = new
             {
-                Token = result.Token,
+                AccessToken = result.AccessToken,
                 RefreshToken = result.RefreshToken
             };
 
