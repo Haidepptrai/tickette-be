@@ -184,11 +184,12 @@ public static class DependencyInjection
 
         builder.Services.TryAddScoped<IFileStorageService, S3FileStorageService>();
         builder.Services.TryAddScoped<IQrCodeService, QrCodeService>();
+
         // Register the custom handler and HttpContextAccessor
         builder.Services.AddScoped<IAuthorizationHandler, EventRoleHandler>();
         builder.Services.AddHttpContextAccessor();
+
         // Apply migrations during app initialization
-        // ReSharper disable once ConvertToUsingDeclaration
         using (var scope = builder.Services.BuildServiceProvider().CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
