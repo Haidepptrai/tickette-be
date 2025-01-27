@@ -15,15 +15,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="DTOs\Auth\" />
     <Folder Include="Features\Auth\Query\" />
     <Folder Include="Features\Categories\Common\" />
     <Folder Include="Features\CommitteeMembers\Command\AddCommitteeMember\" />
     <Folder Include="Features\CommitteeMembers\Command\ChangeCommitteeMemberRole\" />
     <Folder Include="Features\CommitteeMembers\Query\GetAllCommitteeMemberOfEvent\" />
+    <Folder Include="Features\Events\Queries\GetEventByUserId\" />
     <Folder Include="Features\Orders\Command\" />
     <Folder Include="Features\QRCode\Commands\" />
     <Folder Include="Features\Tickets\Query\" />
-    <Folder Include="DTOs\" />
+    <Folder Include="Factories\" />
   </ItemGroup>
 
 </Project>

@@ -9,7 +9,15 @@ public class EventDetailDto
 
     public required string Name { get; set; }
 
-    public required string Address { get; set; }
+    public string LocationName { get; set; }
+
+    public string City { get; set; }
+
+    public string District { get; set; }
+
+    public string Ward { get; set; }
+
+    public string StreetAddress { get; set; }
 
     public required string Description { get; set; }
 

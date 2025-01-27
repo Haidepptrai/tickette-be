@@ -3,7 +3,7 @@ using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Exceptions;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.QRCode.Common;
-using Tickette.Application.Helpers;
+using Tickette.Application.Wrappers;
 
 namespace Tickette.Application.Features.QRCode.Queries.ValidateQrCode;
 

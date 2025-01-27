@@ -182,7 +182,7 @@ public static class DependencyInjection
             .AsImplementedInterfaces()
             .WithScopedLifetime());
 
-        builder.Services.TryAddScoped<IFileStorageService, S3FileStorageService>();
+        builder.Services.TryAddScoped<IFileUploadService, S3FileUploadService>();
         builder.Services.TryAddScoped<IQrCodeService, QrCodeService>();
 
         // Register the custom handler and HttpContextAccessor

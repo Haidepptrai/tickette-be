@@ -17,6 +17,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<OrderItem> OrderItems { get; set; }
     public DbSet<Coupon> Coupons { get; set; }
     public DbSet<EventSeat> EventSeats { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 
     public DbSet<Category> Categories { get; set; }
     public DbSet<CommitteeMember> CommitteeMembers { get; set; }
@@ -40,4 +41,5 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
         builder.Entity<IdentityRoleClaim<Guid>>(b => b.ToTable("identity_role_claims"));
         builder.Entity<IdentityUserToken<Guid>>(b => b.ToTable("identity_user_tokens"));
     }
+
 }

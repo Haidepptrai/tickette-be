@@ -2,7 +2,7 @@
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.QRCode.Common;
-using Tickette.Application.Helpers;
+using Tickette.Application.Wrappers;
 
 namespace Tickette.Application.Features.QRCode.Queries;
 
@@ -47,8 +47,8 @@ public class GetQrCodeQueryQueryHandler : IQueryHandler<GetQrCodeQuery, Response
             OrderItemId = orderItem.Id,
             EventId = orderItem.Order.EventId,
             TicketName = orderItem.Ticket.Name,
-            TicketEventStartTime = orderItem.Ticket.EventStartTime,
-            TicketEventEndTime = orderItem.Ticket.EventEndTime,
+            //TicketEventStartTime = orderItem.Ticket.EventStartTime,
+            //TicketEventEndTime = orderItem.Ticket.EventEndTime,
             SeatsOrdered = orderItem.Seats
         };
 

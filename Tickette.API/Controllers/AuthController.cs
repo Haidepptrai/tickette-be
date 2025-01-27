@@ -4,9 +4,10 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
+using Tickette.Application.Common.Models;
+using Tickette.Application.DTOs.Auth;
 using Tickette.Application.Features.Auth.Command.Login;
-using Tickette.Application.Features.Auth.Common;
-using Tickette.Application.Helpers;
+using Tickette.Application.Wrappers;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -28,11 +29,11 @@ namespace Tickette.API.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
-            var (result, userId) = await _identityServices.CreateUserAsync(request.UserEmail, request.Password);
+            var result = await _identityServices.CreateUserAsync(request.Email, request.Password);
 
             if (result.Succeeded)
             {
-                return Ok(new { UserId = userId });
+                return Ok(ResponseHandler.SuccessResponse<object>(null, "User Created Successfully"));
             }
 
             return BadRequest(result.Errors);
@@ -41,52 +42,34 @@ namespace Tickette.API.Controllers
         [HttpPost("login")]
         public async Task<ResponseDto<object>> Login([FromBody] LoginCommand command, CancellationToken token = default)
         {
-            var result = await _commandDispatcher.Dispatch<LoginCommand, LoginResultDto>(command, token);
+            var result = await _commandDispatcher.Dispatch<LoginCommand, AuthResult<TokenRetrieval>>(command, token);
 
             if (!result.Succeeded)
             {
                 return ResponseHandler.ErrorResponse<object>(result);
             }
 
-            var data = new
-            {
-                AccessToken = result.AccessToken,
-                RefreshToken = result.RefreshToken
-            };
-
-            return ResponseHandler.SuccessResponse<object>(data, "Login Successfully");
+            return ResponseHandler.SuccessResponse<object>(result.Data, "Login Successfully");
         }
 
         [HttpPost("refresh-token")]
         [Authorize]
-        public async Task<ResponseDto<object>> RefreshToken([FromBody] RefreshTokenRequest request)
+        public async Task<ResponseDto<object>> RefreshToken([FromBody] string refreshToken)
         {
-            var (result, token, refreshToken) = await _identityServices.RefreshTokenAsync(request.Token, request.RefreshToken);
+            var result = await _identityServices.RefreshTokenAsync(refreshToken);
 
             if (!result.Succeeded)
             {
                 return ResponseHandler.ErrorResponse<object>(result);
             }
 
-            var data = new
-            {
-                Token = token,
-                RefreshToken = refreshToken
-            };
-
-            return ResponseHandler.SuccessResponse<object>(data, "Token refreshed successfully.");
-        }
-
-        public class RefreshTokenRequest
-        {
-            public string Token { get; set; }
-            public string RefreshToken { get; set; }
+            return ResponseHandler.SuccessResponse<object>(result.Data, "Token refreshed successfully.");
         }
 
         public class RegisterRequest
         {
             [EmailAddress]
-            public string UserEmail { get; set; }
+            public string Email { get; set; }
 
             [PasswordPropertyText]
             public string Password { get; set; }

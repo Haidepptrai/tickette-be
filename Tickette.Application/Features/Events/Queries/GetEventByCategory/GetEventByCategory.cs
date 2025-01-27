@@ -26,7 +26,8 @@ public class GetEventByCategoryHandler : BaseHandler<GetEventByCategoryHandler>,
             var events = await _context.Events
                 .Include(ev => ev.Category)
                 .Include(ev => ev.Committee)
-                .Include(ev => ev.Tickets)
+                .Include(ev => ev.EventDates)
+                    .ThenInclude(ed => ed.Tickets)
                 .Where(c => c.CategoryId == query.CategoryId)
                 .ToListAsync(cancellation);
 

@@ -24,5 +24,7 @@ public class EventCommitteeConfiguration : IEntityTypeConfiguration<EventCommitt
         builder.HasOne(e => e.Event)
             .WithOne(c => c.Committee)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasQueryFilter(e => e.DeletedAt == null);
     }
 }

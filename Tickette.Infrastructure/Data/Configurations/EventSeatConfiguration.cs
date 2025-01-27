@@ -20,7 +20,7 @@ public class EventSeatConfiguration : IEntityTypeConfiguration<EventSeat>
         builder.HasIndex(es => new { es.Row, es.Column, es.EventId })
             .IsUnique();
 
-        builder.HasOne(es => es.Event)
+        builder.HasOne(es => es.EventDate)
             .WithMany(e => e.Seats)
             .HasForeignKey(es => es.EventId)
             .OnDelete(DeleteBehavior.Restrict);
@@ -28,5 +28,7 @@ public class EventSeatConfiguration : IEntityTypeConfiguration<EventSeat>
         builder.HasOne(es => es.Ticket)
             .WithMany(t => t.Seats)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasQueryFilter(e => e.DeletedAt == null);
     }
 }

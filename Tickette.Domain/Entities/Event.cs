@@ -7,9 +7,19 @@ public sealed class Event : BaseEntity
 {
     public Guid CategoryId { get; set; }
 
+    public Guid CreatedById { get; set; }
+
     public string Name { get; private set; }
 
-    public string Address { get; set; }
+    public string LocationName { get; set; }
+
+    public string City { get; set; }
+
+    public string District { get; set; }
+
+    public string Ward { get; set; }
+
+    public string StreetAddress { get; set; }
 
     public string Description { get; set; }
 
@@ -29,68 +39,123 @@ public sealed class Event : BaseEntity
 
     public EventCommittee Committee { get; set; }
 
-    public ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
-
-    public ICollection<EventSeat> Seats { get; set; } = new List<EventSeat>();
+    public User User { get; set; }
 
     public ICollection<Coupon> Coupons { get; set; } = new List<Coupon>();
 
     public ICollection<CommitteeMember> CommitteeMembers { get; set; } = new List<CommitteeMember>();
 
+    public ICollection<EventDate> EventDates { get; set; } = new List<EventDate>();
+
     protected Event() { }
 
-    private Event(string name, string address, Guid categoryId, string description, string logo, string banner, DateTime startDate, DateTime endDate, EventCommittee committee, ICollection<CommitteeMember> members, ICollection<EventSeat> seats)
+    private Event(
+        string name,
+        string locationName,
+        string city,
+        string district,
+        string ward,
+        string streetAddress,
+        string description,
+        string logo,
+        string banner,
+        Guid categoryId,
+        DateTime startDate,
+        DateTime endDate,
+        User userCreated,
+        EventCommittee committee
+        )
     {
         Name = name;
-        Address = address;
+        LocationName = locationName;
+        City = city;
+        District = district;
+        Ward = ward;
+        StreetAddress = streetAddress;
         CategoryId = categoryId;
         Description = description;
         Logo = logo;
         Banner = banner;
         StartDate = startDate;
         EndDate = endDate;
+        User = userCreated;
         Committee = committee;
-        CommitteeMembers = members;
+        CommitteeMembers = new List<CommitteeMember>();
         EventSlug = GenerateSlug(name);
         Status = ApprovalStatus.Pending;
-        Seats = seats;
     }
 
     public static Event CreateEvent(
         string name,
-        string address,
-        Guid categoryId,
+        string locationName,
+        string city,
+        string district,
+        string ward,
+        string streetAddress,
         string description,
         string logo,
         string banner,
+        Guid categoryId,
         DateTime startDate,
         DateTime endDate,
-        EventCommittee committee,
-        ICollection<CommitteeMember> members,
-        ICollection<EventSeat> seats)
+        User userCreated,
+        EventCommittee committee
+        )
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Event name cannot be empty.", nameof(name));
 
+        if (string.IsNullOrWhiteSpace(locationName))
+            throw new ArgumentException("Location name cannot be empty.", nameof(locationName));
+
+        if (string.IsNullOrWhiteSpace(city))
+            throw new ArgumentException("City cannot be empty.", nameof(city));
+
+        if (string.IsNullOrWhiteSpace(district))
+            throw new ArgumentException("District cannot be empty.", nameof(district));
+
+        if (string.IsNullOrWhiteSpace(ward))
+            throw new ArgumentException("Ward cannot be empty.", nameof(ward));
+
+        if (string.IsNullOrWhiteSpace(streetAddress))
+            throw new ArgumentException("Street address cannot be empty.", nameof(streetAddress));
+
         if (startDate >= endDate)
             throw new ArgumentException("Start date must be earlier than end date.", nameof(startDate));
 
-        return new Event(name, address, categoryId, description, logo, banner, startDate, endDate, committee, members, seats);
+        var committeeCreation = EventCommittee.CreateEventCommittee(committee.Name, committee.Description);
+
+        return new Event(
+            name,
+            locationName,
+            city,
+            district,
+            ward,
+            streetAddress,
+            description,
+            logo,
+            banner,
+            categoryId,
+            startDate,
+            endDate,
+            userCreated,
+            committeeCreation
+            );
     }
 
-    public void AddTicket(Ticket ticket)
+    public void AddCommittee(string name, string description)
     {
-        Tickets.Add(ticket);
-    }
-
-    public void AddSeats(ICollection<EventSeat> seats)
-    {
-        Seats = seats;
+        Committee = EventCommittee.CreateEventCommittee(name, description);
     }
 
     public void AddDefaultMembers(CommitteeMember member)
     {
         CommitteeMembers.Add(member);
+    }
+
+    public void AddEventDates(EventDate eventDate)
+    {
+        EventDates.Add(eventDate);
     }
 
     private static string GenerateSlug(string name)

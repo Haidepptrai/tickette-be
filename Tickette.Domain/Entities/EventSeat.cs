@@ -8,17 +8,21 @@ public sealed class EventSeat : BaseEntity
 
     public Guid TicketId { get; private set; }
 
+    public Guid EventDateId { get; private set; }
+
     public int Row { get; private set; }
 
     public int Column { get; private set; }
 
     public bool IsAvailable { get; private set; }
 
-    public Event Event { get; set; }
+    public EventDate EventDate { get; set; }
 
     public Ticket Ticket { get; set; }
 
-    private EventSeat(int row, int column, Guid eventId, Guid ticketId)
+    private EventSeat() { }
+
+    private EventSeat(int row, int column, EventDate eventDate, Ticket ticket)
     {
         if (row <= 0)
         {
@@ -30,16 +34,16 @@ public sealed class EventSeat : BaseEntity
             throw new ArgumentException("Column must be greater than zero.", nameof(column));
         }
 
-        EventId = eventId;
-        TicketId = ticketId;
+        EventDate = eventDate;
+        Ticket = ticket;
         Row = row;
         Column = column;
         IsAvailable = true;
     }
 
-    public static EventSeat CreateEventSeat(int row, int column, Guid eventId, Guid ticketId)
+    public static EventSeat CreateEventSeat(int row, int column, EventDate eventDate, Ticket ticket)
     {
-        return new EventSeat(row, column, eventId, ticketId);
+        return new EventSeat(row, column, eventDate, ticket);
     }
 
     public void SetAsReserved()

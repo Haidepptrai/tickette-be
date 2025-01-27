@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
-using System.Security.Claims;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Models;
+using Tickette.Application.DTOs.Auth;
 using Tickette.Domain.Entities;
 
 namespace Tickette.Infrastructure.Identity;
@@ -13,21 +13,22 @@ public class IdentityServices : IIdentityServices
     private readonly ITokenService _tokenService;
     private readonly SignInManager<User> _signInManager;
     private readonly RoleManager<IdentityRole<Guid>> _roleManager;
+    private readonly IApplicationDbContext _context;
 
     public IdentityServices(
         UserManager<User> userManager,
-        IUserClaimsPrincipalFactory<User> userClaimsPrincipalFactory,
-        IAuthorizationService authorizationService,
         ITokenService tokenService,
-        SignInManager<User> signInManager, RoleManager<IdentityRole<Guid>> roleManager)
+        SignInManager<User> signInManager,
+        RoleManager<IdentityRole<Guid>> roleManager, IApplicationDbContext context)
     {
         _userManager = userManager;
         _tokenService = tokenService;
         _signInManager = signInManager;
         _roleManager = roleManager;
+        _context = context;
     }
 
-    public async Task<(Result Result, Guid UserId)> CreateUserAsync(string userEmail, string password)
+    public async Task<AuthResult<Guid>> CreateUserAsync(string userEmail, string password)
     {
         var user = new User
         {
@@ -38,122 +39,133 @@ public class IdentityServices : IIdentityServices
 
         var result = await _userManager.CreateAsync(user, password);
 
-        return (result.ToApplicationResult(), user.Id);
+        return result.ToApplicationResult(user.Id);
     }
 
-    // Login Method
-    public async Task<(Result Result, string? AccessToken, string? RefreshToken)> LoginAsync(string userEmail, string password)
+    public async Task<AuthResult<TokenRetrieval>> LoginAsync(string userEmail, string password, CancellationToken cancellation)
     {
         // Validate user credentials
-        var user = await _userManager.FindByEmailAsync(userEmail);
+        var user = await _userManager
+            .FindByEmailAsync(userEmail);
         if (user == null)
         {
-            return (Result.Failure(["Invalid Credential."]), null, null);
+            return AuthResult<TokenRetrieval>.Failure(["Invalid credentials."]);
         }
 
         var result = await _signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: false);
         if (!result.Succeeded)
         {
-            return (Result.Failure(["Invalid Credential."]), null, null);
+            return AuthResult<TokenRetrieval>.Failure(["Invalid credentials."]);
         }
 
-        // Generate Access Token
+        // Generate tokens
         var accessToken = await _tokenService.GenerateToken(user);
-
-        // Generate a new Refresh Token and set expiry time
         var refreshToken = _tokenService.GenerateRefreshToken();
         var refreshTokenExpiryTime = DateTime.UtcNow.AddMonths(1);
 
-        // Update user's Refresh Token and Expiry
-        user.RefreshToken = refreshToken;
-        user.RefreshTokenExpiryTime = refreshTokenExpiryTime;
+        // Save refresh token with cancellation support
+        await AddOrUpdateRefreshTokenAsync(user.Id, refreshToken, refreshTokenExpiryTime, cancellation);
 
-        // Save changes to the database
-        var updateResult = await _userManager.UpdateAsync(user);
-        if (!updateResult.Succeeded)
+        return AuthResult<TokenRetrieval>.Success(new TokenRetrieval
         {
-            return (Result.Failure(updateResult.Errors.Select(e => e.Description).ToArray()), null, null);
-        }
-
-        // Return token and refresh token
-        return (Result.Success(), accessToken, refreshToken);
+            AccessToken = accessToken,
+            RefreshToken = refreshToken
+        });
     }
 
-    // Get New Refresh Token Method
-    public async Task<(Result Result, string? AccessToken, string? RefreshToken)> RefreshTokenAsync(string token, string refreshToken)
+    public async Task<AuthResult<TokenRetrieval>> RefreshTokenAsync(string refreshToken)
     {
-        // Validate the token (optional if you're just replacing the expired Access Token)
-        var principal = _tokenService.GetPrincipalFromExpiredToken(token);
-        if (principal == null)
-        {
-            return (Result.Failure(["Invalid token."]), null, null);
-        }
-
-        // Extract the user ID from the claims
-        var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userId))
-        {
-            return (Result.Failure(["Invalid token."]), null, null);
-        }
-
-        // Find the user by ID
-        var user = await _userManager.FindByIdAsync(userId);
-        if (user == null || user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
-        {
-            return (Result.Failure(["Invalid or expired refresh token."]), null, null);
-        }
-
-        // Generate a new Access Token
-        var newAccessToken = await _tokenService.GenerateToken(user);
-
-        // Generate a new Refresh Token
-        var newRefreshToken = _tokenService.GenerateRefreshToken();
-        user.RefreshToken = newRefreshToken;
-        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddMonths(1);
-
-        // Update the user in the database
-        var updateResult = await _userManager.UpdateAsync(user);
-        if (!updateResult.Succeeded)
-        {
-            return (Result.Failure(updateResult.Errors.Select(e => e.Description).ToArray()), null, null);
-        }
-
-        // Return the new tokens
-        return (Result.Success(), newAccessToken, newRefreshToken);
-    }
-
-    public async Task<Result> AssignToRoleAsync(Guid userId, Guid roleId)
-    {
-        var user = await _userManager.FindByIdAsync(userId.ToString());
+        // Validate refresh token
+        var user = await _userManager.Users
+            .Include(u => u.RefreshTokens)
+            .SingleOrDefaultAsync(u => u.RefreshTokens.Any(rt => rt.Token == refreshToken));
 
         if (user == null)
         {
-            return Result.Failure(["User not found."]);
+            return AuthResult<TokenRetrieval>.Failure(["Invalid refresh token."]);
+        }
+
+        var token = user.RefreshTokens.SingleOrDefault(rt => rt.Token == refreshToken);
+        if (token == null || token.ExpiryTime <= DateTime.UtcNow)
+        {
+            return AuthResult<TokenRetrieval>.Failure(["Invalid or expired refresh token."]);
+        }
+
+        // Generate new tokens
+        var newAccessToken = await _tokenService.GenerateToken(user);
+        var newRefreshToken = _tokenService.GenerateRefreshToken();
+        var newExpiryTime = DateTime.UtcNow.AddMonths(1);
+
+        user.RefreshTokens.Remove(token);
+        user.AddRefreshToken(newRefreshToken, newExpiryTime);
+
+        // Update user in database
+        var updateResult = await _userManager.UpdateAsync(user);
+        if (!updateResult.Succeeded)
+        {
+            return AuthResult<TokenRetrieval>.Failure(updateResult.Errors.Select(e => e.Description));
+        }
+
+        return AuthResult<TokenRetrieval>.Success(new TokenRetrieval
+        {
+            AccessToken = newAccessToken,
+            RefreshToken = newRefreshToken
+        });
+    }
+
+    public async Task<AuthResult<object?>> AssignToRoleAsync(Guid userId, Guid roleId)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user == null)
+        {
+            return AuthResult<object?>.Failure(["User not found."]);
         }
 
         var role = await _roleManager.FindByIdAsync(roleId.ToString());
-
         if (role == null)
         {
-            return Result.Failure(["Role not found."]);
+            return AuthResult<object?>.Failure(["Role not found."]);
         }
 
         var result = await _userManager.AddToRoleAsync(user, role.Name!);
-        return result.ToApplicationResult();
+        return result.ToApplicationResult<object?>(result);
     }
 
-    public async Task<Result> DeleteUserAsync(Guid userId)
+    public async Task<AuthResult<object?>> DeleteUserAsync(Guid userId)
     {
         var user = await _userManager.FindByIdAsync(userId.ToString());
-
         if (user == null)
         {
-            return Result.Failure(new[] { "User not found." });
+            return AuthResult<object?>.Failure(["User not found."]);
         }
 
         var result = await _userManager.DeleteAsync(user);
+        return result.ToApplicationResult<object?>(result);
+    }
 
-        return result.ToApplicationResult();
+    public async Task<AuthResult<User>> GetUserByIdAsync(Guid userId)
+    {
+        var user = await _userManager.Users
+            .SingleOrDefaultAsync(u => u.Id == userId);
+
+        return user == null ?
+            AuthResult<User>.Failure(["User not found."]) : AuthResult<User>.Success(user);
+    }
+
+    private async Task AddOrUpdateRefreshTokenAsync(Guid userId, string token, DateTime expiryTime, CancellationToken cancellationToken)
+    {
+        // Remove expired tokens directly from the database
+        _context.RefreshTokens.RemoveRange(
+            _context.RefreshTokens.Where(rt => rt.UserId == userId && rt.ExpiryTime <= DateTime.UtcNow)
+        );
+
+        // Add the new refresh token
+        var refreshToken = new RefreshToken(token, expiryTime) { UserId = userId };
+        _context.RefreshTokens.Add(refreshToken);
+
+        // Save changes with cancellation support
+        await _context.SaveChangesAsync(cancellationToken);
     }
 }
+
 

@@ -6,7 +6,7 @@ using Tickette.Application.Features.Categories.Command.CreateCategory;
 using Tickette.Application.Features.Categories.Command.DeleteCategory;
 using Tickette.Application.Features.Categories.Command.UpdateCategory;
 using Tickette.Application.Features.Categories.Queries;
-using Tickette.Application.Helpers;
+using Tickette.Application.Wrappers;
 using Tickette.Domain.Entities;
 
 namespace Tickette.API.Controllers

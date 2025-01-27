@@ -10,7 +10,11 @@ public static class EventMapper
         Description = entity.Description,
         StartDate = entity.StartDate,
         EndDate = entity.EndDate,
-        Location = entity.Address,
+        LocationName = entity.LocationName,
+        City = entity.City,
+        District = entity.District,
+        Ward = entity.Ward,
+        StreetAddress = entity.StreetAddress,
         ImageUrl = entity.Banner,
         Category = entity.Category.Name,
         Committee = new CommitteeInformation()
@@ -24,7 +28,11 @@ public static class EventMapper
     {
         Id = entity.Id,
         Name = entity.Name,
-        Address = entity.Address,
+        LocationName = entity.LocationName,
+        City = entity.City,
+        District = entity.District,
+        Ward = entity.Ward,
+        StreetAddress = entity.StreetAddress,
         Description = entity.Description,
         Logo = entity.Logo,
         Banner = entity.Banner,
@@ -37,25 +45,6 @@ public static class EventMapper
             CommitteeName = entity.Committee.Name,
             CommitteeDescription = entity.Committee.Description
         },
-        Tickets = entity.Tickets?.Select(ticket => new TicketDto
-        {
-            TicketId = ticket.Id,
-            Name = ticket.Name,
-            Price = ticket.Price,
-            TotalTickets = ticket.TotalTickets,
-            MinTicketsPerOrder = ticket.MinTicketsPerOrder,
-            MaxTicketsPerOrder = ticket.MaxTicketsPerOrder,
-            SaleStartTime = ticket.SaleStartTime,
-            SaleEndTime = ticket.SaleEndTime,
-            EventStartTime = ticket.EventStartTime,
-            EventEndTime = ticket.EventEndTime,
-            Description = ticket.Description,
-            TicketImage = ticket.TicketImage
-        }).ToList() ?? []
+        Tickets = new List<TicketDto>()
     };
-
-    public static EventSeat ToEventSeat(this SeatDto seat, Guid eventId, Guid ticketId)
-    {
-        return EventSeat.CreateEventSeat(seat.Row, seat.Column, eventId, ticketId);
-    }
 }

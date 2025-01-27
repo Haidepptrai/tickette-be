@@ -13,8 +13,15 @@ public sealed class User : IdentityUser<Guid>
 
     public Gender Gender { get; set; } = Gender.Other;
 
-    //RefreshToken
-    public string? RefreshToken { get; set; }
+    public List<Event> Events { get; private set; } = new();
 
-    public DateTime? RefreshTokenExpiryTime { get; set; }
+    public List<RefreshToken> RefreshTokens { get; private set; } = new();
+
+    public void AddRefreshToken(string token, DateTime expiryTime)
+    {
+        // Optionally: Remove expired tokens to keep the list clean
+        RefreshTokens.RemoveAll(rt => rt.ExpiryTime <= DateTime.UtcNow);
+
+        RefreshTokens.Add(new RefreshToken(token, expiryTime));
+    }
 }

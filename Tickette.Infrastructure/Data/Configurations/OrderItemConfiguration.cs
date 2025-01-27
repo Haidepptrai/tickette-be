@@ -27,5 +27,7 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
             .WithMany()
             .HasForeignKey(e => e.TicketId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasQueryFilter(e => e.DeletedAt == null);
     }
 }

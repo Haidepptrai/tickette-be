@@ -2,19 +2,19 @@
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.Tickets.Common;
-using Tickette.Application.Helpers;
+using Tickette.Application.Wrappers;
 using Tickette.Domain.Entities;
 
 namespace Tickette.Application.Features.Tickets.Command;
 
 public record OrderTicketsCommand
 {
-    public Guid EventId { get; init; }
+    public Guid EventDateId { get; init; }
     public Guid BuyerId { get; init; }
     public string BuyerEmail { get; init; }
     public string BuyerName { get; init; }
     public string BuyerPhone { get; init; }
-    public required List<TicketOrderItemDto> OrderItems { get; init; }
+    public required List<TicketOrderItemInput> OrderItems { get; init; }
     public string? CouponCode { get; init; }
 }
 
@@ -33,20 +33,20 @@ public class OrderTicketsCommandHandler : ICommandHandler<OrderTicketsCommand, R
         {
             // Check if the event exists
             var eventEntity = await _context.Events
-                .SingleOrDefaultAsync(e => e.Id == command.EventId, cancellation);
+                .SingleOrDefaultAsync(e => e.Id == command.EventDateId, cancellation);
 
             if (eventEntity == null)
             {
-                throw new ArgumentException("The event does not exist.", nameof(command.EventId));
+                throw new ArgumentException("The event does not exist.", nameof(command.EventDateId));
             }
 
             // Fetch valid ticket IDs and prices for the event
             var validTickets = await _context.Tickets
-                .Where(t => t.EventId == command.EventId)
+                .Where(t => t.EventDateId == command.EventDateId)
                 .ToDictionaryAsync(t => t.Id, t => t.Price, cancellation);
 
             // Create an Order
-            var order = Order.CreateOrder(command.EventId, command.BuyerId, command.BuyerEmail,
+            var order = Order.CreateOrder(command.EventDateId, command.BuyerId, command.BuyerEmail,
                 command.BuyerName, command.BuyerPhone);
 
             // Add order items
@@ -104,7 +104,7 @@ public class OrderTicketsCommandHandler : ICommandHandler<OrderTicketsCommand, R
             await _context.SaveChangesAsync(cancellation);
 
             // Return response
-            return ResponseHandler.SuccessResponse(command.EventId);
+            return ResponseHandler.SuccessResponse(command.EventDateId);
 
         }
         catch (Exception ex)

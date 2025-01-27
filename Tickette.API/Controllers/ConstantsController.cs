@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Tickette.Application.Helpers;
+using Tickette.Application.Wrappers;
 using Tickette.Domain.Enums;
 
 namespace Tickette.API.Controllers;

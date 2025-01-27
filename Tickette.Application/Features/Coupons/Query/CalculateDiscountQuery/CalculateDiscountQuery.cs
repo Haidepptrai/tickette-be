@@ -2,7 +2,7 @@
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.Coupons.Common;
-using Tickette.Application.Helpers;
+using Tickette.Application.Wrappers;
 
 namespace Tickette.Application.Features.Coupons.Query.CalculateDiscountQuery;
 

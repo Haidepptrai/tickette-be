@@ -5,7 +5,7 @@ using Tickette.Application.Features.CommitteeMembers.Command.ChangeCommitteeMemb
 using Tickette.Application.Features.CommitteeMembers.Command.RemoveCommitteeMember;
 using Tickette.Application.Features.CommitteeMembers.Commond;
 using Tickette.Application.Features.CommitteeMembers.Query.GetAllCommitteeMemberOfEvent;
-using Tickette.Application.Helpers;
+using Tickette.Application.Wrappers;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 

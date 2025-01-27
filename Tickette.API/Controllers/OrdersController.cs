@@ -8,7 +8,7 @@ using Tickette.Application.Features.QRCode.Common;
 using Tickette.Application.Features.QRCode.Queries;
 using Tickette.Application.Features.QRCode.Queries.ValidateQrCode;
 using Tickette.Application.Features.Tickets.Command;
-using Tickette.Application.Helpers;
+using Tickette.Application.Wrappers;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 

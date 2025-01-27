@@ -10,7 +10,15 @@ public class EventListDto
 
     public DateTime EndDate { get; set; }
 
-    public string Location { get; set; }
+    public string LocationName { get; set; }
+
+    public string City { get; set; }
+
+    public string District { get; set; }
+
+    public string Ward { get; set; }
+
+    public string StreetAddress { get; set; }
 
     public string ImageUrl { get; set; }
 
