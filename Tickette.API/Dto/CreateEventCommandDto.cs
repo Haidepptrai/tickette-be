@@ -1,42 +1,36 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
-using System.Text.Json.Serialization;
-using Tickette.Application.Features.Events.Common;
+﻿using Tickette.Application.Features.Events.Common;
 
 namespace Tickette.API.Dto;
 
 public class CreateEventCommandDto
 {
-    [FromForm, JsonPropertyName("name")]
-    public string Name { get; set; }
+    public required string Name { get; set; }
 
-    [FromForm, JsonPropertyName("address")]
-    public string Address { get; set; }
+    public required string LocationName { get; set; }
 
-    [FromForm, JsonPropertyName("category_id")]
-    public Guid CategoryId { get; set; }
+    public required string City { get; set; }
 
-    [FromForm, JsonPropertyName("description")]
-    public string Description { get; set; }
+    public required string District { get; set; }
 
-    [FromForm, JsonPropertyName("start_date")]
+    public required string Ward { get; set; }
+
+    public required string StreetAddress { get; set; }
+
+    public required Guid CategoryId { get; set; }
+
+    public required string Description { get; set; }
+
     public DateTime StartDate { get; set; }
 
-    [FromForm, JsonPropertyName("end_date")]
     public DateTime EndDate { get; set; }
 
-    [FromForm, JsonPropertyName("committee_information")]
-    public CommitteeInformation Committee { get; set; }
+    public required string CommitteeName { get; set; }
 
-    [FromForm, JsonPropertyName("ticket_information")]
-    public required TicketInformation[] TicketInformation { get; set; }
+    public required string CommitteeDescription { get; set; }
 
-    [FromForm, JsonPropertyName("logo_file")]
-    public IFormFile LogoFile { get; set; }
+    public required IFormFile LogoFile { get; set; }
 
-    [FromForm, JsonPropertyName("banner_file")]
-    public IFormFile BannerFile { get; set; }
+    public required IFormFile BannerFile { get; set; }
 
-    [FromForm, JsonProperty("seat_map")]
-    public ICollection<SeatDto>? Seats { get; set; }
+    public required EventDateInput[] EventDates { get; set; }
 }

@@ -18,28 +18,30 @@ public sealed class CommitteeMember : BaseEntity
 
     public Event Event { get; private set; }
 
-    private CommitteeMember(Guid userId, Guid committeeRoleId, Guid eventId)
+    private CommitteeMember() { }
+
+    private CommitteeMember(User user, CommitteeRole role, Event originalEvent)
     {
-        Id = Guid.NewGuid();
-        UserId = userId;
-        CommitteeRoleId = committeeRoleId;
-        EventId = eventId;
-        JoinedAt = DateTime.UtcNow;
+        User = user;
+        CommitteeRole = role;
+        Event = originalEvent;
     }
 
-    // Factory Method
-    public static CommitteeMember Create(Guid userId, Guid committeeRoleId, Guid eventId)
+    private CommitteeMember(Guid userId, Guid roleId, Guid eventId)
     {
-        if (userId == Guid.Empty)
-            throw new ArgumentException("User ID cannot be empty.");
+        UserId = userId;
+        CommitteeRoleId = roleId;
+        EventId = eventId;
+    }
 
-        if (committeeRoleId == Guid.Empty)
-            throw new ArgumentException("Committee Role ID cannot be empty.");
+    public static CommitteeMember Create(User user, CommitteeRole role, Event originalEvent)
+    {
+        return new CommitteeMember(user, role, originalEvent);
+    }
 
-        if (eventId == Guid.Empty)
-            throw new ArgumentException("Event ID cannot be empty.");
-
-        return new CommitteeMember(userId, committeeRoleId, eventId);
+    public static CommitteeMember Create(Guid userId, Guid roleId, Guid eventId)
+    {
+        return new CommitteeMember(userId, roleId, eventId);
     }
 
     public void ChangeRole(Guid roleId)

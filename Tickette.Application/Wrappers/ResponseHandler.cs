@@ -1,4 +1,4 @@
-﻿namespace Tickette.Application.Helpers;
+﻿namespace Tickette.Application.Wrappers;
 
 public static class ResponseHandler
 {

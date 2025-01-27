@@ -5,7 +5,7 @@ using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.Coupons.Command.CreateCoupon;
 using Tickette.Application.Features.Coupons.Common;
 using Tickette.Application.Features.Coupons.Query.CalculateDiscountQuery;
-using Tickette.Application.Helpers;
+using Tickette.Application.Wrappers;
 using Constant = Tickette.Domain.Common.Constant;
 
 namespace Tickette.API.Controllers

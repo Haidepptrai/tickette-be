@@ -24,7 +24,7 @@ public class EventRoleHandler : AuthorizationHandler<EventRoleRequirement>
         // Get UserId from claims
         var userId = Guid.Parse(context.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? string.Empty);
 
-        // Try to get the EventId from route or query string first
+        // Try to get the EventDateId from route or query string first
         var eventId = GetEventIdFromRouteOrQuery();
 
         // If not found, try to get it from the request body
@@ -35,7 +35,7 @@ public class EventRoleHandler : AuthorizationHandler<EventRoleRequirement>
 
         if (eventId == Guid.Empty)
         {
-            Console.WriteLine("EventId not found");
+            Console.WriteLine("EventDateId not found");
             return;
         }
 

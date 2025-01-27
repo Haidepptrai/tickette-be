@@ -25,4 +25,8 @@ public class TicketDto
     public string Description { get; set; }
 
     public string? TicketImage { get; set; }
+
+    public string Currency { get; set; }
+
+    public bool IsRefundable { get; set; }
 }

@@ -23,7 +23,8 @@ public class GetEventByIdHandler : IQueryHandler<GetEventByIdRequest, EventDetai
             var result = await _context.Events
                 .Include(ev => ev.Category)
                 .Include(ev => ev.Committee)
-                .Include(ev => ev.Tickets)
+                .Include(ev => ev.EventDates)
+                    .ThenInclude(ed => ed.Tickets)
                 .SingleOrDefaultAsync(ev => ev.Id == query.Id, cancellation);
             if (result == null)
                 throw new KeyNotFoundException($"Event with ID {query.Id} was not found.");

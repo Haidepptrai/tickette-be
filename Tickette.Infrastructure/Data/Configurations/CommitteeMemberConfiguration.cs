@@ -29,5 +29,7 @@ public class CommitteeMemberConfiguration : IEntityTypeConfiguration<CommitteeMe
         builder.HasOne(cm => cm.Event)
             .WithMany(e => e.CommitteeMembers)
             .HasForeignKey(cm => cm.EventId);
+
+        builder.HasQueryFilter(e => e.DeletedAt == null);
     }
 }

@@ -31,10 +31,9 @@ public class CouponConfiguration : IEntityTypeConfiguration<Coupon>
             .IsRequired();
 
 
-        // Ensures each coupon code (Code) is unique within a specific event (EventId). 
+        // Ensures each coupon code (Code) is unique within a specific event (EventDateId). 
         // Prevents duplicates in the same event while allowing reuse across different events.
         // Named "IX_Coupon_EventId_Code" for clarity in the database.
-
         builder.HasIndex(c => new { c.EventId, c.Code })
             .IsUnique()
             .HasDatabaseName("IX_Coupon_EventId_Code");
@@ -43,5 +42,7 @@ public class CouponConfiguration : IEntityTypeConfiguration<Coupon>
             .WithMany(e => e.Coupons)
             .HasForeignKey(c => c.EventId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasQueryFilter(e => e.DeletedAt == null);
     }
 }

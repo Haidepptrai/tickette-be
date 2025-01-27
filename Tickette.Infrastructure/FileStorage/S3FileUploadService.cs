@@ -2,7 +2,7 @@
 
 namespace Tickette.Infrastructure.FileStorage;
 
-public class S3FileStorageService : IFileStorageService
+public class S3FileUploadService : IFileUploadService
 {
     public async Task<string?> UploadFileAsync(IFileUpload? file, string folder)
     {

@@ -16,5 +16,7 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
 
         builder.Property(e => e.CreatedAt)
             .ValueGeneratedOnAdd();
+
+        builder.HasQueryFilter(e => e.DeletedAt == null);
     }
 }

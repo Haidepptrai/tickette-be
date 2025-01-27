@@ -1,16 +1,20 @@
 ﻿using Tickette.Application.Common.Models;
+using Tickette.Application.DTOs.Auth;
+using Tickette.Domain.Entities;
+
 namespace Tickette.Application.Common.Interfaces;
 
 public interface IIdentityServices
 {
-    Task<(Result Result, string? AccessToken, string? RefreshToken)> LoginAsync(string userEmail, string password);
+    Task<AuthResult<TokenRetrieval>> LoginAsync(string userEmail, string password, CancellationToken cancellation);
 
-    Task<(Result Result, Guid UserId)> CreateUserAsync(string userEmail, string password);
+    Task<AuthResult<Guid>> CreateUserAsync(string userEmail, string password);
 
-    Task<(Result Result, string? AccessToken, string? RefreshToken)> RefreshTokenAsync(string token, string refreshToken);
+    Task<AuthResult<TokenRetrieval>> RefreshTokenAsync(string refreshToken);
 
-    Task<Result> AssignToRoleAsync(Guid userId, Guid roleId);
+    Task<AuthResult<object?>> AssignToRoleAsync(Guid userId, Guid roleId);
 
-    Task<Result> DeleteUserAsync(Guid userId);
+    Task<AuthResult<object?>> DeleteUserAsync(Guid userId);
 
+    Task<AuthResult<User>> GetUserByIdAsync(Guid userId);
 }

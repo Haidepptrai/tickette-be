@@ -23,5 +23,7 @@ public class CommitteeRoleConfiguration : IEntityTypeConfiguration<CommitteeRole
         // Indexes
         builder.HasIndex(role => role.Name)
             .IsUnique();
+
+        builder.HasQueryFilter(e => e.DeletedAt == null);
     }
 }

@@ -2,7 +2,7 @@
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.Orders.Common;
-using Tickette.Application.Helpers;
+using Tickette.Application.Wrappers;
 
 namespace Tickette.Application.Features.Orders.Query.ReviewOrders;
 
@@ -34,12 +34,7 @@ public class ReviewOrdersQueryHandler : IQueryHandler<ReviewOrdersQuery, Respons
                     OrderId = group.Key, // The OrderId key
                     Tickets = group.Select(ot => new OrderedTicketListDto
                     {
-                        Id = ot.Id,
-                        OrderId = ot.OrderId,
-                        EventName = ot.Ticket.Event.Name,
-                        VenueName = ot.Ticket.Event.Address,
-                        TicketStartDate = ot.Ticket.Event.StartDate,
-                        TicketEndDate = ot.Ticket.Event.EndDate
+
                     }).ToList()
                 })
                 .ToListAsync(cancellation);

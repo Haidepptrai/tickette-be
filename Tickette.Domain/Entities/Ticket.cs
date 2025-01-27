@@ -4,7 +4,7 @@ namespace Tickette.Domain.Entities;
 
 public sealed class Ticket : BaseEntity
 {
-    public Guid EventId { get; private set; }
+    public Guid EventDateId { get; private set; }
 
     public string Name { get; private set; }
 
@@ -22,22 +22,18 @@ public sealed class Ticket : BaseEntity
 
     public DateTime SaleEndTime { get; private set; }
 
-    public DateTime EventStartTime { get; private set; }
-
-    public DateTime EventEndTime { get; private set; }
-
     public string Description { get; private set; }
 
     public string? TicketImage { get; private set; }
 
-    public Event Event { get; set; }
+    public EventDate EventDate { get; private set; }
 
     public ICollection<EventSeat>? Seats { get; set; } = new List<EventSeat>();
 
     protected Ticket() { }
 
     private Ticket(
-    Guid eventId,
+    EventDate eventDate,
     string name,
     decimal price,
     int totalTickets,
@@ -45,12 +41,10 @@ public sealed class Ticket : BaseEntity
     int maxTicketsPerOrder,
     DateTime saleStartTime,
     DateTime saleEndTime,
-    DateTime eventStartTime,
-    DateTime eventEndTime,
     string description,
     string? ticketImage)
     {
-        EventId = eventId;
+        EventDate = eventDate;
         Name = name;
         Price = price;
         TotalTickets = totalTickets;
@@ -59,14 +53,12 @@ public sealed class Ticket : BaseEntity
         MaxTicketsPerOrder = maxTicketsPerOrder;
         SaleStartTime = saleStartTime;
         SaleEndTime = saleEndTime;
-        EventStartTime = eventStartTime;
-        EventEndTime = eventEndTime;
         Description = description;
         TicketImage = ticketImage;
     }
 
     public static Ticket Create(
-        Guid eventId,
+        EventDate eventDate,
         string name,
         decimal price,
         int totalTickets,
@@ -74,15 +66,10 @@ public sealed class Ticket : BaseEntity
         int maxTicketsPerOrder,
         DateTime saleStartTime,
         DateTime saleEndTime,
-        DateTime eventStartTime,
-        DateTime eventEndTime,
         string description,
         string? ticketImage)
     {
         // Business rule validations
-        if (eventId == Guid.Empty)
-            throw new ArgumentException("Event ID cannot be empty.");
-
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name cannot be empty.");
 
@@ -98,15 +85,9 @@ public sealed class Ticket : BaseEntity
         if (saleStartTime >= saleEndTime)
             throw new ArgumentException("Sale start time must be before sale end time.");
 
-        if (eventStartTime >= eventEndTime)
-            throw new ArgumentException("Event start time must be before event end time.");
-
-        if (saleEndTime > eventStartTime)
-            throw new ArgumentException("Sale end time must be before the event start time.");
-
         // Create and return a valid Ticket object
         return new Ticket(
-            eventId,
+            eventDate,
             name,
             price,
             totalTickets,
@@ -114,8 +95,6 @@ public sealed class Ticket : BaseEntity
             maxTicketsPerOrder,
             saleStartTime,
             saleEndTime,
-            eventStartTime,
-            eventEndTime,
             description,
             ticketImage);
     }

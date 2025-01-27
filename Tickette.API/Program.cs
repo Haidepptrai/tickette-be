@@ -17,13 +17,14 @@ namespace Tickette.API
 
             // Add services to the container.
             builder.Services.AddControllers(controllerOptions =>
+            {
+                controllerOptions.Conventions.Add(new RouteTokenTransformerConvention(new KebabCaseParameterTransformer()));
+            })
+                .AddJsonOptions(options =>
                 {
-                    controllerOptions.Conventions.Add(new RouteTokenTransformerConvention(new KebabCaseParameterTransformer()));
-                })
-                .AddJsonOptions(jsonOptions =>
-                {
-                    jsonOptions.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
-                    jsonOptions.JsonSerializerOptions.WriteIndented = true;
+                    options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+                    options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.SnakeCaseLower;
+                    options.JsonSerializerOptions.WriteIndented = true;
                 });
 
             builder.Services.AddFluentValidationAutoValidation(); // Register auto-validation
@@ -88,6 +89,8 @@ namespace Tickette.API
             //app.UseExceptionHandler("/errors");
 
             app.UseHttpsRedirection();
+
+            app.UseAuthentication();
 
             app.UseAuthorization();
 

@@ -44,5 +44,7 @@ public class TicketOrderConfiguration : IEntityTypeConfiguration<Order>
 
         builder.HasIndex(e => e.BuyerEmail)
             .HasDatabaseName("IX_TicketOrder_BuyerEmail");
+
+        builder.HasQueryFilter(e => e.DeletedAt == null);
     }
 }

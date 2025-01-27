@@ -5,10 +5,10 @@ namespace Tickette.Infrastructure.Identity;
 
 public static class IdentityResultExtensions
 {
-    public static Result ToApplicationResult(this IdentityResult result)
+    public static AuthResult<T> ToApplicationResult<T>(this IdentityResult result, T data)
     {
         return result.Succeeded
-            ? Result.Success()
-            : Result.Failure(result.Errors.Select(e => e.Description));
+            ? AuthResult<T>.Success(data)
+            : AuthResult<T>.Failure(result.Errors.Select(e => e.Description));
     }
 }
