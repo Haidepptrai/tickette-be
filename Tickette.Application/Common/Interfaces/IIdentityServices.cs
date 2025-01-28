@@ -17,4 +17,6 @@ public interface IIdentityServices
     Task<AuthResult<object?>> DeleteUserAsync(Guid userId);
 
     Task<AuthResult<User>> GetUserByIdAsync(Guid userId);
+
+    Task<AuthResult<User>> SyncGoogleUserAsync(GoogleUserRequest request);
 }

@@ -104,5 +104,19 @@ namespace Tickette.API.Controllers
 
             return BadRequest(result.Errors);
         }
+
+        // POST api/auth/login-google
+        [HttpPost("sync-google-user")]
+        public async Task<IActionResult> SyncGoogleUser([FromBody] GoogleUserRequest request)
+        {
+            var result = await _identityServices.SyncGoogleUserAsync(request);
+
+            if (!result.Succeeded)
+            {
+                return BadRequest(ResponseHandler.ErrorResponse("Google user sync failed."));
+            }
+
+            return Ok(ResponseHandler.SuccessResponse(result.Data, "Google user synced successfully."));
+        }
     }
 }

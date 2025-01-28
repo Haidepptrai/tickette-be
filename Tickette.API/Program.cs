@@ -5,6 +5,7 @@ using Microsoft.OpenApi.Models;
 using System.Text.Json;
 using Tickette.API.Helpers;
 using Tickette.Infrastructure;
+using Tickette.Infrastructure.Messaging.Feature;
 
 
 namespace Tickette.API
@@ -33,6 +34,7 @@ namespace Tickette.API
             builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 
             builder.AddInfrastructure();
+            builder.AddRabbitMQSettings();
 
             //Add Swagger
             builder.Services.AddEndpointsApiExplorer();
@@ -75,9 +77,11 @@ namespace Tickette.API
             });
 
 
-
-
             var app = builder.Build();
+
+            // Start the RabbitMQ consumer
+            var ticketReservationConsumer = app.Services.GetRequiredService<TicketReservationConsumer>();
+            ticketReservationConsumer.StartListening();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())

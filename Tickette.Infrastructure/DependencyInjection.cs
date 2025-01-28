@@ -11,6 +11,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
+using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Domain.Entities;
 using Tickette.Infrastructure.Authentication;
 using Tickette.Infrastructure.Authorization.Handlers;
@@ -19,6 +20,8 @@ using Tickette.Infrastructure.CQRS;
 using Tickette.Infrastructure.Data;
 using Tickette.Infrastructure.FileStorage;
 using Tickette.Infrastructure.Identity;
+using Tickette.Infrastructure.Messaging;
+using Tickette.Infrastructure.Messaging.Feature;
 using Tickette.Infrastructure.Services;
 using static Tickette.Domain.Common.Constant;
 
@@ -201,5 +204,18 @@ public static class DependencyInjection
             SeedDatabase.SeedRolesAsync(roleManager).Wait();
             SeedDatabase.SeedRolesAndPermissions(dbContext).Wait();
         }
+    }
+
+    public static void AddRabbitMQSettings(this IHostApplicationBuilder builder)
+    {
+        var rabbitMQSettings = new RabbitMQSettings();
+        builder.Configuration.GetSection("RabbitMQ").Bind(rabbitMQSettings);
+
+        builder.Services.AddSingleton(rabbitMQSettings);
+        builder.Services.AddSingleton<IRabbitMQConnection, RabbitMQConnection>();
+        builder.Services.AddSingleton<IMessageProducer, RabbitMQProducer>();
+        builder.Services.AddSingleton<IMessageConsumer, RabbitMQConsumer>();
+
+        builder.Services.AddSingleton<TicketReservationConsumer>();
     }
 }

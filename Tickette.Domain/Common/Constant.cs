@@ -38,4 +38,8 @@ public static class Constant
         public const string Manager = "Manager";
         public const string Moderator = "Moderator";
     }
+
+    public static string TICKET_RESERVATION_QUEUE = "reverse_ticket";
+
+    public static string CART_EXPIRED_QUEUE = "cart_expired";
 }
