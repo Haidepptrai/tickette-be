@@ -27,6 +27,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.2" />
     <PackageReference Include="QRCoder" Version="1.6.0" />
+    <PackageReference Include="RabbitMQ.Client" Version="7.0.0" />
     <PackageReference Include="Scrutor" Version="5.0.2" />
     <PackageReference Include="SkiaSharp" Version="3.116.1" />
     <PackageReference Include="ZXing.Net" Version="0.16.9" />
@@ -37,6 +38,7 @@
     <Folder Include="Authorization\Handlers\" />
     <Folder Include="Authorization\Requirements\" />
     <Folder Include="Authentication\" />
+    <Folder Include="Messaging\Feature\" />
     <Folder Include="Repositories\" />
   </ItemGroup>
 

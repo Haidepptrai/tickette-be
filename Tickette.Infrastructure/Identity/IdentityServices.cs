@@ -152,6 +152,30 @@ public class IdentityServices : IIdentityServices
             AuthResult<User>.Failure(["User not found."]) : AuthResult<User>.Success(user);
     }
 
+    public async Task<AuthResult<User>> SyncGoogleUserAsync(GoogleUserRequest request)
+    {
+        // Check if the user exists in the database
+        var user = await _userManager.FindByEmailAsync(request.Email);
+        if (user != null) return AuthResult<User>.Success(user);
+
+        // Create a new user if one doesn't exist
+        user = new User
+        {
+            UserName = request.Email,
+            Email = request.Email,
+            EmailConfirmed = true,
+            ProfilePicture = request.Image
+        };
+
+        var createResult = await _userManager.CreateAsync(user);
+        if (!createResult.Succeeded)
+        {
+            return AuthResult<User>.Failure(createResult.Errors.Select(e => e.Description).ToArray());
+        }
+
+        return AuthResult<User>.Success(user);
+    }
+
     private async Task AddOrUpdateRefreshTokenAsync(Guid userId, string token, DateTime expiryTime, CancellationToken cancellationToken)
     {
         // Remove expired tokens directly from the database

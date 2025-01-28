@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
 using Tickette.Application.Common.CQRS;
+using Tickette.Application.Features.Orders.Command.ReverseTicket;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Application.Features.Orders.Query.ReviewOrders;
 using Tickette.Application.Features.QRCode.Common;
@@ -9,136 +10,161 @@ using Tickette.Application.Features.QRCode.Queries;
 using Tickette.Application.Features.QRCode.Queries.ValidateQrCode;
 using Tickette.Application.Features.Tickets.Command;
 using Tickette.Application.Wrappers;
+using Tickette.Domain.Common;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
-namespace Tickette.API.Controllers
+namespace Tickette.API.Controllers;
+
+[Route("api/[controller]")]
+[ApiController]
+public class OrdersController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class OrdersController : ControllerBase
+    private readonly ICommandDispatcher _commandDispatcher;
+    private readonly IQueryDispatcher _queryDispatcher;
+
+    public OrdersController(ICommandDispatcher commandDispatcher, IQueryDispatcher queryDispatcher)
     {
-        private readonly ICommandDispatcher _commandDispatcher;
-        private readonly IQueryDispatcher _queryDispatcher;
+        _commandDispatcher = commandDispatcher;
+        _queryDispatcher = queryDispatcher;
+    }
 
-        public OrdersController(ICommandDispatcher commandDispatcher, IQueryDispatcher queryDispatcher)
+    [HttpGet("my-orders")]
+    [Authorize]
+    public async Task<IActionResult> Get(CancellationToken cancellation)
+    {
+        try
         {
-            _commandDispatcher = commandDispatcher;
-            _queryDispatcher = queryDispatcher;
+            // Extract UserId from JWT token claims
+            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub);
+            if (userIdClaim == null || string.IsNullOrWhiteSpace(userIdClaim.Value))
+            {
+                return BadRequest(
+                    ResponseHandler.ErrorResponse<List<OrderedTicketGroupListDto>>(null,
+                        "User ID not found in token."));
+            }
+
+            // Set the UserId in the query object
+            var query = new ReviewOrdersQuery
+            {
+                UserId = Guid.Parse(userIdClaim.Value)
+            };
+
+            // Dispatch the query
+            var response =
+                await _queryDispatcher.Dispatch<ReviewOrdersQuery, ResponseDto<List<OrderedTicketGroupListDto>>>(
+                    query, cancellation);
+
+            if (!response.Success)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
         }
-
-        [HttpGet("my-orders")]
-        [Authorize]
-        public async Task<IActionResult> Get(CancellationToken cancellation)
+        catch (Exception ex)
         {
-            try
-            {
-                // Extract UserId from JWT token claims
-                var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub);
-                if (userIdClaim == null || string.IsNullOrWhiteSpace(userIdClaim.Value))
-                {
-                    return BadRequest(ResponseHandler.ErrorResponse<List<OrderedTicketGroupListDto>>(null, "User ID not found in token."));
-                }
-
-                // Set the UserId in the query object
-                var query = new ReviewOrdersQuery
-                {
-                    UserId = Guid.Parse(userIdClaim.Value)
-                };
-
-                // Dispatch the query
-                var response = await _queryDispatcher.Dispatch<ReviewOrdersQuery, ResponseDto<List<OrderedTicketGroupListDto>>>(query, cancellation);
-
-                if (!response.Success)
-                {
-                    return BadRequest(response);
-                }
-
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ResponseHandler.ErrorResponse<List<OrderedTicketGroupListDto>>(null, ex.Message));
-            }
+            return BadRequest(ResponseHandler.ErrorResponse<List<OrderedTicketGroupListDto>>(null, ex.Message));
         }
+    }
 
-        [HttpGet("detail/get-qrcode/{orderItemId:guid}")]
-        [Authorize]
-        public async Task<IActionResult> GetQrCode(Guid orderItemId, CancellationToken cancellation)
+    [HttpGet("detail/get-qrcode/{orderItemId:guid}")]
+    [Authorize]
+    public async Task<IActionResult> GetQrCode(Guid orderItemId, CancellationToken cancellation)
+    {
+        try
         {
-            try
+            // Extract UserId from JWT token claims
+            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub);
+
+            if (userIdClaim == null || string.IsNullOrWhiteSpace(userIdClaim.Value))
             {
-                // Extract UserId from JWT token claims
-                var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub);
-
-                if (userIdClaim == null || string.IsNullOrWhiteSpace(userIdClaim.Value))
-                {
-                    return BadRequest(ResponseHandler.ErrorResponse<byte[]>(null, "User ID not found in token."));
-                }
-
-                // Set the UserId and OrderItemId in the query object
-                var query = new GetQrCodeQuery
-                {
-                    UserId = Guid.Parse(userIdClaim.Value),
-                    OrderItemId = orderItemId
-                };
-
-                // Dispatch the query
-                var response = await _queryDispatcher.Dispatch<GetQrCodeQuery, ResponseDto<byte[]>>(query, cancellation);
-                if (!response.Success)
-                {
-                    return BadRequest(response);
-                }
-                return Ok(response);
+                return BadRequest(ResponseHandler.ErrorResponse<byte[]>(null, "User ID not found in token."));
             }
-            catch (Exception ex)
+
+            // Set the UserId and OrderItemId in the query object
+            var query = new GetQrCodeQuery
             {
-                return BadRequest(ResponseHandler.ErrorResponse<byte[]>(null, ex.Message));
+                UserId = Guid.Parse(userIdClaim.Value),
+                OrderItemId = orderItemId
+            };
+
+            // Dispatch the query
+            var response =
+                await _queryDispatcher.Dispatch<GetQrCodeQuery, ResponseDto<byte[]>>(query, cancellation);
+            if (!response.Success)
+            {
+                return BadRequest(response);
             }
+
+            return Ok(response);
         }
-
-        [HttpPost("validate-qrcode")]
-        [Authorize]
-        public async Task<IActionResult> ValidateQrCode([FromBody] ValidateQrCodeQuery query, CancellationToken cancellation)
+        catch (Exception ex)
         {
-            try
-            {
-                var response = await _queryDispatcher.Dispatch<ValidateQrCodeQuery, ResponseDto<DataRetrievedFromQrCode>>(query, cancellation);
-
-                if (!response.Success)
-                {
-                    return BadRequest(response);
-                }
-
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ResponseHandler.ErrorResponse(false, ex.Message));
-            }
+            return BadRequest(ResponseHandler.ErrorResponse<byte[]>(null, ex.Message));
         }
+    }
 
-
-
-        [HttpPost]
-        public async Task<IActionResult> Post([FromBody] OrderTicketsCommand command, CancellationToken cancellation)
+    [HttpPost("validate-qrcode")]
+    [Authorize]
+    public async Task<IActionResult> ValidateQrCode([FromBody] ValidateQrCodeQuery query,
+        CancellationToken cancellation)
+    {
+        try
         {
-            try
-            {
-                var response =
-                    await _commandDispatcher.Dispatch<OrderTicketsCommand, ResponseDto<Guid>>(command, cancellation);
+            var response =
+                await _queryDispatcher.Dispatch<ValidateQrCodeQuery, ResponseDto<DataRetrievedFromQrCode>>(query,
+                    cancellation);
 
-                if (!response.Success)
-                {
-                    return BadRequest(response);
-                }
-
-                return Ok(response);
-            }
-            catch (Exception ex)
+            if (!response.Success)
             {
-                return BadRequest(ResponseHandler.ErrorResponse<Guid>(Guid.Empty, ex.Message));
+                return BadRequest(response);
             }
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ResponseHandler.ErrorResponse(false, ex.Message));
+        }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Post([FromBody] OrderTicketsCommand command, CancellationToken cancellation)
+    {
+        try
+        {
+            var response =
+                await _commandDispatcher.Dispatch<OrderTicketsCommand, ResponseDto<Guid>>(command, cancellation);
+
+            if (!response.Success)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ResponseHandler.ErrorResponse<Guid>(Guid.Empty, ex.Message));
+        }
+    }
+
+    [HttpPost("reverse-tickets")]
+    [Authorize]
+    public async Task<IActionResult> ReverseOrder([FromBody] ReverseTicketCommand command,
+        CancellationToken cancellation)
+    {
+        try
+        {
+            var response =
+                await _commandDispatcher.Dispatch<ReverseTicketCommand, Unit>(command, cancellation);
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ResponseHandler.ErrorResponse<Guid>(Guid.Empty, ex.Message));
         }
     }
 }
