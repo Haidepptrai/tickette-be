@@ -100,7 +100,7 @@ public sealed class Ticket : BaseEntity
     }
 
 
-    public void UpdateRemainingTickets(int quantity)
+    public void ReduceTickets(int quantity)
     {
         if (quantity > RemainingTickets)
             throw new ArgumentException("Quantity exceeds remaining tickets.");

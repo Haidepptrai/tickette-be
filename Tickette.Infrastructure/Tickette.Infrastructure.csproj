@@ -30,6 +30,7 @@
     <PackageReference Include="RabbitMQ.Client" Version="7.0.0" />
     <PackageReference Include="Scrutor" Version="5.0.2" />
     <PackageReference Include="SkiaSharp" Version="3.116.1" />
+    <PackageReference Include="StackExchange.Redis" Version="2.8.24" />
     <PackageReference Include="ZXing.Net" Version="0.16.9" />
     <PackageReference Include="ZXing.Net.Bindings.SkiaSharp" Version="0.16.20" />
   </ItemGroup>

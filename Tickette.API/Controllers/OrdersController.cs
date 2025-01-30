@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
 using Tickette.Application.Common.CQRS;
-using Tickette.Application.Features.Orders.Command.ReverseTicket;
+using Tickette.Application.Features.Orders.Command.ReserveTicket;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Application.Features.Orders.Query.ReviewOrders;
 using Tickette.Application.Features.QRCode.Common;
@@ -152,13 +152,13 @@ public class OrdersController : ControllerBase
 
     [HttpPost("reverse-tickets")]
     [Authorize]
-    public async Task<IActionResult> ReverseOrder([FromBody] ReverseTicketCommand command,
+    public async Task<IActionResult> ReverseOrder([FromBody] ReserveTicketCommand command,
         CancellationToken cancellation)
     {
         try
         {
             var response =
-                await _commandDispatcher.Dispatch<ReverseTicketCommand, Unit>(command, cancellation);
+                await _commandDispatcher.Dispatch<ReserveTicketCommand, Unit>(command, cancellation);
 
             return Ok(response);
         }

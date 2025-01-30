@@ -12,6 +12,7 @@ using System.Text;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Messaging;
+using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Domain.Entities;
 using Tickette.Infrastructure.Authentication;
 using Tickette.Infrastructure.Authorization.Handlers;
@@ -22,6 +23,7 @@ using Tickette.Infrastructure.FileStorage;
 using Tickette.Infrastructure.Identity;
 using Tickette.Infrastructure.Messaging;
 using Tickette.Infrastructure.Messaging.Feature;
+using Tickette.Infrastructure.Persistence.Redis;
 using Tickette.Infrastructure.Services;
 using static Tickette.Domain.Common.Constant;
 
@@ -216,6 +218,11 @@ public static class DependencyInjection
         builder.Services.AddSingleton<IMessageProducer, RabbitMQProducer>();
         builder.Services.AddSingleton<IMessageConsumer, RabbitMQConsumer>();
 
-        builder.Services.AddSingleton<TicketReservationConsumer>();
+        builder.Services.AddHostedService<TicketReservationConsumer>();
+    }
+
+    public static void AddRedisSettings(this IHostApplicationBuilder builder)
+    {
+        builder.Services.AddSingleton<IRedisService, RedisService>();
     }
 }
