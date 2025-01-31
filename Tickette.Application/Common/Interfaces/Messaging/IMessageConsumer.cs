@@ -2,5 +2,5 @@
 
 public interface IMessageConsumer
 {
-    void Consume(string queueName, Action<string> onMessageReceived);
+    Task ConsumeAsync(string queueName, Func<string, Task> onMessageReceived, CancellationToken cancellationToken);
 }

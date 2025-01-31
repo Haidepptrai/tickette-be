@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
 using Tickette.Application.Common.CQRS;
-using Tickette.Application.Features.Orders.Command.ReserveTicket;
+using Tickette.Application.Features.Orders.Command.CreateOrder;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Application.Features.Orders.Query.ReviewOrders;
 using Tickette.Application.Features.QRCode.Common;
@@ -10,7 +10,6 @@ using Tickette.Application.Features.QRCode.Queries;
 using Tickette.Application.Features.QRCode.Queries.ValidateQrCode;
 using Tickette.Application.Features.Tickets.Command;
 using Tickette.Application.Wrappers;
-using Tickette.Domain.Common;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -150,21 +149,21 @@ public class OrdersController : ControllerBase
         }
     }
 
-    [HttpPost("reverse-tickets")]
+    [HttpPost("create")]
     [Authorize]
-    public async Task<IActionResult> ReverseOrder([FromBody] ReserveTicketCommand command,
+    public async Task<ResponseDto<string>> CreateOrder([FromBody] CreateOrderCommand command,
         CancellationToken cancellation)
     {
         try
         {
             var response =
-                await _commandDispatcher.Dispatch<ReserveTicketCommand, Unit>(command, cancellation);
+                await _commandDispatcher.Dispatch<CreateOrderCommand, string>(command, cancellation);
 
-            return Ok(response);
+            return ResponseHandler.SuccessResponse(response, "Retrieving Stripe Secret Key");
         }
         catch (Exception ex)
         {
-            return BadRequest(ResponseHandler.ErrorResponse<Guid>(Guid.Empty, ex.Message));
+            return ResponseHandler.ErrorResponse("We fucked up!", ex.Message);
         }
     }
 }

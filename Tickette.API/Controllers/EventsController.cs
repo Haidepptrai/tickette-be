@@ -12,7 +12,6 @@ using Tickette.Application.Features.Events.Queries.GetEventByCategory;
 using Tickette.Application.Features.Events.Queries.GetEventById;
 using Tickette.Application.Features.Events.Queries.GetEventByUserId;
 using Tickette.Application.Wrappers;
-using Tickette.Domain.Common;
 
 namespace Tickette.API.Controllers;
 
@@ -162,9 +161,9 @@ public class EventsController : ControllerBase
     }
 
     //Update Event Status
-    [HttpPatch("{eventId:guid}/status")]
-    [Authorize(Roles = Constant.APPLICATION_ROLE.Admin)]
-    public async Task<ResponseDto<Guid>> UpdateEventStatus(Guid eventId, UpdateEventStatusCommand command, CancellationToken token)
+    [HttpPatch("status")]
+    //[Authorize(Roles = Constant.APPLICATION_ROLE.Admin)]
+    public async Task<ResponseDto<Guid>> UpdateEventStatus(UpdateEventStatusCommand command, CancellationToken token)
     {
         try
         {

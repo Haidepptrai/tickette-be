@@ -1,6 +1,6 @@
 ﻿namespace Tickette.Application.Features.Orders.Common;
 
-public class TicketReservation
+public record TicketReservation
 {
     public Guid TicketId { get; set; }
 

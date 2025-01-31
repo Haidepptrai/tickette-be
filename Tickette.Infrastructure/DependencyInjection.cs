@@ -13,6 +13,7 @@ using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Interfaces.Redis;
+using Tickette.Application.Common.Interfaces.Stripe;
 using Tickette.Domain.Entities;
 using Tickette.Infrastructure.Authentication;
 using Tickette.Infrastructure.Authorization.Handlers;
@@ -224,5 +225,10 @@ public static class DependencyInjection
     public static void AddRedisSettings(this IHostApplicationBuilder builder)
     {
         builder.Services.AddSingleton<IRedisService, RedisService>();
+    }
+
+    public static void AddStripeSettings(this IHostApplicationBuilder builder)
+    {
+        builder.Services.AddSingleton<IPaymentService, StripePaymentService>();
     }
 }

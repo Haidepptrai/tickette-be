@@ -8,7 +8,7 @@ public static class TicketFactory
     public static async Task<Ticket> CreateTicketAsync(
         EventDate eventDate,
         string name,
-        decimal price,
+        long price,
         int totalTickets,
         int minTicketsPerOrder,
         int maxTicketsPerOrder,

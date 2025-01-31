@@ -16,11 +16,11 @@ public sealed class Order : BaseEntity
 
     public string BuyerPhone { get; private set; }
 
-    public decimal OriginalPrice { get; private set; }
+    public long OriginalPrice { get; private set; }
 
-    public decimal TotalPrice { get; private set; }
+    public long TotalPrice { get; private set; }
 
-    public decimal DiscountAmount { get; private set; }
+    public long DiscountAmount { get; private set; }
 
     public int TotalQuantity { get; private set; }
 
@@ -48,7 +48,7 @@ public sealed class Order : BaseEntity
         return new Order(eventId, buyerId, buyerEmail, buyerName, buyerPhone);
     }
 
-    public void AddOrderItem(Guid ticketId, decimal ticketPrice, int quantity, List<EventSeat>? seats)
+    public void AddOrderItem(Guid ticketId, long ticketPrice, int quantity, List<EventSeat>? seats)
     {
         if (quantity <= 0)
         {
@@ -69,7 +69,7 @@ public sealed class Order : BaseEntity
         CalculateTotals();
     }
 
-    public void CalculateTotals()
+    private void CalculateTotals()
     {
         OriginalPrice = _items.Sum(item => item.CalculateTotalPrice());
         TotalPrice = OriginalPrice;

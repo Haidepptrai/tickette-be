@@ -1,4 +1,5 @@
-﻿using RabbitMQ.Client;
+﻿using Microsoft.Extensions.Logging;
+using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text;
 using Tickette.Application.Common.Interfaces.Messaging;
@@ -8,42 +9,69 @@ namespace Tickette.Infrastructure.Messaging;
 public class RabbitMQConsumer : IMessageConsumer
 {
     private readonly IRabbitMQConnection _rabbitMQConnection;
+    private readonly ILogger<RabbitMQConsumer> _logger;
 
-    public RabbitMQConsumer(IRabbitMQConnection rabbitMQConnection)
+    public RabbitMQConsumer(IRabbitMQConnection rabbitMQConnection, ILogger<RabbitMQConsumer> logger)
     {
         _rabbitMQConnection = rabbitMQConnection;
+        _logger = logger;
     }
 
-    public async void Consume(string queueName, Action<string> onMessageReceived)
+    public async Task ConsumeAsync(string queueName, Func<string, Task> onMessageReceived, CancellationToken cancellationToken)
     {
         try
         {
-            await using var channel = await _rabbitMQConnection.CreateChannelAsync();
+            // Create a channel for consuming messages
+            var channel = await _rabbitMQConnection.CreateChannelAsync();
 
+            // Declare the queue
             await channel.QueueDeclareAsync(queue: queueName,
                 durable: true,
                 exclusive: false,
                 autoDelete: false,
-                arguments: null);
+                arguments: null,
+                cancellationToken: cancellationToken);
 
+            // Create an async consumer
             var consumer = new AsyncEventingBasicConsumer(channel);
-            consumer.ReceivedAsync += (model, ea) =>
+            consumer.ReceivedAsync += async (_, ea) =>
             {
-                var body = ea.Body.ToArray();
-                var message = Encoding.UTF8.GetString(body);
+                try
+                {
+                    // Extract the message body
+                    var body = ea.Body.ToArray();
+                    var message = Encoding.UTF8.GetString(body);
 
-                // Invoke the callback action
-                onMessageReceived(message);
-                return Task.CompletedTask;
+                    // Process the message
+                    await onMessageReceived(message);
+
+                    // Acknowledge the message after successful processing
+                    await channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    // Log the error and reject the message (optionally requeue it)
+                    _logger.LogError(ex, "Error processing message.");
+                    await channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: true, cancellationToken);
+                }
             };
 
+            // Start consuming messages
             await channel.BasicConsumeAsync(queue: queueName,
-                autoAck: true,
-                consumer: consumer);
+                autoAck: false, // Manual acknowledgment
+                consumer: consumer,
+                cancellationToken: cancellationToken);
+
+            // Keep the consumer running until cancellation is requested
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await Task.Delay(1000, cancellationToken); // Add a delay to avoid tight looping
+            }
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            throw new Exception($"An error occurred while consuming the message: {e.Message}");
+            _logger.LogError(ex, "An error occurred while consuming messages.");
+            throw;
         }
     }
 }

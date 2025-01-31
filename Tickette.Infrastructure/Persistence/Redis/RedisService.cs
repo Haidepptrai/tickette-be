@@ -17,7 +17,12 @@ namespace Tickette.Infrastructure.Persistence.Redis
 
         public async Task<bool> SetAsync(string key, string value, int expirationMinutes)
         {
-            return await _database.StringSetAsync(key, value, TimeSpan.FromMinutes(expirationMinutes));
+            if (expirationMinutes > 0)
+            {
+                return await _database.StringSetAsync(key, value, TimeSpan.FromMinutes(expirationMinutes));
+            }
+
+            return await _database.StringSetAsync(key, value); // No expiration
         }
 
         public async Task<string?> GetAsync(string key)
@@ -43,6 +48,16 @@ namespace Tickette.Infrastructure.Persistence.Redis
         public async Task<long> DecrementAsync(string key, long value)
         {
             return await _database.StringDecrementAsync(key, value);
+        }
+
+        public async Task<bool> AcquireLockAsync(string key, TimeSpan expiry)
+        {
+            return await _database.LockTakeAsync(key, Environment.MachineName, expiry);
+        }
+
+        public async Task<bool> ReleaseLockAsync(string key)
+        {
+            return await _database.LockReleaseAsync(key, Environment.MachineName);
         }
     }
 }

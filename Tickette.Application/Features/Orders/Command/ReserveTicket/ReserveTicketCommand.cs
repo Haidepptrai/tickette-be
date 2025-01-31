@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Tickette.Application.Common.CQRS;
+using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Features.Orders.Common;
@@ -19,11 +20,13 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
 {
     private readonly IMessageProducer _messageProducer;
     private readonly IRedisService _redisService;
+    private readonly IApplicationDbContext _context;
 
-    public ReserveTicketCommandHandler(IMessageProducer messageProducer, IRedisService redisService)
+    public ReserveTicketCommandHandler(IMessageProducer messageProducer, IRedisService redisService, IApplicationDbContext context)
     {
         _messageProducer = messageProducer;
         _redisService = redisService;
+        _context = context;
     }
 
     public async Task<Unit> Handle(ReserveTicketCommand request, CancellationToken cancellationToken)
@@ -60,6 +63,8 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
         var message = JsonSerializer.Serialize(request);
         _messageProducer.Publish(Constant.TICKET_RESERVATION_QUEUE, message);
 
+        // This is just reserve ticket for user
+        // The actual order will be created in the OrderTicketsCommandHandler
         return Unit.Value;
     }
 }
