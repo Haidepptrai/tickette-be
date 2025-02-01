@@ -25,7 +25,6 @@ public class UpdateEventStatusHandler : ICommandHandler<UpdateEventStatusCommand
         {
             // Fetch the event with its dates and tickets
             var eventToUpdate = await _context.Events
-                .AsNoTracking()
                 .Include(e => e.EventDates)
                     .ThenInclude(ed => ed.Tickets) // Include tickets for each event date
                 .AsSplitQuery()

@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
+using Tickette.Application.Common;
 using Tickette.Application.Common.CQRS;
+using Tickette.Application.Features.Orders.Command.ApplyCouponToOrder;
 using Tickette.Application.Features.Orders.Command.CreateOrder;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Application.Features.Orders.Query.ReviewOrders;
@@ -151,19 +153,35 @@ public class OrdersController : ControllerBase
 
     [HttpPost("create")]
     [Authorize]
-    public async Task<ResponseDto<string>> CreateOrder([FromBody] CreateOrderCommand command,
+    public async Task<ResponseDto<CreateOrderResponse>> CreateOrder([FromBody] CreateOrderCommand command,
         CancellationToken cancellation)
     {
         try
         {
             var response =
-                await _commandDispatcher.Dispatch<CreateOrderCommand, string>(command, cancellation);
+                await _commandDispatcher.Dispatch<CreateOrderCommand, CreateOrderResponse>(command, cancellation);
 
             return ResponseHandler.SuccessResponse(response, "Retrieving Stripe Secret Key");
         }
         catch (Exception ex)
         {
-            return ResponseHandler.ErrorResponse("We fucked up!", ex.Message);
+            return ResponseHandler.ErrorResponse<CreateOrderResponse>(null, "An error while creating order");
+        }
+    }
+
+    [HttpPost("apply-coupon")]
+    [Authorize]
+    public async Task<IActionResult> ApplyCoupon([FromBody] ApplyCouponToOrderCommand command, CancellationToken cancellation)
+    {
+        try
+        {
+            var response = await _commandDispatcher.Dispatch<ApplyCouponToOrderCommand, PaymentIntentResult>(command, cancellation);
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ResponseHandler.ErrorResponse<ApplyCouponToOrderCommand>(null, ex.Message));
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Stripe;
+using Tickette.Application.Common;
 using Tickette.Application.Common.Interfaces.Stripe;
 using Tickette.Domain.Entities;
 
@@ -16,7 +17,7 @@ public class StripePaymentService : IPaymentService
     }
 
 
-    public async Task<string> CreatePaymentIntentAsync(Payment payment)
+    public async Task<PaymentIntentResult> CreatePaymentIntentAsync(Payment payment)
     {
         var service = new PaymentIntentService();
         var options = new PaymentIntentCreateOptions
@@ -28,6 +29,30 @@ public class StripePaymentService : IPaymentService
 
         var paymentIntent = await service.CreateAsync(options);
 
-        return paymentIntent.ClientSecret;
+        var result = new PaymentIntentResult
+        {
+            ClientSecret = paymentIntent.ClientSecret,
+            PaymentIntentId = paymentIntent.Id
+        };
+
+        return result;
+    }
+
+    public async Task<PaymentIntentResult> UpdatePaymentIntentAsync(string paymentIntentId, long newAmount)
+    {
+        var service = new PaymentIntentService();
+        var options = new PaymentIntentUpdateOptions
+        {
+            Amount = newAmount
+        };
+        var paymentIntent = await service.UpdateAsync(paymentIntentId, options);
+
+        var result = new PaymentIntentResult
+        {
+            ClientSecret = paymentIntent.ClientSecret,
+            PaymentIntentId = paymentIntent.Id
+        };
+
+        return result;
     }
 }

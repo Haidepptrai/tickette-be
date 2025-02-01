@@ -8,7 +8,7 @@ public sealed class Order : BaseEntity
 
     public Guid UserOrderedId { get; private set; }
 
-    public Guid CouponId { get; private set; }
+    public Guid? CouponId { get; private set; }
 
     public string BuyerEmail { get; private set; }
 

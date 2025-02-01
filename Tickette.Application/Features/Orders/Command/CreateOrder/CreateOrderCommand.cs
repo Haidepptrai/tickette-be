@@ -19,7 +19,7 @@ public record CreateOrderCommand
     public string? CouponCode { get; init; }
 }
 
-public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, string>
+public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, CreateOrderResponse>
 {
     private readonly IApplicationDbContext _context;
     private readonly IPaymentService _paymentService;
@@ -30,7 +30,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, str
         _paymentService = paymentService;
     }
 
-    public async Task<string> Handle(CreateOrderCommand query, CancellationToken cancellation)
+    public async Task<CreateOrderResponse> Handle(CreateOrderCommand query, CancellationToken cancellation)
     {
         // Create an order
         var order = Order.CreateOrder(query.EventId, query.UserId, query.BuyerEmail, query.BuyerName, query.BuyerPhone);
@@ -40,10 +40,15 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, str
         {
             var ticketPrice = await _context.Tickets
                 .Where(t => t.Id == ticket.TicketId)
-                .Select(t => t.Price)
+                .Select(t => (long?)t.Price) // Nullable to detect missing records
                 .SingleOrDefaultAsync(cancellation);
 
-            var orderItem = OrderItem.Create(ticket.TicketId, ticketPrice, ticket.Quantity, null);
+            if (ticketPrice == null)
+            {
+                throw new ArgumentException($"Invalid Ticket ID: {ticket.TicketId}");
+            }
+
+            var orderItem = OrderItem.Create(ticket.TicketId, ticketPrice.Value, ticket.Quantity, null);
 
             order.AddOrderItem(orderItem.TicketId, orderItem.Price, orderItem.Quantity, null);
         }
@@ -61,16 +66,20 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, str
 
         // Create payment intent
         var payment = Payment.Create(order.TotalPrice);
-        var paymentIntent = await _paymentService.CreatePaymentIntentAsync(payment);
-
-
+        var paymentIntentResult = await _paymentService.CreatePaymentIntentAsync(payment);
 
         // Save order
         await _context.Orders.AddAsync(order, cancellation);
 
-        // Save payment
-        //Later...
+        await _context.SaveChangesAsync(cancellation);
 
-        return paymentIntent;
+        var response = new CreateOrderResponse
+        {
+            OrderId = order.Id,
+            PaymentIntentId = paymentIntentResult.PaymentIntentId,
+            ClientSecret = paymentIntentResult.ClientSecret
+        };
+
+        return response;
     }
 }
