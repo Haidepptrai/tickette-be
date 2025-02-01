@@ -9,7 +9,7 @@ public sealed class Coupon : BaseEntity
 
     public string Code { get; private set; }
 
-    public decimal DiscountValue { get; private set; }
+    public long DiscountValue { get; private set; }
 
     public DiscountType DiscountType { get; private set; }
 
@@ -19,7 +19,7 @@ public sealed class Coupon : BaseEntity
 
     public Event Event { get; set; }
 
-    private Coupon(Guid eventId, string code, decimal discountValue, DiscountType discountType, DateTime expiryDate)
+    private Coupon(Guid eventId, string code, long discountValue, DiscountType discountType, DateTime expiryDate)
     {
         EventId = eventId;
         Code = code.ToUpper();
@@ -29,7 +29,7 @@ public sealed class Coupon : BaseEntity
         IsActive = true;
     }
 
-    public static Coupon CreateCoupon(Guid eventId, string code, decimal discountValue, DiscountType discountType, DateTime expiryDate)
+    public static Coupon CreateCoupon(Guid eventId, string code, long discountValue, DiscountType discountType, DateTime expiryDate)
     {
         //Conditional check
         if (string.IsNullOrWhiteSpace(code))
@@ -50,7 +50,7 @@ public sealed class Coupon : BaseEntity
         return new Coupon(eventId, code, discountValue, discountType, expiryDate);
     }
 
-    public decimal CalculateDiscount(decimal originalPrice)
+    public long CalculateDiscount(long originalPrice)
     {
         if (!IsActive)
         {
@@ -70,7 +70,7 @@ public sealed class Coupon : BaseEntity
         };
     }
 
-    public decimal CalculateFinalPrice(decimal originalPrice)
+    public long CalculateFinalPrice(long originalPrice)
     {
         return originalPrice - CalculateDiscount(originalPrice);
     }

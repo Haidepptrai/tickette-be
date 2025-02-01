@@ -16,14 +16,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Events\Handlers\" />
-    <Folder Include="Events\Models\" />
     <Folder Include="Features\Auth\Query\" />
     <Folder Include="Features\Categories\Common\" />
     <Folder Include="Features\CommitteeMembers\Command\AddCommitteeMember\" />
     <Folder Include="Features\CommitteeMembers\Command\ChangeCommitteeMemberRole\" />
     <Folder Include="Features\CommitteeMembers\Query\GetAllCommitteeMemberOfEvent\" />
     <Folder Include="Features\Events\Queries\GetEventByUserId\" />
+    <Folder Include="Features\Orders\Command\CreateOrder\" />
     <Folder Include="Features\QRCode\Commands\" />
     <Folder Include="Features\Tickets\Query\" />
     <Folder Include="Factories\" />

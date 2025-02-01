@@ -12,8 +12,8 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
             .IsRequired();
 
         builder.Property(e => e.Price)
-            .HasColumnType("decimal(18,2)")
-            .IsRequired();
+            .IsRequired()
+            .HasColumnType("bigint");
 
         builder.Property(e => e.IsScanned)
             .IsRequired();

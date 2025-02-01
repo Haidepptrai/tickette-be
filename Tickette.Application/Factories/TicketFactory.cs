@@ -8,7 +8,7 @@ public static class TicketFactory
     public static async Task<Ticket> CreateTicketAsync(
         EventDate eventDate,
         string name,
-        decimal price,
+        long price,
         int totalTickets,
         int minTicketsPerOrder,
         int maxTicketsPerOrder,
@@ -19,7 +19,7 @@ public static class TicketFactory
         IFileUploadService fileUploadService)
     {
         // Upload the ticket image and get the URL
-        var ticketImageUrl = await fileUploadService.UploadFileAsync(ticketImageFile, "tickets");
+        var ticketImageUrl = ticketImageFile is null ? "" : await fileUploadService.UploadFileAsync(ticketImageFile, "tickets");
 
         // Create and return the Ticket
         return Ticket.Create(

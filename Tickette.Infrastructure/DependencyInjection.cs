@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Amazon;
+using Amazon.S3;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -12,6 +14,8 @@ using System.Text;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Messaging;
+using Tickette.Application.Common.Interfaces.Redis;
+using Tickette.Application.Common.Interfaces.Stripe;
 using Tickette.Domain.Entities;
 using Tickette.Infrastructure.Authentication;
 using Tickette.Infrastructure.Authorization.Handlers;
@@ -22,6 +26,7 @@ using Tickette.Infrastructure.FileStorage;
 using Tickette.Infrastructure.Identity;
 using Tickette.Infrastructure.Messaging;
 using Tickette.Infrastructure.Messaging.Feature;
+using Tickette.Infrastructure.Persistence.Redis;
 using Tickette.Infrastructure.Services;
 using static Tickette.Domain.Common.Constant;
 
@@ -185,7 +190,6 @@ public static class DependencyInjection
             .AsImplementedInterfaces()
             .WithScopedLifetime());
 
-        builder.Services.TryAddScoped<IFileUploadService, S3FileUploadService>();
         builder.Services.TryAddScoped<IQrCodeService, QrCodeService>();
 
         // Register the custom handler and HttpContextAccessor
@@ -216,6 +220,38 @@ public static class DependencyInjection
         builder.Services.AddSingleton<IMessageProducer, RabbitMQProducer>();
         builder.Services.AddSingleton<IMessageConsumer, RabbitMQConsumer>();
 
-        builder.Services.AddSingleton<TicketReservationConsumer>();
+        builder.Services.AddHostedService<TicketReservationConsumer>();
+    }
+
+    public static void AddRedisSettings(this IHostApplicationBuilder builder)
+    {
+        builder.Services.AddSingleton<IRedisService, RedisService>();
+    }
+
+    public static void AddStripeSettings(this IHostApplicationBuilder builder)
+    {
+        builder.Services.AddSingleton<IPaymentService, StripePaymentService>();
+    }
+
+    public static void AddS3Service(this IHostApplicationBuilder builder)
+    {
+        var awsConfig = builder.Configuration.GetSection("AWS");
+
+        // Manually create AmazonS3Config
+        var s3Config = new AmazonS3Config
+        {
+            RegionEndpoint = RegionEndpoint.GetBySystemName(awsConfig["Region"]) // Set the region
+        };
+
+        // Manually create AmazonS3Client with AccessKey and SecretKey
+        var s3Client = new AmazonS3Client(
+            awsConfig["AccessKey"], // Access Key ID
+            awsConfig["SecretKey"], // Secret Access Key
+            s3Config
+        );
+
+        builder.Services.AddSingleton<IAmazonS3>(s3Client);
+
+        builder.Services.TryAddScoped<IFileUploadService, S3FileUploadService>();
     }
 }

@@ -15,7 +15,7 @@ public class CouponConfiguration : IEntityTypeConfiguration<Coupon>
 
         builder.Property(c => c.DiscountValue)
             .IsRequired()
-            .HasColumnType("decimal(18,2)");
+            .HasColumnType("bigint");
 
         builder.Property(c => c.DiscountType)
             .IsRequired()

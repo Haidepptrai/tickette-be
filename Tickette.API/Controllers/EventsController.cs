@@ -8,11 +8,11 @@ using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.Events.Commands.CreateEvent;
 using Tickette.Application.Features.Events.Commands.UpdateEventStatus;
 using Tickette.Application.Features.Events.Common;
+using Tickette.Application.Features.Events.Queries.GetAllEvents;
 using Tickette.Application.Features.Events.Queries.GetEventByCategory;
 using Tickette.Application.Features.Events.Queries.GetEventById;
 using Tickette.Application.Features.Events.Queries.GetEventByUserId;
 using Tickette.Application.Wrappers;
-using Tickette.Domain.Common;
 
 namespace Tickette.API.Controllers;
 
@@ -43,6 +43,35 @@ public class EventsController : ControllerBase
         catch (Exception ex)
         {
             return ResponseHandler.ErrorResponse<IEnumerable<EventListDto>>(null, "Internal Server Error", 500);
+        }
+    }
+
+    // GET all events
+    [HttpPost("get-all")]
+    [SwaggerOperation(
+        Summary = "Get All Events",
+        Description = "Get all events with pagination"
+    )]
+    public async Task<ResponseDto<IEnumerable<EventDetailDto>>> GetAllEvents(GetAllEventsQuery query, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _queryDispatcher.Dispatch<GetAllEventsQuery, PagedResult<EventDetailDto>>(query, cancellationToken);
+
+            var paginationMeta = new PaginationMeta(
+                result.PageNumber,
+                result.PageSize,
+                result.TotalCount,
+                (int)Math.Ceiling((double)result.TotalCount / result.PageSize)
+            );
+
+            var response = ResponseHandler.PaginatedResponse(result.Items, paginationMeta, "Get all events successfully");
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            return ResponseHandler.ErrorResponse<IEnumerable<EventDetailDto>>(null, "Internal Server Error", 500);
         }
     }
 
@@ -162,9 +191,9 @@ public class EventsController : ControllerBase
     }
 
     //Update Event Status
-    [HttpPatch("{eventId:guid}/status")]
-    [Authorize(Roles = Constant.APPLICATION_ROLE.Admin)]
-    public async Task<ResponseDto<Guid>> UpdateEventStatus(Guid eventId, UpdateEventStatusCommand command, CancellationToken token)
+    [HttpPatch("status")]
+    //[Authorize(Roles = Constant.APPLICATION_ROLE.Admin)]
+    public async Task<ResponseDto<Guid>> UpdateEventStatus(UpdateEventStatusCommand command, CancellationToken token)
     {
         try
         {

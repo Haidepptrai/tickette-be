@@ -43,8 +43,11 @@ public class ResponseDto<T>
 public class PaginationMeta
 {
     public int Page { get; set; }
+
     public int PerPage { get; set; }
+
     public int TotalItems { get; set; }
+
     public int TotalPages { get; set; }
 
     public PaginationMeta(int page, int perPage, int totalItems, int totalPages)

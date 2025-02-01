@@ -10,7 +10,7 @@ public sealed class OrderItem : BaseEntity
 
     public int Quantity { get; private set; }
 
-    public decimal Price { get; private set; } // Price of the ticket at the time of the order
+    public long Price { get; private set; } // Price of each ticket at the time of the order
 
     public bool IsScanned { get; private set; }
 
@@ -25,7 +25,7 @@ public sealed class OrderItem : BaseEntity
 
     private OrderItem() { }
 
-    public OrderItem(Guid ticketId, decimal price, int quantity, List<EventSeat>? seats)
+    public OrderItem(Guid ticketId, long price, int quantity, List<EventSeat>? seats)
     {
         if (quantity <= 0)
         {
@@ -37,6 +37,11 @@ public sealed class OrderItem : BaseEntity
         Quantity = quantity;
         Seats = seats ?? [];
         IsScanned = false;
+    }
+
+    public static OrderItem Create(Guid ticketId, long price, int quantity, List<EventSeat>? seats)
+    {
+        return new OrderItem(ticketId, price, quantity, seats);
     }
 
     public void SetAsScanned()
@@ -55,7 +60,7 @@ public sealed class OrderItem : BaseEntity
         Quantity += quantity;
     }
 
-    public decimal CalculateTotalPrice()
+    public long CalculateTotalPrice()
     {
         return Price * Quantity;
     }

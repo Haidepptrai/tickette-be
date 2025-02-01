@@ -8,7 +8,7 @@ public sealed class Ticket : BaseEntity
 
     public string Name { get; private set; }
 
-    public decimal Price { get; private set; }
+    public long Price { get; private set; }
 
     public int TotalTickets { get; private set; }
 
@@ -35,7 +35,7 @@ public sealed class Ticket : BaseEntity
     private Ticket(
     EventDate eventDate,
     string name,
-    decimal price,
+    long price,
     int totalTickets,
     int minTicketsPerOrder,
     int maxTicketsPerOrder,
@@ -60,7 +60,7 @@ public sealed class Ticket : BaseEntity
     public static Ticket Create(
         EventDate eventDate,
         string name,
-        decimal price,
+        long price,
         int totalTickets,
         int minTicketsPerOrder,
         int maxTicketsPerOrder,
@@ -100,7 +100,7 @@ public sealed class Ticket : BaseEntity
     }
 
 
-    public void UpdateRemainingTickets(int quantity)
+    public void ReduceTickets(int quantity)
     {
         if (quantity > RemainingTickets)
             throw new ArgumentException("Quantity exceeds remaining tickets.");

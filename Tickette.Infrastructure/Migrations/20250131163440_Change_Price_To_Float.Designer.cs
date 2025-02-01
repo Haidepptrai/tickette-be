@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Tickette.Infrastructure.Data;
@@ -11,9 +12,11 @@ using Tickette.Infrastructure.Data;
 namespace Tickette.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250131163440_Change_Price_To_Float")]
+    partial class Change_Price_To_Float
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -726,7 +729,7 @@ namespace Tickette.Infrastructure.Migrations
                         .HasColumnType("character varying(15)")
                         .HasColumnName("buyer_phone");
 
-                    b.Property<Guid?>("CouponId")
+                    b.Property<Guid>("CouponId")
                         .HasColumnType("uuid")
                         .HasColumnName("coupon_id");
 

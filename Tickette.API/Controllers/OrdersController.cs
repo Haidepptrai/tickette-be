@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
+using Tickette.Application.Common;
 using Tickette.Application.Common.CQRS;
-using Tickette.Application.Features.Orders.Command.ReverseTicket;
+using Tickette.Application.Features.Orders.Command.ApplyCouponToOrder;
+using Tickette.Application.Features.Orders.Command.CreateOrder;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Application.Features.Orders.Query.ReviewOrders;
 using Tickette.Application.Features.QRCode.Common;
@@ -10,7 +12,6 @@ using Tickette.Application.Features.QRCode.Queries;
 using Tickette.Application.Features.QRCode.Queries.ValidateQrCode;
 using Tickette.Application.Features.Tickets.Command;
 using Tickette.Application.Wrappers;
-using Tickette.Domain.Common;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -150,21 +151,37 @@ public class OrdersController : ControllerBase
         }
     }
 
-    [HttpPost("reverse-tickets")]
+    [HttpPost("create")]
     [Authorize]
-    public async Task<IActionResult> ReverseOrder([FromBody] ReverseTicketCommand command,
+    public async Task<ResponseDto<CreateOrderResponse>> CreateOrder([FromBody] CreateOrderCommand command,
         CancellationToken cancellation)
     {
         try
         {
             var response =
-                await _commandDispatcher.Dispatch<ReverseTicketCommand, Unit>(command, cancellation);
+                await _commandDispatcher.Dispatch<CreateOrderCommand, CreateOrderResponse>(command, cancellation);
+
+            return ResponseHandler.SuccessResponse(response, "Retrieving Stripe Secret Key");
+        }
+        catch (Exception ex)
+        {
+            return ResponseHandler.ErrorResponse<CreateOrderResponse>(null, "An error while creating order");
+        }
+    }
+
+    [HttpPost("apply-coupon")]
+    [Authorize]
+    public async Task<IActionResult> ApplyCoupon([FromBody] ApplyCouponToOrderCommand command, CancellationToken cancellation)
+    {
+        try
+        {
+            var response = await _commandDispatcher.Dispatch<ApplyCouponToOrderCommand, PaymentIntentResult>(command, cancellation);
 
             return Ok(response);
         }
         catch (Exception ex)
         {
-            return BadRequest(ResponseHandler.ErrorResponse<Guid>(Guid.Empty, ex.Message));
+            return BadRequest(ResponseHandler.ErrorResponse<ApplyCouponToOrderCommand>(null, ex.Message));
         }
     }
 }
