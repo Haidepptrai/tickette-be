@@ -36,6 +36,7 @@ namespace Tickette.API
             builder.AddRabbitMQSettings();
             builder.AddRedisSettings();
             builder.AddStripeSettings();
+            builder.AddS3Service();
 
             //Add Swagger
             builder.Services.AddEndpointsApiExplorer();

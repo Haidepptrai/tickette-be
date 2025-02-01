@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Amazon;
+using Amazon.S3;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -188,7 +190,6 @@ public static class DependencyInjection
             .AsImplementedInterfaces()
             .WithScopedLifetime());
 
-        builder.Services.TryAddScoped<IFileUploadService, S3FileUploadService>();
         builder.Services.TryAddScoped<IQrCodeService, QrCodeService>();
 
         // Register the custom handler and HttpContextAccessor
@@ -230,5 +231,27 @@ public static class DependencyInjection
     public static void AddStripeSettings(this IHostApplicationBuilder builder)
     {
         builder.Services.AddSingleton<IPaymentService, StripePaymentService>();
+    }
+
+    public static void AddS3Service(this IHostApplicationBuilder builder)
+    {
+        var awsConfig = builder.Configuration.GetSection("AWS");
+
+        // Manually create AmazonS3Config
+        var s3Config = new AmazonS3Config
+        {
+            RegionEndpoint = RegionEndpoint.GetBySystemName(awsConfig["Region"]) // Set the region
+        };
+
+        // Manually create AmazonS3Client with AccessKey and SecretKey
+        var s3Client = new AmazonS3Client(
+            awsConfig["AccessKey"], // Access Key ID
+            awsConfig["SecretKey"], // Secret Access Key
+            s3Config
+        );
+
+        builder.Services.AddSingleton<IAmazonS3>(s3Client);
+
+        builder.Services.TryAddScoped<IFileUploadService, S3FileUploadService>();
     }
 }
