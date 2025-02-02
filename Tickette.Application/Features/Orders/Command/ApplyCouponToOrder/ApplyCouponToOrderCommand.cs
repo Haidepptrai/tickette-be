@@ -1,8 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Tickette.Application.Common;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Stripe;
+using Tickette.Application.Features.Orders.Common;
 
 namespace Tickette.Application.Features.Orders.Command.ApplyCouponToOrder;
 
@@ -15,7 +15,7 @@ public record ApplyCouponToOrderCommand
     public string PaymentIntentId { get; init; }
 }
 
-public class ApplyCouponToOrderCommandHandler : ICommandHandler<ApplyCouponToOrderCommand, PaymentIntentResult>
+public class ApplyCouponToOrderCommandHandler : ICommandHandler<ApplyCouponToOrderCommand, ApplyCouponToOrderResponse>
 {
     private readonly IApplicationDbContext _context;
     private readonly IPaymentService _paymentService;
@@ -26,7 +26,7 @@ public class ApplyCouponToOrderCommandHandler : ICommandHandler<ApplyCouponToOrd
         _paymentService = paymentService;
     }
 
-    public async Task<PaymentIntentResult> Handle(ApplyCouponToOrderCommand command, CancellationToken cancellationToken)
+    public async Task<ApplyCouponToOrderResponse> Handle(ApplyCouponToOrderCommand command, CancellationToken cancellationToken)
     {
         var order = await _context.Orders
             .SingleOrDefaultAsync(o => o.Id == command.OrderId, cancellationToken);
@@ -52,7 +52,15 @@ public class ApplyCouponToOrderCommandHandler : ICommandHandler<ApplyCouponToOrd
         order.ApplyCoupon(coupon);
         var paymentServiceResult = await _paymentService.UpdatePaymentIntentAsync(command.PaymentIntentId, order.TotalPrice);
 
+        var result = new ApplyCouponToOrderResponse
+        {
+            TotalPrice = order.TotalPrice,
+            ClientSecret = paymentServiceResult.ClientSecret,
+            PaymentIntentId = paymentServiceResult.PaymentIntentId
+        };
+
+
         await _context.SaveChangesAsync(cancellationToken);
-        return paymentServiceResult;
+        return result;
     }
 }

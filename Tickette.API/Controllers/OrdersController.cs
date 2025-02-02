@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
-using Tickette.Application.Common;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.Orders.Command.ApplyCouponToOrder;
 using Tickette.Application.Features.Orders.Command.CreateOrder;
@@ -171,13 +170,13 @@ public class OrdersController : ControllerBase
 
     [HttpPost("apply-coupon")]
     [Authorize]
-    public async Task<IActionResult> ApplyCoupon([FromBody] ApplyCouponToOrderCommand command, CancellationToken cancellation)
+    public async Task<ActionResult<ResponseDto<ApplyCouponToOrderResponse>>> ApplyCoupon([FromBody] ApplyCouponToOrderCommand command, CancellationToken cancellation)
     {
         try
         {
-            var response = await _commandDispatcher.Dispatch<ApplyCouponToOrderCommand, PaymentIntentResult>(command, cancellation);
+            var response = await _commandDispatcher.Dispatch<ApplyCouponToOrderCommand, ApplyCouponToOrderResponse>(command, cancellation);
 
-            return Ok(response);
+            return Ok(ResponseHandler.SuccessResponse(response, "Update total price in order successfully"));
         }
         catch (Exception ex)
         {
