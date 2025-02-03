@@ -28,7 +28,7 @@ public class CreatePaymentIntentCommandHandler : ICommandHandler<CreatePaymentIn
     {
         decimal totalPrice = 0;
 
-        // ✅ Validate Tickets and Calculate Total Price
+        // Validate Tickets and Calculate Total Price
         foreach (var ticket in command.Tickets)
         {
             var ticketInfo = await _context.Tickets

@@ -76,11 +76,7 @@ public class TicketReservationConsumer : BackgroundService
 
                 // Verify reservation still exists in Redis
                 bool exists = await _redisService.KeyExistsAsync(reservationKey);
-                if (!exists)
-                {
-                    _logger.LogWarning($"Reservation expired or not found in Redis for Ticket {ticket.Id}");
-                    throw new Exception($"Reservation expired or not found in Redis for Ticket {ticket.Id}");
-                }
+                if (!exists) return;
 
                 // Update PostgreSQL inventory per ticket
                 var ticketRecord = await context.Tickets
@@ -95,9 +91,6 @@ public class TicketReservationConsumer : BackgroundService
 
                 ticketRecord.ReduceTickets(ticket.Quantity);
                 await context.SaveChangesAsync(cancellationToken);
-
-                // Remove reservation from Redis after confirming in DB
-                await _redisService.DeleteKeyAsync(reservationKey);
             }
         }
         catch (Exception ex)

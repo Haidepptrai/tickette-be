@@ -1,16 +1,19 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 using System.IdentityModel.Tokens.Jwt;
 using Tickette.Application.Common.CQRS;
-using Tickette.Application.Features.Orders.Command.ApplyCouponToOrder;
 using Tickette.Application.Features.Orders.Command.CreateOrder;
+using Tickette.Application.Features.Orders.Command.RemoveReserveTicket;
+using Tickette.Application.Features.Orders.Command.ReserveTicket;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Application.Features.Orders.Query.ReviewOrders;
+using Tickette.Application.Features.Orders.Query.ValidateReservation;
 using Tickette.Application.Features.QRCode.Common;
 using Tickette.Application.Features.QRCode.Queries;
 using Tickette.Application.Features.QRCode.Queries.ValidateQrCode;
-using Tickette.Application.Features.Tickets.Command;
 using Tickette.Application.Wrappers;
+using Tickette.Domain.Common;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -129,28 +132,8 @@ public class OrdersController : ControllerBase
         }
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Post([FromBody] OrderTicketsCommand command, CancellationToken cancellation)
-    {
-        try
-        {
-            var response =
-                await _commandDispatcher.Dispatch<OrderTicketsCommand, ResponseDto<Guid>>(command, cancellation);
-
-            if (!response.Success)
-            {
-                return BadRequest(response);
-            }
-
-            return Ok(response);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ResponseHandler.ErrorResponse<Guid>(Guid.Empty, ex.Message));
-        }
-    }
-
     [HttpPost("create")]
+    [SwaggerOperation(summary: "Create order for the user after confirm payment")]
     [Authorize]
     public async Task<ResponseDto<CreateOrderResponse>> CreateOrder([FromBody] CreateOrderCommand command,
         CancellationToken cancellation)
@@ -160,7 +143,7 @@ public class OrdersController : ControllerBase
             var response =
                 await _commandDispatcher.Dispatch<CreateOrderCommand, CreateOrderResponse>(command, cancellation);
 
-            return ResponseHandler.SuccessResponse(response, "Retrieving Stripe Secret Key");
+            return ResponseHandler.SuccessResponse(response, "Order created successfully");
         }
         catch (Exception ex)
         {
@@ -168,19 +151,59 @@ public class OrdersController : ControllerBase
         }
     }
 
-    [HttpPost("apply-coupon")]
+    [HttpPost("validate-reservation")]
+    [SwaggerOperation(summary: "Validate the reservation before creating the order")]
     [Authorize]
-    public async Task<ActionResult<ResponseDto<ApplyCouponToOrderResponse>>> ApplyCoupon([FromBody] ApplyCouponToOrderCommand command, CancellationToken cancellation)
+    public async Task<ActionResult<ResponseDto<bool>>> ValidateReservation([FromBody] ValidateReservationQuery query,
+        CancellationToken cancellation)
     {
         try
         {
-            var response = await _commandDispatcher.Dispatch<ApplyCouponToOrderCommand, ApplyCouponToOrderResponse>(command, cancellation);
+            var response =
+                await _queryDispatcher.Dispatch<ValidateReservationQuery, bool>(query, cancellation);
 
-            return Ok(ResponseHandler.SuccessResponse(response, "Update total price in order successfully"));
+            return Ok(ResponseHandler.SuccessResponse(response, "Tickets is still in reserved"));
         }
         catch (Exception ex)
         {
-            return BadRequest(ResponseHandler.ErrorResponse<ApplyCouponToOrderCommand>(null, ex.Message));
+            return BadRequest(ResponseHandler.ErrorResponse(false, ex.Message));
         }
     }
+
+    [HttpPost("reserve-tickets")]
+    [SwaggerOperation(summary: "Reserve tickets for the user before confirm payment")]
+    [Authorize]
+    public async Task<ActionResult<ResponseDto<Unit>>> ReserveTickets([FromBody] ReserveTicketCommand command,
+        CancellationToken cancellation)
+    {
+        try
+        {
+            var response =
+                await _commandDispatcher.Dispatch<ReserveTicketCommand, Unit>(command, cancellation);
+            return Ok(ResponseHandler.SuccessResponse(response, "Tickets reserved successfully"));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ResponseHandler.ErrorResponse(Unit.Value, ex.Message));
+        }
+    }
+
+    [HttpPost("remove-tickets-reserve")]
+    [SwaggerOperation(summary: "Remove the reservation of the tickets")]
+    [Authorize]
+    public async Task<ActionResult<ResponseDto<Unit>>>
+        RemoveReserve([FromBody] RemoveReserveTicketCommand command, CancellationToken cancellation)
+    {
+        try
+        {
+            var response =
+                await _commandDispatcher.Dispatch<RemoveReserveTicketCommand, Unit>(command, cancellation);
+            return Ok(ResponseHandler.SuccessResponse(response, "Reservation removed successfully"));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ResponseHandler.ErrorResponse(Unit.Value, ex.Message));
+        }
+    }
+
 }

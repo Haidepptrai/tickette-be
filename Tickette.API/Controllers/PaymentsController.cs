@@ -21,6 +21,7 @@ namespace Tickette.API.Controllers
         }
 
         [HttpPost("create-payment-intent")]
+        [SwaggerOperation(summary: "Create payment intent for the user reserved the tickets")]
         public async Task<IActionResult> CreatePaymentIntent([FromBody] CreatePaymentIntentCommand command,
             CancellationToken cancellationToken)
         {
