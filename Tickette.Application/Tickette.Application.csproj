@@ -24,7 +24,9 @@
     <Folder Include="Features\Events\Queries\GetEventByUserId\" />
     <Folder Include="Features\Orders\Command\CreateOrder\" />
     <Folder Include="Features\Orders\Command\CreatePaymentIntent\" />
+    <Folder Include="Features\Orders\Query\ValidateReservation\" />
     <Folder Include="Features\QRCode\Commands\" />
+    <Folder Include="Features\Tickets\Command\" />
     <Folder Include="Features\Tickets\Query\" />
     <Folder Include="Factories\" />
     <Folder Include="Features\Users\Command\" />

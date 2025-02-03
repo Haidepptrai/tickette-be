@@ -45,7 +45,7 @@ public class UpdateEventStatusHandler : ICommandHandler<UpdateEventStatusCommand
                     foreach (var ticket in eventDate.Tickets)
                     {
                         // Create a unique Redis key for each ticket in each event date
-                        string inventoryKey = $"event:{command.EventId}:ticket:{ticket.Id}:remaining_tickets";
+                        string inventoryKey = $"ticket:{ticket.Id}:remaining_tickets";
 
                         // Set the initial ticket quantity in Redis
                         await _redisService.SetAsync(inventoryKey, ticket.RemainingTickets.ToString(), 0);

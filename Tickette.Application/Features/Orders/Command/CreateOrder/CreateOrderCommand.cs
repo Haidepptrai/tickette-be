@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
-using Tickette.Application.Common.Interfaces.Stripe;
+using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Entities;
 
@@ -22,12 +22,12 @@ public record CreateOrderCommand
 public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, CreateOrderResponse>
 {
     private readonly IApplicationDbContext _context;
-    private readonly IPaymentService _paymentService;
+    private readonly IRedisService _redisService;
 
-    public CreateOrderCommandHandler(IApplicationDbContext context, IPaymentService paymentService)
+    public CreateOrderCommandHandler(IApplicationDbContext context, IRedisService redisService)
     {
         _context = context;
-        _paymentService = paymentService;
+        _redisService = redisService;
     }
 
     public async Task<CreateOrderResponse> Handle(CreateOrderCommand query, CancellationToken cancellation)
@@ -59,10 +59,6 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
             }
         }
 
-        // Create payment intent
-        var payment = Payment.Create(order.TotalPrice);
-        var paymentIntentResult = await _paymentService.CreatePaymentIntentAsync(payment);
-
         // Save order
         await _context.Orders.AddAsync(order, cancellation);
 
@@ -71,9 +67,27 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
         var response = new CreateOrderResponse
         {
             OrderId = order.Id,
-            PaymentIntentId = paymentIntentResult.PaymentIntentId,
-            ClientSecret = paymentIntentResult.ClientSecret
         };
+
+        foreach (var ticket in query.Tickets)
+        {
+            string reservationKey = $"reservation:{ticket.Id}:{query.UserId}";
+            var exists = await _redisService.KeyExistsAsync(reservationKey);
+
+            // No reservation found
+            if (!exists)
+            {
+                // Increase the tickets quantity back
+                string inventoryKey = $"ticket:{ticket.Id}:remaining_tickets";
+                await _redisService.IncrementAsync(inventoryKey, ticket.Quantity);
+
+                continue;
+            }
+
+            // Remove the reservation from Redis
+            await _redisService.DeleteKeyAsync(reservationKey);
+
+        }
 
         return response;
     }

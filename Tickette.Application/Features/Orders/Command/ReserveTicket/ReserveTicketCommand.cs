@@ -11,29 +11,25 @@ namespace Tickette.Application.Features.Orders.Command.ReserveTicket;
 public record ReserveTicketCommand
 {
     public required Guid UserId { get; init; }
-    public required Guid EventId { get; init; }
     public required ICollection<TicketReservation> Tickets { get; set; }
-    public required DateTime ReverseTime { get; init; } = DateTime.UtcNow;
 }
 
 public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand, Unit>
 {
     private readonly IMessageProducer _messageProducer;
     private readonly IRedisService _redisService;
-    private readonly IApplicationDbContext _context;
 
     public ReserveTicketCommandHandler(IMessageProducer messageProducer, IRedisService redisService, IApplicationDbContext context)
     {
         _messageProducer = messageProducer;
         _redisService = redisService;
-        _context = context;
     }
 
     public async Task<Unit> Handle(ReserveTicketCommand request, CancellationToken cancellationToken)
     {
         foreach (var ticket in request.Tickets)
         {
-            string inventoryKey = $"event:{request.EventId}:ticket:{ticket.Id}:remaining_tickets";
+            string inventoryKey = $"ticket:{ticket.Id}:remaining_tickets";
 
             // Atomic decrement in Redis to prevent overselling
             long remainingTickets = await _redisService.DecrementAsync(inventoryKey, ticket.Quantity);
@@ -63,8 +59,6 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
         var message = JsonSerializer.Serialize(request);
         _messageProducer.Publish(Constant.TICKET_RESERVATION_QUEUE, message);
 
-        // This is just reserve ticket for user
-        // The actual order will be created in the OrderTicketsCommandHandler
         return Unit.Value;
     }
 }
