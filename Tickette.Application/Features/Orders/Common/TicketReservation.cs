@@ -2,7 +2,7 @@
 
 public record TicketReservation
 {
-    public Guid TicketId { get; set; }
+    public Guid Id { get; set; }
 
     public int Quantity { get; set; }
 }

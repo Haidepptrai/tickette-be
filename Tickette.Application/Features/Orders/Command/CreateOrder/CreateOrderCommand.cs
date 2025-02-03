@@ -39,16 +39,11 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
         foreach (var ticket in query.Tickets)
         {
             var ticketPrice = await _context.Tickets
-                .Where(t => t.Id == ticket.TicketId)
-                .Select(t => (long?)t.Price) // Nullable to detect missing records
+                .Where(t => t.Id == ticket.Id)
+                .Select(t => t.Price) // Nullable to detect missing records
                 .SingleOrDefaultAsync(cancellation);
 
-            if (ticketPrice == null)
-            {
-                throw new ArgumentException($"Invalid Ticket ID: {ticket.TicketId}");
-            }
-
-            var orderItem = OrderItem.Create(ticket.TicketId, ticketPrice.Value, ticket.Quantity, null);
+            var orderItem = OrderItem.Create(ticket.Id, ticketPrice, ticket.Quantity, null);
 
             order.AddOrderItem(orderItem.TicketId, orderItem.Price, orderItem.Quantity, null);
         }

@@ -33,7 +33,7 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
     {
         foreach (var ticket in request.Tickets)
         {
-            string inventoryKey = $"event:{request.EventId}:ticket:{ticket.TicketId}:remaining_tickets";
+            string inventoryKey = $"event:{request.EventId}:ticket:{ticket.Id}:remaining_tickets";
 
             // Atomic decrement in Redis to prevent overselling
             long remainingTickets = await _redisService.DecrementAsync(inventoryKey, ticket.Quantity);
@@ -42,11 +42,11 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
             {
                 // Rollback if oversold
                 await _redisService.IncrementAsync(inventoryKey, ticket.Quantity);
-                throw new Exception($"Not enough tickets available for Ticket {ticket.TicketId}");
+                throw new Exception($"Not enough tickets available for Ticket {ticket.Id}");
             }
 
             // Store only the quantity locked by the user (not the entire command)
-            string reservationKey = $"reservation:{ticket.TicketId}:{request.UserId}";
+            string reservationKey = $"reservation:{ticket.Id}:{request.UserId}";
 
             var reservationData = new
             {

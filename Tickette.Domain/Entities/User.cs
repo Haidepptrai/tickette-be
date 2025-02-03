@@ -17,8 +17,6 @@ public sealed class User : IdentityUser<Guid>
 
     public List<RefreshToken> RefreshTokens { get; private set; } = new();
 
-    public Cart Cart { get; set; }
-
     public void AddRefreshToken(string token, DateTime expiryTime)
     {
         // Optionally: Remove expired tokens to keep the list clean

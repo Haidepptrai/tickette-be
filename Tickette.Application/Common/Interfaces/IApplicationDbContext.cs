@@ -21,10 +21,6 @@ public interface IApplicationDbContext
 
     DbSet<OrderItem> OrderItems { get; set; }
 
-    DbSet<Cart> Carts { get; set; }
-
-    DbSet<CartItem> CartItems { get; set; }
-
     DbSet<Coupon> Coupons { get; set; }
 
     DbSet<EventSeat> EventSeats { get; set; }

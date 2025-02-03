@@ -27,7 +27,7 @@ public class TicketOrderConfiguration : IEntityTypeConfiguration<Order>
 
         builder.Property(e => e.TotalPrice)
             .IsRequired()
-            .HasColumnType("bigint");
+            .HasColumnType("decimal(18,2)");
 
         builder.HasOne(e => e.Event)
             .WithMany()

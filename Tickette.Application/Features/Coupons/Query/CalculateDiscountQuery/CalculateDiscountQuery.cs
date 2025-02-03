@@ -10,7 +10,7 @@ public record CalculateDiscountQuery
 {
     public required string CouponCode { get; set; }
     public required Guid EventId { get; set; }
-    public required long CurrentPrice { get; set; }
+    public required decimal CurrentPrice { get; set; }
 }
 
 public class CalculateDiscountQueryHandler : IQueryHandler<CalculateDiscountQuery, ResponseDto<PriceDiscountInformationDto>>

@@ -55,7 +55,7 @@ public class OrderTicketsCommandHandler : ICommandHandler<OrderTicketsCommand, R
                 if (!validTickets.TryGetValue(item.TicketId, out var ticketPrice))
                 {
                     throw new ArgumentException(
-                        $"Invalid TicketId: {item.TicketId}. The ticket does not exist for the specified event.");
+                        $"Invalid Id: {item.TicketId}. The ticket does not exist for the specified event.");
                 }
 
                 // Fetch the selected seats from the database

@@ -72,25 +72,25 @@ public class TicketReservationConsumer : BackgroundService
         {
             foreach (var ticket in ticketReservation.Tickets)
             {
-                string reservationKey = $"reservation:{ticket.TicketId}:{ticketReservation.UserId}";
+                string reservationKey = $"reservation:{ticket.Id}:{ticketReservation.UserId}";
 
                 // Verify reservation still exists in Redis
                 bool exists = await _redisService.KeyExistsAsync(reservationKey);
                 if (!exists)
                 {
-                    _logger.LogWarning($"Reservation expired or not found in Redis for Ticket {ticket.TicketId}");
-                    throw new Exception($"Reservation expired or not found in Redis for Ticket {ticket.TicketId}");
+                    _logger.LogWarning($"Reservation expired or not found in Redis for Ticket {ticket.Id}");
+                    throw new Exception($"Reservation expired or not found in Redis for Ticket {ticket.Id}");
                 }
 
                 // Update PostgreSQL inventory per ticket
                 var ticketRecord = await context.Tickets
-                    .Where(t => t.Id == ticket.TicketId)
+                    .Where(t => t.Id == ticket.Id)
                     .FirstOrDefaultAsync(cancellationToken);
 
                 if (ticketRecord == null || ticketRecord.RemainingTickets < ticket.Quantity)
                 {
-                    _logger.LogWarning($"Not enough tickets available for Ticket {ticket.TicketId}");
-                    throw new Exception($"Not enough tickets available for Ticket {ticket.TicketId}");
+                    _logger.LogWarning($"Not enough tickets available for Ticket {ticket.Id}");
+                    throw new Exception($"Not enough tickets available for Ticket {ticket.Id}");
                 }
 
                 ticketRecord.ReduceTickets(ticket.Quantity);

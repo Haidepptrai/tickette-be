@@ -16,13 +16,12 @@ public class StripePaymentService : IPaymentService
         StripeConfiguration.ApiKey = _secretKey;
     }
 
-
     public async Task<PaymentIntentResult> CreatePaymentIntentAsync(Payment payment)
     {
         var service = new PaymentIntentService();
         var options = new PaymentIntentCreateOptions
         {
-            Amount = payment.Amount,
+            Amount = (long)Math.Round(payment.Amount * 100), // Convert to cents for Stripe
             Currency = payment.Currency,
             PaymentMethodTypes = new List<string> { "card" }
         };
@@ -38,21 +37,61 @@ public class StripePaymentService : IPaymentService
         return result;
     }
 
-    public async Task<PaymentIntentResult> UpdatePaymentIntentAsync(string paymentIntentId, long newAmount)
+    public async Task<PaymentIntentResult> UpdatePaymentIntentAsync(string paymentIntentId, decimal newAmount)
     {
+        if (string.IsNullOrWhiteSpace(paymentIntentId))
+            throw new ArgumentException("Payment Intent ID cannot be null or empty.", nameof(paymentIntentId));
+
+        if (newAmount <= 0)
+            throw new ArgumentOutOfRangeException(nameof(newAmount), "Amount must be greater than zero.");
+
         var service = new PaymentIntentService();
-        var options = new PaymentIntentUpdateOptions
-        {
-            Amount = newAmount
-        };
-        var paymentIntent = await service.UpdateAsync(paymentIntentId, options);
 
-        var result = new PaymentIntentResult
+        try
         {
-            ClientSecret = paymentIntent.ClientSecret,
-            PaymentIntentId = paymentIntent.Id
-        };
+            // Get the current PaymentIntent status
+            var currentIntent = await service.GetAsync(paymentIntentId);
 
-        return result;
+            // Check if the payment intent is in a state that allows updates
+            if (currentIntent.Status != "requires_payment_method" &&
+                currentIntent.Status != "requires_confirmation")
+            {
+                throw new InvalidOperationException("Cannot update payment intent that has already been processed.");
+            }
+
+            // Prepare the update options
+            var options = new PaymentIntentUpdateOptions
+            {
+                Amount = (long)Math.Round(newAmount * 100), // To update the amount, it must be in cents
+                Currency = currentIntent.Currency, // Use the same currency as the original intent
+            };
+
+            // Update the payment intent
+            var updatedIntent = await service.UpdateAsync(paymentIntentId, options);
+
+            // Return the updated payment intent details
+            return new PaymentIntentResult
+            {
+                ClientSecret = updatedIntent.ClientSecret,
+                PaymentIntentId = updatedIntent.Id
+            };
+        }
+        catch (StripeException ex)
+        {
+            // Handle Stripe-specific exceptions
+            if (ex.StripeError != null)
+            {
+                throw new InvalidOperationException($"Stripe Error: {ex.StripeError.Message}");
+            }
+
+            // Handle generic Stripe exceptions
+            throw new InvalidOperationException("An error occurred while updating the payment intent.", ex);
+        }
+        catch (Exception ex)
+        {
+            // Handle any other exceptions
+            throw new InvalidOperationException("An unexpected error occurred.", ex);
+        }
     }
+
 }
