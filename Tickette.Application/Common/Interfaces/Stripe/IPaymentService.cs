@@ -6,5 +6,5 @@ public interface IPaymentService
 {
     Task<PaymentIntentResult> CreatePaymentIntentAsync(Payment payment);
 
-    Task<PaymentIntentResult> UpdatePaymentIntentAsync(string paymentIntentId, long newAmount);
+    Task<PaymentIntentResult> UpdatePaymentIntentAsync(string paymentIntentId, decimal newAmount);
 }

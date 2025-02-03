@@ -8,7 +8,7 @@ using Tickette.Domain.Enums;
 
 namespace Tickette.Application.Features.Coupons.Command.CreateCoupon;
 
-public record CreateCouponCommand(Guid EventId, string Code, long DiscountValue, DiscountType DiscountType, DateTime ExpiryDate);
+public record CreateCouponCommand(Guid EventId, string Code, decimal DiscountValue, DiscountType DiscountType, DateTime ExpiryDate);
 
 public class CreateCouponCommandHandler : ICommandHandler<CreateCouponCommand, ResponseDto<CreateCouponResponse>>
 {

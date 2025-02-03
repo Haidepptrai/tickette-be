@@ -13,7 +13,7 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
 
         builder.Property(e => e.Price)
             .IsRequired()
-            .HasColumnType("bigint");
+            .HasColumnType("decimal(18,2)");
 
         builder.Property(e => e.IsScanned)
             .IsRequired();
