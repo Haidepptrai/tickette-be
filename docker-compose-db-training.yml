@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  ai-db:
+    image: postgres:15
+    container_name: ai-training-db
+    environment:
+      POSTGRES_USER: ai_user
+      POSTGRES_PASSWORD: ai_password
+      POSTGRES_DB: ai_training
+    ports:
+      - "5433:5432"
+    volumes:
+      - ai_db_data:/var/lib/postgresql/data
+      - ./init-training.sql:/docker-entrypoint-initdb.d/init-training.sql # Automatically loads schema on startup
+
+volumes:
+  ai_db_data:
+    driver: local

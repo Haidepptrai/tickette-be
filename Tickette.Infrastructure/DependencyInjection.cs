@@ -14,6 +14,7 @@ using System.Text;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Messaging;
+using Tickette.Application.Common.Interfaces.Prediction;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Common.Interfaces.Stripe;
 using Tickette.Domain.Entities;
@@ -27,6 +28,7 @@ using Tickette.Infrastructure.Identity;
 using Tickette.Infrastructure.Messaging;
 using Tickette.Infrastructure.Messaging.Feature;
 using Tickette.Infrastructure.Persistence.Redis;
+using Tickette.Infrastructure.Prediction;
 using Tickette.Infrastructure.Services;
 using static Tickette.Domain.Common.Constant;
 
@@ -81,7 +83,8 @@ public static class DependencyInjection
                     ValidateIssuerSigningKey = true,
                     ValidIssuer = builder.Configuration["Jwt:Issuer"],
                     ValidAudience = builder.Configuration["Jwt:Audience"],
-                    IssuerSigningKey = new SymmetricSecurityKey(key)
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    RoleClaimType = "roles"
                 };
 
                 // Disable claim type remapping
@@ -253,5 +256,10 @@ public static class DependencyInjection
         builder.Services.AddSingleton<IAmazonS3>(s3Client);
 
         builder.Services.TryAddScoped<IFileUploadService, S3FileUploadService>();
+    }
+
+    public static void AddMachineLearningModel(this IHostApplicationBuilder builder)
+    {
+        builder.Services.AddSingleton<ITrainingModelService, TrainingModelService>();
     }
 }

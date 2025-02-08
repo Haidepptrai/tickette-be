@@ -23,7 +23,12 @@ public class StripePaymentService : IPaymentService
         {
             Amount = (long)Math.Round(payment.Amount * 100), // Convert to cents for Stripe
             Currency = payment.Currency,
-            PaymentMethodTypes = new List<string> { "card" }
+            PaymentMethodTypes = new List<string> { "card" },
+            TransferData = new PaymentIntentTransferDataOptions
+            {
+                Destination = "acct_1QpYEHHFsj1g5H5Q", // Replace with your own account ID
+            },
+            ApplicationFeeAmount = 1000 // Platform fee (e.g., $10.00 in cents)
         };
 
         var paymentIntent = await service.CreateAsync(options);

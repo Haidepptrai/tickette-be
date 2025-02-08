@@ -25,11 +25,16 @@ public class RemoveReserveTicketCommandHandler : ICommandHandler<RemoveReserveTi
         foreach (var ticket in command.Tickets)
         {
             string reservationKey = $"reservation:{ticket.Id}:{command.UserId}";
-            var reservationData = await _redisService.GetAsync(reservationKey);
+            var exists = await _redisService.KeyExistsAsync(reservationKey);
 
-            if (reservationData == null)
+            // No reservation found
+            if (!exists)
             {
-                return Unit.Value;
+                // Increase the tickets quantity back
+                string inventoryKey = $"ticket:{ticket.Id}:remaining_tickets";
+                await _redisService.IncrementAsync(inventoryKey, ticket.Quantity);
+
+                continue;
             }
 
             // Remove the reservation from Redis

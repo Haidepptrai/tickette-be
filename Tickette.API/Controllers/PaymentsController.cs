@@ -35,6 +35,7 @@ namespace Tickette.API.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex.Message);
                 return BadRequest(ResponseHandler.ErrorResponse<PaymentIntentResult>(null, "Internal Server Error"));
             }
         }
