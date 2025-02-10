@@ -10,6 +10,7 @@
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.301" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.413.1" />
     <PackageReference Include="EFCore.NamingConventions" Version="9.0.0" />
+    <PackageReference Include="MailKit" Version="4.10.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="8.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.1.39" />
@@ -30,10 +31,12 @@
     <PackageReference Include="Microsoft.ML.FastTree" Version="4.0.1" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
     <PackageReference Include="Microsoft.ML.Recommender" Version="0.22.1" />
+    <PackageReference Include="MimeKit" Version="4.10.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.2" />
     <PackageReference Include="QRCoder" Version="1.6.0" />
     <PackageReference Include="RabbitMQ.Client" Version="7.0.0" />
+    <PackageReference Include="RazorLight" Version="2.3.1" />
     <PackageReference Include="Scrutor" Version="5.0.2" />
     <PackageReference Include="SkiaSharp" Version="3.116.1" />
     <PackageReference Include="StackExchange.Redis" Version="2.8.24" />

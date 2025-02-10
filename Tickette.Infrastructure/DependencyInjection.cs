@@ -13,16 +13,19 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
+using Tickette.Application.Common.Interfaces.Email;
 using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Interfaces.Prediction;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Common.Interfaces.Stripe;
+using Tickette.Application.Common.Models;
 using Tickette.Domain.Entities;
 using Tickette.Infrastructure.Authentication;
 using Tickette.Infrastructure.Authorization.Handlers;
 using Tickette.Infrastructure.Authorization.Requirements;
 using Tickette.Infrastructure.CQRS;
 using Tickette.Infrastructure.Data;
+using Tickette.Infrastructure.Email;
 using Tickette.Infrastructure.FileStorage;
 using Tickette.Infrastructure.Identity;
 using Tickette.Infrastructure.Messaging;
@@ -261,5 +264,13 @@ public static class DependencyInjection
     public static void AddMachineLearningModel(this IHostApplicationBuilder builder)
     {
         builder.Services.AddSingleton<ITrainingModelService, TrainingModelService>();
+        builder.Services.AddSingleton<IRecommendationService, RecommendationService>();
+    }
+
+    public static void AddEmailService(this IHostApplicationBuilder builder)
+    {
+        builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+
+        builder.Services.TryAddScoped<IEmailService, EmailService>();
     }
 }

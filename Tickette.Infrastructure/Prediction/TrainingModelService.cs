@@ -1,5 +1,4 @@
 ﻿using Microsoft.ML;
-using Microsoft.ML.Transforms;
 using Tickette.Application.Common.Interfaces.Prediction;
 
 namespace Tickette.Infrastructure.Prediction;
@@ -7,87 +6,61 @@ namespace Tickette.Infrastructure.Prediction;
 public class TrainingModelService : ITrainingModelService
 {
     private readonly MLContext _mlContext = new();
-    private ITransformer _trainedModel;
     private readonly string _modelPath = "recommendation_model.zip";
 
     public void TrainModelAsync()
     {
-        List<UserHistoryBuyData> userHistoryData =
-        [
-            new UserHistoryBuyData(
-                Guid.NewGuid().ToString(), "Ho Chi Minh", "District 1",
-                500000f, new string[] { "Ho Chi Minh", "Ho Chi Minh", "Ha Noi" }),
+        List<UserEventInteraction> userEventHistory = new();
+        string[] eventCategories = { "Concert", "Sports", "Theatre", "Art", "Comedy" }; // 🔥 Different event types
 
+        Random random = new Random();
 
-            new UserHistoryBuyData(
-                Guid.NewGuid().ToString(), "Ho Chi Minh", "District 1",
-                450000f, new string[] { "Ho Chi Minh", "Ho Chi Minh", "Ha Noi" }),
+        // Generate mock interaction history for 500 users
+        for (int i = 0; i < 1000; i++)
+        {
+            string userId = Guid.NewGuid().ToString();
+            int eventCount = random.Next(2, 5); // Each user interacts with 2 to 5 event categories
 
+            for (int j = 0; j < eventCount; j++)
+            {
+                string eventCategory = eventCategories[random.Next(eventCategories.Length)];
+                float clickCount = random.Next(1, 20);  // Simulate user clicking on an event multiple times
+                float stayTime = random.Next(10, 300);  // Time spent on the event page (10s - 5min)
+                float purchaseCount = (clickCount > 5 && stayTime > 30) ? random.Next(0, 2) : 0; // More likely to buy if high click & stay time
 
-            new UserHistoryBuyData(
-                Guid.NewGuid().ToString(), "Ho Chi Minh", "District 1",
-                550000f, new string[] { "Ho Chi Minh", "Ho Chi Minh", "Ha Noi" }),
+                userEventHistory.Add(new UserEventInteraction(userId, eventCategory, clickCount, stayTime, purchaseCount));
+            }
+        }
 
-
-            new UserHistoryBuyData(
-                Guid.NewGuid().ToString(), "Ha Noi", "Ba Dinh",
-                700000f, new string[] { "Ha Noi", "Ha Noi", "Ha Noi" }),
-
-
-            new UserHistoryBuyData(
-                Guid.NewGuid().ToString(), "Ha Noi", "Ba Dinh",
-                750000f, new string[] { "Ha Noi", "Ha Noi", "Ha Noi" }),
-
-
-            new UserHistoryBuyData(
-                Guid.NewGuid().ToString(), "Ha Noi", "Ba Dinh",
-                800000f, new string[] { "Ha Noi", "Ha Noi", "Ha Noi" })
-        ];
-
-        // Load data
-        IDataView trainingData = _mlContext.Data.LoadFromEnumerable(userHistoryData);
+        // Load data into ML.NET
+        IDataView trainingData = _mlContext.Data.LoadFromEnumerable(userEventHistory);
 
         // Define data preparation pipeline
         var dataProcessPipeline = _mlContext.Transforms.Conversion
-            // Convert UserId and EventCity to Key type (Needed for Matrix Factorization)
-            .MapValueToKey("UserIdKey", "UserId")
-            .Append(_mlContext.Transforms.Conversion.MapValueToKey("EventCityKey", "EventCity"))
-
-            // Convert categorical text columns to numerical format
-            .Append(_mlContext.Transforms.Categorical.OneHotEncoding("EventDistrictEncoded", "EventDistrict"))
-
-            // Transform event history as separate categorical features
-            .Append(_mlContext.Transforms.Categorical.OneHotEncoding("EventHistory1Encoded", "EventHistoryCities", outputKind: OneHotEncodingEstimator.OutputKind.Indicator))
-            .Append(_mlContext.Transforms.Categorical.OneHotEncoding("EventHistory2Encoded", "EventHistoryCities", outputKind: OneHotEncodingEstimator.OutputKind.Indicator))
-            .Append(_mlContext.Transforms.Categorical.OneHotEncoding("EventHistory3Encoded", "EventHistoryCities", outputKind: OneHotEncodingEstimator.OutputKind.Indicator))
-
-            // Concatenate all features (Do not include Key columns in concatenation)
-            .Append(_mlContext.Transforms.Concatenate("Features",
-                "EventDistrictEncoded",
-                "EventHistory1Encoded",
-                "EventHistory2Encoded",
-                "EventHistory3Encoded",
-                "TicketPrice"))
-
-            // Normalize data to improve training stability
-            .Append(_mlContext.Transforms.NormalizeMinMax("Features"));
+            .MapValueToKey("UserId", "UserId")
+            .Append(_mlContext.Transforms.Conversion.MapValueToKey("EventCategory", "EventCategory"))
+            .Append(_mlContext.Transforms.NormalizeMinMax("ClickCount", fixZero: true))
+            .Append(_mlContext.Transforms.NormalizeMinMax("StayTime", fixZero: true))
+            .Append(_mlContext.Transforms.NormalizeMinMax("PurchaseCount", fixZero: true));
 
         // Define the training pipeline
         var trainer = _mlContext.Recommendation().Trainers.MatrixFactorization(
-            labelColumnName: "TicketPrice",  // ✅ Ensure this matches the label column
-            matrixColumnIndexColumnName: "UserIdKey",  // ✅ Use the Key column
-            matrixRowIndexColumnName: "EventCityKey"   // ✅ Use the Key column
+            labelColumnName: "PurchaseCount", // Predicts how likely the user is to buy
+            matrixColumnIndexColumnName: "UserId",
+            matrixRowIndexColumnName: "EventCategory",
+            numberOfIterations: 1000, // More training iterations
+            approximationRank: 64 // Improve accuracy
         );
 
-        // Combine data process pipeline with the trainer
         var trainingPipeline = dataProcessPipeline.Append(trainer);
 
         // Train the model
-        _trainedModel = trainingPipeline.Fit(trainingData);
+        var trainedModel = trainingPipeline.Fit(trainingData);
 
         // Save the trained model
-        _mlContext.Model.Save(_trainedModel, trainingData.Schema, _modelPath);
+        _mlContext.Model.Save(trainedModel, trainingData.Schema, _modelPath);
         Console.WriteLine("✅ Model training completed and saved.");
     }
+
 }
 

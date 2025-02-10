@@ -27,5 +27,7 @@ public interface IApplicationDbContext
 
     DbSet<RefreshToken> RefreshTokens { get; set; }
 
+    DbSet<EmailUnsubscription> EmailUnsubscriptions { get; set; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }
