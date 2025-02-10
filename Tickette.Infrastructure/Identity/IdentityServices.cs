@@ -152,29 +152,43 @@ public class IdentityServices : IIdentityServices
             AuthResult<User>.Failure(["User not found."]) : AuthResult<User>.Success(user);
     }
 
-    public async Task<AuthResult<User>> SyncGoogleUserAsync(GoogleUserRequest request)
+    public async Task<AuthResult<TokenRetrieval>> SyncGoogleUserAsync(GoogleUserRequest request)
     {
         // Check if the user exists in the database
         var user = await _userManager.FindByEmailAsync(request.Email);
-        if (user != null) return AuthResult<User>.Success(user);
-
-        // Create a new user if one doesn't exist
-        user = new User
+        if (user == null)
         {
-            UserName = request.Email,
-            Email = request.Email,
-            EmailConfirmed = true,
-            ProfilePicture = request.Image
-        };
+            // Create a new user if one doesn't exist
+            user = new User
+            {
+                FullName = request.Name,
+                Email = request.Email,
+                EmailConfirmed = true,
+                ProfilePicture = request.Image
+            };
 
-        var createResult = await _userManager.CreateAsync(user);
-        if (!createResult.Succeeded)
-        {
-            return AuthResult<User>.Failure(createResult.Errors.Select(e => e.Description).ToArray());
+            var createResult = await _userManager.CreateAsync(user);
+            if (!createResult.Succeeded)
+            {
+                return AuthResult<TokenRetrieval>.Failure(createResult.Errors.Select(e => e.Description).ToArray());
+            }
         }
 
-        return AuthResult<User>.Success(user);
+        // Generate tokens for the user
+        var accessToken = await _tokenService.GenerateToken(user);
+        var refreshToken = _tokenService.GenerateRefreshToken();
+        var refreshTokenExpiryTime = DateTime.UtcNow.AddMonths(1);
+
+        // Save the refresh token to the database
+        await AddOrUpdateRefreshTokenAsync(user.Id, refreshToken, refreshTokenExpiryTime, CancellationToken.None);
+
+        return AuthResult<TokenRetrieval>.Success(new TokenRetrieval
+        {
+            AccessToken = accessToken,
+            RefreshToken = refreshToken
+        });
     }
+
 
     private async Task AddOrUpdateRefreshTokenAsync(Guid userId, string token, DateTime expiryTime, CancellationToken cancellationToken)
     {

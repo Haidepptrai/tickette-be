@@ -18,6 +18,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<Coupon> Coupons { get; set; }
     public DbSet<EventSeat> EventSeats { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<EmailUnsubscription> EmailUnsubscriptions { get; set; }
 
     public DbSet<Category> Categories { get; set; }
     public DbSet<CommitteeMember> CommitteeMembers { get; set; }

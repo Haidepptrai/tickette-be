@@ -37,6 +37,8 @@ namespace Tickette.API
             builder.AddRedisSettings();
             builder.AddStripeSettings();
             builder.AddS3Service();
+            builder.AddMachineLearningModel();
+            builder.AddEmailService();
 
             //Add Swagger
             builder.Services.AddEndpointsApiExplorer();

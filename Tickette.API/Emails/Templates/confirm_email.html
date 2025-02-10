@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Welcome Email</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 0; margin: 0; }
+        .container { max-width: 600px; background: white; padding: 20px; margin: 20px auto; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
+        .content { padding: 20px; font-size: 16px; color: #333; line-height: 1.6; text-align: center; }
+        .button { display: inline-block; padding: 12px 20px; font-size: 16px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px; }
+        .button:hover { background: #0056b3; }
+        .footer { text-align: center; font-size: 12px; color: #777; padding: 15px; background: #f9f9f9; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
+        .fallback-link { font-size: 14px; color: #555; margin-top: 15px; }
+        .unsubscribe { font-size: 12px; color: #777; margin-top: 10px; }
+        .unsubscribe a { color: #007bff; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        {{ Header }}
+        
+        <div class="content">
+            <h2>Verify Your Email Address</h2>
+            <p>Thank you for signing up, <strong>{{UserName}}</strong>!</p>
+            <p>Please confirm your email address to activate your account.</p>
+            <a href="{{VerificationLink}}" class="button">Verify Email</a>
+            <p class="fallback-link">
+                If the button does not work, copy and paste the following link into your browser:<br>
+                <a href="{{VerificationLink}}" style="color: #007bff; word-wrap: break-word;">{{VerificationLink}}</a>
+            </p>
+        </div>
+
+        {{ Footer }}
+    </div>
+
+</body>
+</html>

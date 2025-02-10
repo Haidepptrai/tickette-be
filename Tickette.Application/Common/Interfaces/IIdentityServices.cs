@@ -18,5 +18,5 @@ public interface IIdentityServices
 
     Task<AuthResult<User>> GetUserByIdAsync(Guid userId);
 
-    Task<AuthResult<User>> SyncGoogleUserAsync(GoogleUserRequest request);
+    Task<AuthResult<TokenRetrieval>> SyncGoogleUserAsync(GoogleUserRequest request);
 }
