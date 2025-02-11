@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Tickette.Application.Common.CQRS;
-using Tickette.Application.Common.Exceptions;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.QRCode.Common;
 using Tickette.Application.Wrappers;
@@ -9,7 +8,17 @@ namespace Tickette.Application.Features.QRCode.Queries.ValidateQrCode;
 
 public record ValidateQrCodeQuery
 {
-    public required string QrCode { get; init; }
+    public required string BuyerEmail { get; init; }
+
+    public required string BuyerName { get; init; }
+
+    public required string BuyerPhone { get; init; }
+
+    public required Guid OrderId { get; init; }
+
+    public required Guid OrderItemId { get; init; }
+
+    public required string Signature { get; init; }
 }
 
 public class ValidateQrCodeQueryHandler : IQueryHandler<ValidateQrCodeQuery, ResponseDto<DataRetrievedFromQrCode>>
@@ -27,54 +36,45 @@ public class ValidateQrCodeQueryHandler : IQueryHandler<ValidateQrCodeQuery, Res
     {
         try
         {
-            var (orderDetails, isValid) = _qrCodeService.DecodeQrCode(Convert.FromBase64String(query.QrCode));
+            // 1. Concatenate data fields into a single string for verification
+            var dataToVerify = _qrCodeService.SerializeData(query);
 
-            if (!isValid || orderDetails == null)
+            // 2. Validate the QR Code Signature using QrCodeService
+            if (!_qrCodeService.VerifyQrCodeSignature(dataToVerify, query.Signature))
             {
-                return ResponseHandler.ErrorResponse(
-                    new DataRetrievedFromQrCode { IsValid = false },
-                    "Invalid QR Code"
-                );
+                return ResponseHandler.ErrorResponse(new DataRetrievedFromQrCode { IsValid = false }, "Invalid QR Code Signature.");
             }
 
-            // Update order item IsScanned to true
-            var orderItem = await _context.OrderItems.FirstOrDefaultAsync(x => x.Id == orderDetails.OrderItemId, cancellation);
+            // 3. Check if order item exists
+            var orderItem = await _context.OrderItems.FirstOrDefaultAsync(x => x.Id == query.OrderItemId, cancellation);
 
             if (orderItem == null)
             {
-                return ResponseHandler.ErrorResponse(
-                    new DataRetrievedFromQrCode { IsValid = false },
-                    "Order item not found"
-                );
+                return ResponseHandler.ErrorResponse(new DataRetrievedFromQrCode { IsValid = false }, "Order item not found.");
             }
 
-            // if the order item is already scanned, return an error
+            // 4. Prevent duplicate scans
             if (orderItem.IsScanned)
             {
-                throw new QrCodeAlreadyScannedException();
+                return ResponseHandler.ErrorResponse(new DataRetrievedFromQrCode { IsValid = false }, "QR Code already scanned.");
             }
 
+            // 5. Mark ticket as scanned
             orderItem.SetAsScanned();
+            await _context.SaveChangesAsync(cancellation);
 
+            // 6. Return success response
             var responseDto = new DataRetrievedFromQrCode()
             {
-
                 IsValid = true,
-                OrderDetail = new OrderDetailFromQrCodeDto(orderDetails.EventId, orderDetails.EventId,
-                    orderDetails.SeatsOrdered?.Select(seat => seat.Id).ToList())
+                OrderDetail = new OrderDetailFromQrCodeDto(query.OrderId, query.OrderItemId, null)
             };
-
-            await _context.SaveChangesAsync(cancellation);
 
             return ResponseHandler.SuccessResponse(responseDto, "QR Code validated successfully.");
         }
-        catch (QrCodeAlreadyScannedException ex)
-        {
-            throw new QrCodeAlreadyScannedException();
-        }
         catch (Exception ex)
         {
-            throw new Exception("Failed to decode QR code", ex);
+            throw new Exception("Failed to validate QR code", ex);
         }
     }
 }
