@@ -24,7 +24,7 @@ public sealed class Ticket : BaseEntity
 
     public string Description { get; private set; }
 
-    public string? TicketImage { get; private set; }
+    public string? Image { get; private set; }
 
     public EventDate EventDate { get; private set; }
 
@@ -42,7 +42,7 @@ public sealed class Ticket : BaseEntity
     DateTime saleStartTime,
     DateTime saleEndTime,
     string description,
-    string? ticketImage)
+    string? image)
     {
         EventDate = eventDate;
         Name = name;
@@ -54,7 +54,7 @@ public sealed class Ticket : BaseEntity
         SaleStartTime = saleStartTime;
         SaleEndTime = saleEndTime;
         Description = description;
-        TicketImage = ticketImage;
+        Image = image;
     }
 
     public static Ticket Create(

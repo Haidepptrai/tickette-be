@@ -1,11 +1,11 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using QRCoder;
-using SkiaSharp;
 using System.Security.Cryptography;
+using Tickette.Application.Common;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.QRCode.Common;
-using ZXing.SkiaSharp;
+using Tickette.Application.Features.QRCode.Queries.ValidateQrCode;
 
 namespace Tickette.Infrastructure.Services;
 
@@ -18,7 +18,7 @@ public class QrCodeService : IQrCodeService
         _secretKey = configuration["QrCodeSecretKey"] ?? throw new KeyNotFoundException("Missing Secret Key For QR Code Generator");
     }
 
-    public byte[] GenerateQrCode(OrderItemQrCodeDto order, int pixelSize = 20)
+    public string GenerateQrCode(OrderItemQrCodeDto order, int pixelSize = 20)
     {
         // 1. Serialize the OrderItemQrCodeDto to JSON
         var jsonData = JsonConvert.SerializeObject(order);
@@ -27,11 +27,7 @@ public class QrCodeService : IQrCodeService
         var signature = GenerateSignature(jsonData);
 
         // 3. Create a payload with the order data and the signature
-        var payload = new
-        {
-            Data = jsonData,
-            Signature = signature
-        };
+        var payload = new QrCodePayload(jsonData, signature);
 
         // 4. Serialize the payload to JSON
         var payloadJson = JsonConvert.SerializeObject(payload);
@@ -41,59 +37,22 @@ public class QrCodeService : IQrCodeService
         var qrCodeData = qrGenerator.CreateQrCode(payloadJson, QRCodeGenerator.ECCLevel.Q);
         var qrCode = new PngByteQRCode(qrCodeData);
 
-        // 6. Return the QR code as a PNG byte array
-        return qrCode.GetGraphic(pixelSize);
+        // 6. Get the QR code as a PNG byte array
+        byte[] qrCodeBytes = qrCode.GetGraphic(10);
+
+        // 7. Convert bytes to Base64 string
+        return Convert.ToBase64String(qrCodeBytes);
     }
 
-    public (OrderItemQrCodeDto?, bool) DecodeQrCode(byte[] qrCodeBytes)
+    public bool VerifyQrCodeSignature(string data, string providedSignature)
     {
-        try
-        {
-            // 1. Load the byte array into a SkiaSharp bitmap
-            using var skBitmap = SKBitmap.Decode(qrCodeBytes);
-
-            // 2. Use ZXing with SkiaSharp binding to decode the QR code
-            var reader = new BarcodeReader
-            {
-                Options = new ZXing.Common.DecodingOptions
-                {
-                    TryHarder = true,
-                    PossibleFormats = new List<ZXing.BarcodeFormat> { ZXing.BarcodeFormat.QR_CODE }
-                }
-            };
-
-            var result = reader.Decode(skBitmap);
-
-            // 3. Ensure the QR code was decoded successfully
-            if (result == null || string.IsNullOrWhiteSpace(result.Text))
-                return (null, false);
-
-            // 4. Deserialize the JSON payload from the QR code
-            var payload = JsonConvert.DeserializeObject<PayloadDto>(result.Text);
-            if (payload == null || string.IsNullOrEmpty(payload.Data) || string.IsNullOrEmpty(payload.Signature))
-                return (null, false);
-
-            // 5. Recreate the signature using the Data field
-            var newSignature = GenerateSignature(payload.Data);
-
-            // 6. Compare the new signature with the one from the QR code
-            if (newSignature != payload.Signature)
-                return (null, false);
-
-            // 7. Deserialize the Data field to OrderItemQrCodeDto
-            var orderItem = JsonConvert.DeserializeObject<OrderItemQrCodeDto>(payload.Data);
-            return (orderItem, true);
-        }
-        catch
-        {
-            return (null, false);
-        }
+        var expectedSignature = GenerateSignature(data);
+        return expectedSignature == providedSignature;
     }
 
-    private class PayloadDto
+    public string SerializeData(ValidateQrCodeQuery request)
     {
-        public string Data { get; set; }
-        public string Signature { get; set; }
+        return JsonConvert.SerializeObject(request);
     }
 
     private string GenerateSignature(string data)

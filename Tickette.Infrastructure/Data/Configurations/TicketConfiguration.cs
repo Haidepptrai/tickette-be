@@ -37,7 +37,7 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.Property(t => t.Description)
             .HasMaxLength(1500);
 
-        builder.Property(t => t.TicketImage)
+        builder.Property(t => t.Image)
             .HasMaxLength(2500);
 
         builder.HasOne(t => t.EventDate)
