@@ -25,7 +25,6 @@ public class ChangeCommitteeMemberRoleCommandHandler : ICommandHandler<ChangeCom
         if (entity == null)
         {
             throw new KeyNotFoundException("Committee Member Not Found");
-
         }
 
         entity.ChangeRole(request.CommitteeRoleId);

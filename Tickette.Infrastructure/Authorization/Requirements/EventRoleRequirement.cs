@@ -4,10 +4,11 @@ namespace Tickette.Infrastructure.Authorization.Requirements;
 
 public class EventRoleRequirement : IAuthorizationRequirement
 {
-    public string RequiredRole { get; }
+    public HashSet<string> RequiredRoles { get; }
 
-    public EventRoleRequirement(string requiredRole)
+    public EventRoleRequirement(string primaryRole, params string[] elevatedRoles)
     {
-        RequiredRole = requiredRole;
+        RequiredRoles = new HashSet<string> { primaryRole };
+        RequiredRoles.UnionWith(elevatedRoles); // Include Admin and EventOwner
     }
 }

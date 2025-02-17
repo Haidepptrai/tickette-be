@@ -1,4 +1,4 @@
-﻿namespace Tickette.Application.Features.CommitteeMembers.Commond;
+﻿namespace Tickette.Application.Features.CommitteeMembers.Common;
 
 public class CommitteeMemberDto
 {

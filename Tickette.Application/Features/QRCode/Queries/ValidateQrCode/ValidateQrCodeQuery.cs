@@ -8,6 +8,7 @@ namespace Tickette.Application.Features.QRCode.Queries.ValidateQrCode;
 
 public record ValidateQrCodeQuery
 {
+    public required Guid EventId { get; init; }
     public required string BuyerEmail { get; init; }
 
     public required string BuyerName { get; init; }

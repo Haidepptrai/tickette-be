@@ -1,8 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.JsonWebTokens;
-using Newtonsoft.Json.Linq;
+using Microsoft.Extensions.DependencyInjection;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text.Json;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Infrastructure.Authorization.Requirements;
 
@@ -10,93 +11,99 @@ namespace Tickette.Infrastructure.Authorization.Handlers;
 
 public class EventRoleHandler : AuthorizationHandler<EventRoleRequirement>
 {
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IApplicationDbContext _context;
 
-    public EventRoleHandler(IHttpContextAccessor httpContextAccessor, IApplicationDbContext context)
+    public EventRoleHandler(IServiceScopeFactory serviceScopeFactory, IHttpContextAccessor httpContextAccessor)
     {
+        _serviceScopeFactory = serviceScopeFactory;
         _httpContextAccessor = httpContextAccessor;
-        _context = context;
     }
 
-    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, EventRoleRequirement requirement)
+    protected override async Task HandleRequirementAsync(
+        AuthorizationHandlerContext context,
+        EventRoleRequirement requirement)
     {
-        // Get UserId from claims
-        var userId = Guid.Parse(context.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? string.Empty);
-
-        // Try to get the EventDateId from route or query string first
-        var eventId = GetEventIdFromRouteOrQuery();
-
-        // If not found, try to get it from the request body
-        if (eventId == Guid.Empty)
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
         {
-            eventId = await GetEventIdFromBodyAsync();
-        }
-
-        if (eventId == Guid.Empty)
-        {
-            Console.WriteLine("EventDateId not found");
+            context.Fail();
             return;
         }
 
-        // Check if the user has the required role for the specific event
-        var hasRole = await _context.CommitteeMembers
-            .AnyAsync(cm => cm.UserId == userId && cm.EventId == eventId && cm.CommitteeRole.Name == requirement.RequiredRole);
+        var userId = context.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            context.Fail();
+            return;
+        }
 
-        if (hasRole)
+        var eventId = await ExtractEventIdFromRequestAsync(httpContext);
+        if (string.IsNullOrEmpty(eventId))
+        {
+            context.Fail();
+            return;
+        }
+
+        // **Create a Scoped Database Context**
+        using var scope = _serviceScopeFactory.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+
+        // Fetch user role dynamically
+        var userRoles = await dbContext.CommitteeMembers
+            .Where(ec => ec.UserId.ToString() == userId && ec.EventId.ToString() == eventId)
+            .Select(ec => ec.CommitteeRole.Name)
+            .ToListAsync(httpContext.RequestAborted);
+
+
+        if (userRoles.Any(role => requirement.RequiredRoles.Contains(role)))
         {
             context.Succeed(requirement);
         }
+        else
+        {
+            context.Fail();
+        }
     }
 
-    private Guid GetEventIdFromRouteOrQuery()
+    private async Task<string?> ExtractEventIdFromRequestAsync(HttpContext httpContext)
     {
-        // Check route values
-        var routeEventId = _httpContextAccessor.HttpContext?.Request.RouteValues["eventId"]?.ToString();
-        if (Guid.TryParse(routeEventId, out var eventIdFromRoute))
+        var request = httpContext.Request;
+
+        // 1. Check route parameters (e.g., /events/{eventId}/scan-qr)
+        if (request.RouteValues.TryGetValue("eventId", out var routeEventId))
         {
-            return eventIdFromRoute;
+            return routeEventId?.ToString();
         }
 
-        // Check query string
-        var queryEventId = _httpContextAccessor.HttpContext?.Request.Query["eventId"].ToString();
-        if (Guid.TryParse(queryEventId, out var eventIdFromQuery))
+        // 2. Check query parameters (e.g., /scan-qr?eventId=123)
+        if (request.Query.TryGetValue("eventId", out var queryEventId))
         {
-            return eventIdFromQuery;
+            return queryEventId.ToString();
         }
 
-        return Guid.Empty;
-    }
-
-    private async Task<Guid> GetEventIdFromBodyAsync()
-    {
-        var request = _httpContextAccessor.HttpContext?.Request;
-
-        if (request?.Body == null || !request.Body.CanRead)
+        // 3. Check request body (for POST/PUT methods)
+        if (request.Method == HttpMethods.Post || request.Method == HttpMethods.Put)
         {
-            return Guid.Empty;
+            try
+            {
+                request.EnableBuffering(); // Allows re-reading request body
+                using var reader = new StreamReader(request.Body, leaveOpen: true);
+                var bodyContent = await reader.ReadToEndAsync();
+                request.Body.Position = 0; // Reset stream position for middleware
+
+                using var bodyJson = JsonDocument.Parse(bodyContent);
+                if (bodyJson.RootElement.TryGetProperty("event_id", out var bodyEventId))
+                {
+                    return bodyEventId.GetString();
+                }
+            }
+            catch (JsonException)
+            {
+                return null; // Malformed JSON
+            }
         }
 
-        // Enable buffering to allow multiple reads
-        request.EnableBuffering();
-
-        // Reset the stream position before reading
-        request.Body.Seek(0, SeekOrigin.Begin);
-
-        using var reader = new StreamReader(request.Body, leaveOpen: true);
-        var bodyContent = await reader.ReadToEndAsync();
-
-        // Reset the stream position after reading
-        request.Body.Seek(0, SeekOrigin.Begin);
-
-        if (string.IsNullOrWhiteSpace(bodyContent))
-        {
-            return Guid.Empty;
-        }
-
-        var json = JObject.Parse(bodyContent);
-        var eventIdFromBody = json["event_id"]?.ToString();
-
-        return Guid.TryParse(eventIdFromBody, out var eventId) ? eventId : Guid.Empty;
+        return null; // No event ID found
     }
 }

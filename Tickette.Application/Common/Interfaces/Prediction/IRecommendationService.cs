@@ -2,5 +2,5 @@
 
 public interface IRecommendationService
 {
-    public Task<List<RecommendationResult>> GetRecommendationsAsync(Guid userId);
+    public void GetRecommendationsAsync(Guid userId);
 }

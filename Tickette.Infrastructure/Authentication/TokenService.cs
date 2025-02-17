@@ -34,9 +34,7 @@ public class TokenService : ITokenService
         };
 
         // Add roles as claims
-
         var roles = await _userManager.GetRolesAsync(user);
-
         claims.AddRange(roles.Select(role => new Claim("roles", role)));
 
         // Create the security key

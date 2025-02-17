@@ -3,7 +3,7 @@ using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.CommitteeMembers.Command.AddCommitteeMember;
 using Tickette.Application.Features.CommitteeMembers.Command.ChangeCommitteeMemberRole;
 using Tickette.Application.Features.CommitteeMembers.Command.RemoveCommitteeMember;
-using Tickette.Application.Features.CommitteeMembers.Commond;
+using Tickette.Application.Features.CommitteeMembers.Common;
 using Tickette.Application.Features.CommitteeMembers.Query.GetAllCommitteeMemberOfEvent;
 using Tickette.Application.Wrappers;
 
@@ -25,8 +25,8 @@ namespace Tickette.API.Controllers
         }
 
         // GET: api/committeeMembers
-        [HttpGet("{eventId:guid}")]
-        public async Task<ResponseDto<IEnumerable<CommitteeMemberDto>>> GetCommitteeMembersByEvent(Guid eventId, GetAllCommitteeMemberOfEventQuery query, CancellationToken cancellation)
+        [HttpPost("members")]
+        public async Task<ResponseDto<IEnumerable<CommitteeMemberDto>>> GetCommitteeMembersByEvent(GetAllCommitteeMemberOfEventQuery query, CancellationToken cancellation)
         {
             var result = await _queryDispatcher.Dispatch<GetAllCommitteeMemberOfEventQuery, IEnumerable<CommitteeMemberDto>>(query, cancellation);
 
@@ -35,7 +35,7 @@ namespace Tickette.API.Controllers
 
 
         // POST: api/committeeMembers
-        [HttpPost]
+        [HttpPost("add-member")]
         public async Task<ResponseDto<object>> AddNewMemberToEvent([FromBody] AddCommitteeMemberCommand command, CancellationToken cancellation)
         {
             var result = await _commandDispatcher.Dispatch<AddCommitteeMemberCommand, object>(command, cancellation);
@@ -45,8 +45,8 @@ namespace Tickette.API.Controllers
 
         // PUT: api/committeeMembers/5
         // Update member role
-        [HttpPut("{id:guid}")]
-        public async Task<ResponseDto<object>> ChangeMemberRole([FromBody] ChangeCommitteeMemberRoleCommand command, CancellationToken cancellation, Guid id)
+        [HttpPost("update-role")]
+        public async Task<ResponseDto<object>> ChangeMemberRole([FromBody] ChangeCommitteeMemberRoleCommand command, CancellationToken cancellation)
         {
             var result = await _commandDispatcher.Dispatch<ChangeCommitteeMemberRoleCommand, object>(command, cancellation);
 
