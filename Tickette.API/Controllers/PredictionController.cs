@@ -21,7 +21,7 @@ namespace Tickette.API.Controllers
         {
             try
             {
-                _predictionService.TrainModelAsync();
+                _predictionService.TrainModel();
                 return Ok("Good");
             }
             catch (Exception ex)
@@ -35,8 +35,9 @@ namespace Tickette.API.Controllers
         {
             try
             {
-                var recommendations = await _recommendationService.GetRecommendationsAsync(userId);
-                return Ok(recommendations);
+                //var recommendations = await _recommendationService.GetRecommendationsAsync(userId);
+                //return Ok(recommendations);
+                return Ok();
             }
             catch (Exception ex)
             {

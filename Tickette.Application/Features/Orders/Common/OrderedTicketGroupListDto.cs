@@ -4,6 +4,8 @@ public record OrderedTicketGroupListDto
 {
     public Guid Id { get; set; }
 
+    public string EventName { get; set; }
+
     public string EventBanner { get; set; }
 
     public DateTime StartDate { get; set; }

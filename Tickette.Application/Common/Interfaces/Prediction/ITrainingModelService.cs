@@ -5,5 +5,5 @@ public interface ITrainingModelService
     /// <summary>
     /// Trains the AI model.
     /// </summary>
-    void TrainModelAsync();
+    void TrainModel();
 }

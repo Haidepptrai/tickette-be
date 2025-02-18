@@ -156,30 +156,50 @@ public static class DependencyInjection
 
         builder.Services.AddAuthorization(options =>
         {
-            // Dynamic policy for EventOwner
-            options.AddPolicy(COMMITTEE_MEMBER_ROLES.EventOwner, policy =>
-                policy.Requirements.Add(new EventRoleRequirement(COMMITTEE_MEMBER_ROLES.EventOwner)));
+            // Admin and EventOwner inherit all lower role permissions
+            var elevatedRoles = new[]
+            {
+                COMMITTEE_MEMBER_ROLES.EventOwner,
+                COMMITTEE_MEMBER_ROLES.Admin
+            };
 
-            // Dynamic policy for Admin
-            options.AddPolicy(COMMITTEE_MEMBER_ROLES.Admin, policy =>
-                policy.Requirements.Add(new EventRoleRequirement(COMMITTEE_MEMBER_ROLES.Admin)));
+            // Define policies where lower roles + Admin + EventOwner are allowed
+            options.AddPolicy("CheckInAccess", policy =>
+                policy.Requirements.Add(new EventRoleRequirement(
+                    COMMITTEE_MEMBER_ROLES.CheckInStaff, elevatedRoles)));
 
-            // Dynamic policy for Manager
-            options.AddPolicy(COMMITTEE_MEMBER_ROLES.Manager, policy =>
-                policy.Requirements.Add(new EventRoleRequirement(COMMITTEE_MEMBER_ROLES.Manager)));
+            options.AddPolicy("CheckOutAccess", policy =>
+                policy.Requirements.Add(new EventRoleRequirement(
+                    COMMITTEE_MEMBER_ROLES.CheckOutStaff, elevatedRoles)));
 
-            // Dynamic policy for CheckInStaff
-            options.AddPolicy(COMMITTEE_MEMBER_ROLES.CheckInStaff, policy =>
-                policy.Requirements.Add(new EventRoleRequirement(COMMITTEE_MEMBER_ROLES.CheckInStaff)));
+            options.AddPolicy("RedeemAccess", policy =>
+                policy.Requirements.Add(new EventRoleRequirement(
+                    COMMITTEE_MEMBER_ROLES.RedeemStaff, elevatedRoles)));
 
-            // Dynamic policy for CheckOutStaff
-            options.AddPolicy(COMMITTEE_MEMBER_ROLES.CheckOutStaff, policy =>
-                policy.Requirements.Add(new EventRoleRequirement(COMMITTEE_MEMBER_ROLES.CheckOutStaff)));
+            options.AddPolicy("ManagerAccess", policy =>
+                policy.Requirements.Add(new EventRoleRequirement(
+                    COMMITTEE_MEMBER_ROLES.Manager, elevatedRoles)));
 
-            // Dynamic policy for RedeemStaff
-            options.AddPolicy(COMMITTEE_MEMBER_ROLES.RedeemStaff, policy =>
-                policy.Requirements.Add(new EventRoleRequirement(COMMITTEE_MEMBER_ROLES.RedeemStaff)));
+            // General dynamic policies for each specific role
+            foreach (var role in new[]
+                     {
+                         COMMITTEE_MEMBER_ROLES.EventOwner,
+                         COMMITTEE_MEMBER_ROLES.Admin,
+                         COMMITTEE_MEMBER_ROLES.Manager,
+                         COMMITTEE_MEMBER_ROLES.CheckInStaff,
+                         COMMITTEE_MEMBER_ROLES.CheckOutStaff,
+                         COMMITTEE_MEMBER_ROLES.RedeemStaff
+                     })
+            {
+                options.AddPolicy(role, policy =>
+                    policy.Requirements.Add(new EventRoleRequirement(role)));
+            }
         });
+
+
+
+        builder.Services.AddSingleton<IAuthorizationHandler, EventRoleHandler>();
+        builder.Services.AddHttpContextAccessor(); // For extracting event id
 
         builder.Services.TryAddScoped<IQueryDispatcher, QueryDispatcher>();
         builder.Services.TryAddScoped<ICommandDispatcher, CommandDispatcher>();

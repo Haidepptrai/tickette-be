@@ -71,7 +71,7 @@ public class OrdersController : ControllerBase
     }
 
     [HttpPost("validate-qrcode")]
-    [Authorize]
+    [Authorize(Policy = "CheckInAccess")]
     public async Task<IActionResult> ValidateQrCode([FromBody] ValidateQrCodeQuery query,
         CancellationToken cancellation)
     {
