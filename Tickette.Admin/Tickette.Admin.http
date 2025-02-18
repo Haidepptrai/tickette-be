@@ -1,0 +1,6 @@
+@Tickette.Admin_HostAddress = http://localhost:5268
+
+GET {{Tickette.Admin_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
