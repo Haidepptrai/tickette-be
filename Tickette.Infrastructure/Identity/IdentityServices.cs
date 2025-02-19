@@ -152,6 +152,19 @@ public class IdentityServices : IIdentityServices
             AuthResult<User>.Failure(["User not found."]) : AuthResult<User>.Success(user);
     }
 
+    public async Task<AuthResult<IEnumerable<User>>> GetAllUsers(int pageNumber, int pageSize, CancellationToken cancellationToken)
+    {
+        var users = await _userManager.Users.AsNoTracking()
+            .OrderBy(u => u.Email)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return !users.Any() ?
+            AuthResult<IEnumerable<User>>.Failure(["User not found."]) : AuthResult<IEnumerable<User>>.Success(users);
+    }
+
+
     public async Task<AuthResult<TokenRetrieval>> SyncGoogleUserAsync(GoogleUserRequest request)
     {
         // Check if the user exists in the database

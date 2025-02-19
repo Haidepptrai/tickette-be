@@ -18,5 +18,7 @@ public interface IIdentityServices
 
     Task<AuthResult<User>> GetUserByIdAsync(Guid userId);
 
+    Task<AuthResult<IEnumerable<User>>> GetAllUsers(int pageNumber, int pageSize, CancellationToken cancellationToken);
+
     Task<AuthResult<TokenRetrieval>> SyncGoogleUserAsync(GoogleUserRequest request);
 }
