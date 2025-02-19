@@ -34,7 +34,7 @@ public class EventDetailDto
 
     public required string CategoryName { get; set; }
 
-    public required CommitteeInformation EventCommitteeInformation { get; set; }
+    public required CommitteeInformation CommitteeInformation { get; set; }
 
-    public List<TicketDto> Tickets { get; set; } = [];
+    public IEnumerable<EventDateDto> EventDates { get; init; }
 }

@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Tickette.Domain.Entities;
-using Tickette.Domain.Enums;
 
 namespace Tickette.Infrastructure.Data.Configurations;
 
@@ -68,7 +67,5 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasQueryFilter(e => e.DeletedAt == null);
-
-        builder.HasQueryFilter(e => e.Status == ApprovalStatus.Approved);
     }
 }

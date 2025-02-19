@@ -25,7 +25,10 @@ public class GetEventByIdHandler : IQueryHandler<GetEventByIdRequest, EventDetai
                 .Include(ev => ev.Committee)
                 .Include(ev => ev.EventDates)
                     .ThenInclude(ed => ed.Tickets)
+                .AsSplitQuery()
+                .AsNoTracking()
                 .SingleOrDefaultAsync(ev => ev.Id == query.Id, cancellation);
+
             if (result == null)
                 throw new KeyNotFoundException($"Event with ID {query.Id} was not found.");
 
