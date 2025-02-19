@@ -18,15 +18,9 @@ public class TicketDto
 
     public DateTime SaleEndTime { get; set; }
 
-    public DateTime EventStartTime { get; set; }
-
-    public DateTime EventEndTime { get; set; }
-
     public string Description { get; set; }
 
     public string? TicketImage { get; set; }
 
     public string Currency { get; set; }
-
-    public bool IsRefundable { get; set; }
 }

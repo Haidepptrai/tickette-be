@@ -40,11 +40,29 @@ public static class EventMapper
         EndDate = entity.EndDate,
         Status = entity.Status,
         CategoryName = entity.Category.Name,
-        EventCommitteeInformation = new CommitteeInformation()
+        CommitteeInformation = new CommitteeInformation()
         {
             CommitteeName = entity.Committee.Name,
             CommitteeDescription = entity.Committee.Description
         },
-        Tickets = new List<TicketDto>()
+        EventDates = entity.EventDates.Select(ev => new EventDateDto()
+        {
+            StartDate = ev.StartDate,
+            EndDate = ev.EndDate,
+            Tickets = ev.Tickets.Select(ticket => new TicketDto()
+            {
+                TicketId = ticket.Id,
+                Name = ticket.Name,
+                Currency = "USD",
+                Description = ticket.Description,
+                TotalTickets = ticket.TotalTickets,
+                MinTicketsPerOrder = ticket.MinTicketsPerOrder,
+                MaxTicketsPerOrder = ticket.MaxTicketsPerOrder,
+                Price = ticket.Price,
+                SaleStartTime = ticket.SaleStartTime,
+                SaleEndTime = ticket.SaleEndTime,
+                TicketImage = ticket.Image
+            })
+        })
     };
 }
