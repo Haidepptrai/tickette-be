@@ -4,7 +4,7 @@ using Tickette.Application.Features.Users.Common;
 
 namespace Tickette.Application.Features.Users.Query.GetUserById;
 
-public record GetUserByIdQuery(Guid UserId);
+public record GetUserByIdQuery(Guid UserId, bool IsAdmin);
 
 public class GetUserByIdQueryHandler : IQueryHandler<GetUserByIdQuery, GetUserByIdResponse>
 {
@@ -15,25 +15,17 @@ public class GetUserByIdQueryHandler : IQueryHandler<GetUserByIdQuery, GetUserBy
     }
     public async Task<GetUserByIdResponse> Handle(GetUserByIdQuery query, CancellationToken cancellationToken)
     {
-        var user = await _identityServices.GetUserByIdAsync(query.UserId);
+        var result = await _identityServices.GetUserByIdAsync(query.UserId);
 
-        if (!user.Succeeded)
+        if (!result.Succeeded)
         {
             throw new Exception("Not found user");
         }
 
-        if (user.Data == null)
-        {
-            throw new Exception("Not found user");
-        }
+        var data = query.IsAdmin ? result.Data.user.MapToGetUserByIdResponseForAdmin(result.Data.roles) :
+            result.Data.user.MapToGetUserByIdResponseForUser();
 
-        return new GetUserByIdResponse
-        {
-            Id = user.Data.Id,
-            Email = user.Data.Email,
-            FullName = user.Data.FullName,
-            PhoneNumber = user.Data.PhoneNumber
-        };
+        return data;
     }
 }
 

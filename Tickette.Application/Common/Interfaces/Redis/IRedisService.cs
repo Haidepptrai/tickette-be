@@ -8,6 +8,7 @@ public interface IRedisService
     Task<bool> DeleteKeyAsync(string key);
     Task<long> IncrementAsync(string key, long value);
     Task<long> DecrementAsync(string key, long value);
-    Task<bool> AcquireLockAsync(string key, TimeSpan expiry);
-    Task<bool> ReleaseLockAsync(string key);
+
+    // Handle bulk/batch operations
+    Task SetBatchAsync(Dictionary<string, string> keyValuePairs);
 }
