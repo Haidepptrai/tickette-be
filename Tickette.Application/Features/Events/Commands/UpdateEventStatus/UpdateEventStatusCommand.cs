@@ -2,6 +2,7 @@
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Redis;
+using Tickette.Domain.Entities;
 using Tickette.Domain.Enums;
 
 namespace Tickette.Application.Features.Events.Commands.UpdateEventStatus;
@@ -40,27 +41,59 @@ public class UpdateEventStatusHandler : ICommandHandler<UpdateEventStatusCommand
             // If the event is approved, initialize Redis with ticket quantities for each event date
             if (command.Status == ApprovalStatus.Approved)
             {
+                var redisData = new Dictionary<string, string>();
+
                 foreach (var eventDate in eventToUpdate.EventDates)
                 {
                     foreach (var ticket in eventDate.Tickets)
                     {
-                        // Create a unique Redis key for each ticket in each event date
                         string inventoryKey = $"ticket:{ticket.Id}:remaining_tickets";
 
-                        // Set the initial ticket quantity in Redis
-                        await _redisService.SetAsync(inventoryKey, ticket.RemainingTickets.ToString(), 0);
+                        // Only add if it doesn't already exist in Redis
+                        var existingValue = await _redisService.GetAsync(inventoryKey);
+                        if (existingValue == null)
+                        {
+                            redisData[inventoryKey] = ticket.RemainingTickets.ToString();
+                        }
                     }
+                }
+
+
+                if (redisData.Count > 0)
+                {
+                    await _redisService.SetBatchAsync(redisData);
                 }
             }
 
-            // Save changes to the database
             await _context.SaveChangesAsync(cancellationToken);
+
+            // Ensure all approved event tickets exist in Redis
+            await VerifyAllTicketsExistInRedis(eventToUpdate);
 
             return command.EventId;
         }
         catch (Exception ex)
         {
-            throw new ApplicationException(ex.Message);
+            throw new ApplicationException($"Error updating event status: {ex.Message}", ex);
+        }
+    }
+
+    private async Task VerifyAllTicketsExistInRedis(Event eventToUpdate)
+    {
+        foreach (var eventDate in eventToUpdate.EventDates)
+        {
+            foreach (var ticket in eventDate.Tickets)
+            {
+                string inventoryKey = $"ticket:{ticket.Id}:remaining_tickets";
+
+                var cachedValue = await _redisService.GetAsync(inventoryKey);
+                if (cachedValue == null)
+                {
+                    // If missing, re-add it
+                    await _redisService.SetAsync(inventoryKey, ticket.RemainingTickets.ToString(), 0);
+                    Console.WriteLine($"Ticket {ticket.Id} added to Redis.");
+                }
+            }
         }
     }
 }

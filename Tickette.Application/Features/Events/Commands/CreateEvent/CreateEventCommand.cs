@@ -64,7 +64,7 @@ public class CreateEventCommandHandler : ICommandHandler<CreateEventCommand, Gui
             startDate: command.StartDate,
             endDate: command.EndDate,
             categoryId: command.CategoryId,
-            userCreated: userCreatedResult.Data!,
+            userCreated: userCreatedResult.Data.user,
             logo: logoUrl,
             banner: bannerUrl,
             committee: committee);
@@ -101,7 +101,7 @@ public class CreateEventCommandHandler : ICommandHandler<CreateEventCommand, Gui
             throw new Exception("An error has occurred while assign you as admin. Please contact support if this error continue");
         }
 
-        var admin = CommitteeMember.Create(userCreatedResult.Data!, committeeRoleAdmin, newEventCreated);
+        var admin = CommitteeMember.Create(userCreatedResult.Data.user, committeeRoleAdmin, newEventCreated);
 
         newEventCreated.AddDefaultMembers(admin);
 

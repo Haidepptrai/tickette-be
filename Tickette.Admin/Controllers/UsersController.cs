@@ -1,10 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Tickette.Application.Common.CQRS;
+using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Models;
+using Tickette.Application.Features.Users.Common;
 using Tickette.Application.Features.Users.Query.GetAllUsers;
+using Tickette.Application.Features.Users.Query.GetUserById;
 using Tickette.Application.Wrappers;
 using Tickette.Domain.Common;
-using Tickette.Domain.Entities;
 
 namespace Tickette.Admin.Controllers
 {
@@ -13,10 +15,12 @@ namespace Tickette.Admin.Controllers
     public class UsersController : ControllerBase
     {
         private readonly IQueryDispatcher _queryDispatcher;
+        private readonly IIdentityServices _identityServices;
 
-        public UsersController(IQueryDispatcher queryDispatcher)
+        public UsersController(IQueryDispatcher queryDispatcher, IIdentityServices identityServices)
         {
             _queryDispatcher = queryDispatcher;
+            _identityServices = identityServices;
         }
 
         [HttpPost]
@@ -27,7 +31,7 @@ namespace Tickette.Admin.Controllers
                 return BadRequest(ResponseHandler.ErrorResponse(Unit.Value, "Invalid Request"));
             }
 
-            var result = await _queryDispatcher.Dispatch<GetAllUsersQuery, AuthResult<IEnumerable<User>>>(request, cancellationToken);
+            var result = await _queryDispatcher.Dispatch<GetAllUsersQuery, AuthResult<IEnumerable<PreviewUserResponse>>>(request, cancellationToken);
 
             if (!result.Succeeded)
             {
@@ -42,5 +46,42 @@ namespace Tickette.Admin.Controllers
             return Ok(ResponseHandler.PaginatedResponse(result.Data, paginationMeta, "Users retrieved successfully"));
         }
 
+        // Get user by ID, Update user, Delete user, etc.
+        [HttpPost("get-user-by-id")]
+        public async Task<ActionResult> GetUserById([FromBody] GetUserByIdRequest body, CancellationToken cancellationToken)
+        {
+            // Get roles from authenticated user
+            var userRoles = User.Claims
+                .Where(c => c.Type == "role")
+                .Select(c => c.Value)
+                .ToList();
+
+            // Check if the user is an Admin or Moderator
+            bool isAdmin = userRoles.Contains("Admin") || userRoles.Contains("Moderator");
+
+            var request = new GetUserByIdQuery(body.UserId, isAdmin);
+            var result = await _queryDispatcher.Dispatch<GetUserByIdQuery, GetUserByIdResponse>(request, cancellationToken);
+
+            return Ok(ResponseHandler.SuccessResponse(result, "User retrieved successfully"));
+        }
+
+        [HttpPost("assign-role")]
+        public async Task<IActionResult> AssignRole([FromBody] AssignRoleRequest request)
+        {
+            var result = await _identityServices.AssignToRoleAsync(request.UserId, request.RoleId);
+
+            if (result.Succeeded)
+            {
+                return Ok(ResponseHandler.SuccessResponse(Unit.Value, "Role assigned successfully"));
+            }
+
+            return BadRequest(ResponseHandler.ErrorResponse(Unit.Value, "An error has occurred"));
+        }
+
+        public class AssignRoleRequest
+        {
+            public Guid UserId { get; set; }
+            public IEnumerable<Guid> RoleId { get; set; }
+        }
     }
 }

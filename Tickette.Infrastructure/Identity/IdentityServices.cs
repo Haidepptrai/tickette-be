@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Models;
 using Tickette.Application.DTOs.Auth;
+using Tickette.Application.Features.Users.Common;
 using Tickette.Domain.Entities;
 
 namespace Tickette.Infrastructure.Identity;
@@ -113,7 +114,7 @@ public class IdentityServices : IIdentityServices
         });
     }
 
-    public async Task<AuthResult<object?>> AssignToRoleAsync(Guid userId, Guid roleId)
+    public async Task<AuthResult<object?>> AssignToRoleAsync(Guid userId, IEnumerable<Guid>? roleIds)
     {
         var user = await _userManager.FindByIdAsync(userId.ToString());
         if (user == null)
@@ -121,15 +122,59 @@ public class IdentityServices : IIdentityServices
             return AuthResult<object?>.Failure(["User not found."]);
         }
 
-        var role = await _roleManager.FindByIdAsync(roleId.ToString());
-        if (role == null)
+        // If `roleIds == null` OR Empty => Remove All Roles (User is now a standard "User")
+        if (roleIds == null)
         {
-            return AuthResult<object?>.Failure(["Role not found."]);
+            var existingRoles = await _userManager.GetRolesAsync(user);
+            var removeResult = await _userManager.RemoveFromRolesAsync(user, existingRoles);
+
+            if (!removeResult.Succeeded)
+            {
+                return removeResult.ToApplicationResult<object?>(removeResult);
+            }
+
+            return AuthResult<object?>.Success(); // Successfully removed all roles (User is now a default "User")
         }
 
-        var result = await _userManager.AddToRoleAsync(user, role.Name!);
-        return result.ToApplicationResult<object?>(result);
+        // Validate All Role IDs Exist Before Assigning
+        var roles = await _roleManager.Roles
+            .Where(r => roleIds.Contains(r.Id))
+            .Select(r => r.Name) // This produces `List<string?>`
+            .Where(name => name != null) // Filter out null values
+            .Select(name => name!) // Convert to `List<string>` -> Just to avoid null issue
+            .ToListAsync();
+
+        if (roles.Count != roleIds.Count())
+        {
+            return AuthResult<object?>.Failure(["One or more roles not found."]);
+        }
+
+        // Remove Roles That Are No Longer Assigned
+        var currentRoles = await _userManager.GetRolesAsync(user);
+        var rolesToRemove = currentRoles.Except(roles).ToList();
+        if (rolesToRemove.Any())
+        {
+            var removeOldRolesResult = await _userManager.RemoveFromRolesAsync(user, rolesToRemove);
+            if (!removeOldRolesResult.Succeeded)
+            {
+                return removeOldRolesResult.ToApplicationResult<object?>(removeOldRolesResult);
+            }
+        }
+
+        // 4️ Add New Roles
+        var rolesToAdd = roles.Except(currentRoles).ToList();
+        if (rolesToAdd.Any())
+        {
+            var addNewRolesResult = await _userManager.AddToRolesAsync(user, rolesToAdd);
+            if (!addNewRolesResult.Succeeded)
+            {
+                return addNewRolesResult.ToApplicationResult<object?>(addNewRolesResult);
+            }
+        }
+
+        return AuthResult<object?>.Success(null); // Successfully updated roles
     }
+
 
     public async Task<AuthResult<object?>> DeleteUserAsync(Guid userId)
     {
@@ -143,27 +188,47 @@ public class IdentityServices : IIdentityServices
         return result.ToApplicationResult<object?>(result);
     }
 
-    public async Task<AuthResult<User>> GetUserByIdAsync(Guid userId)
+    public async Task<AuthResult<(User user, List<string> roles)>> GetUserByIdAsync(Guid userId)
     {
         var user = await _userManager.Users
             .SingleOrDefaultAsync(u => u.Id == userId);
 
-        return user == null ?
-            AuthResult<User>.Failure(["User not found."]) : AuthResult<User>.Success(user);
+        if (user == null)
+        {
+            return AuthResult<(User, List<string>)>.Failure(["User not found."]);
+        }
+
+        var roles = await _userManager.GetRolesAsync(user);
+
+        return AuthResult<(User, List<string>)>.Success((user, roles.ToList()));
     }
 
-    public async Task<AuthResult<IEnumerable<User>>> GetAllUsers(int pageNumber, int pageSize, CancellationToken cancellationToken)
+
+    public async Task<AuthResult<IEnumerable<PreviewUserResponse>>> GetAllUsers(
+        int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
-        var users = await _userManager.Users.AsNoTracking()
+        // Fetch paginated users first
+        var users = await _userManager.Users
+            .AsNoTracking()
             .OrderBy(u => u.Email)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        return !users.Any() ?
-            AuthResult<IEnumerable<User>>.Failure(["User not found."]) : AuthResult<IEnumerable<User>>.Success(users);
-    }
+        if (!users.Any())
+            return AuthResult<IEnumerable<PreviewUserResponse>>.Failure(["Users not found."]);
 
+        // Fetch roles sequentially to avoid DbContext threading issues
+        var userResponses = new List<PreviewUserResponse>();
+
+        foreach (var user in users)
+        {
+            var roles = await _userManager.GetRolesAsync(user); // Fetch roles one by one
+            userResponses.Add(user.MapToPreviewUserResponse(roles));
+        }
+
+        return AuthResult<IEnumerable<PreviewUserResponse>>.Success(userResponses);
+    }
 
     public async Task<AuthResult<TokenRetrieval>> SyncGoogleUserAsync(GoogleUserRequest request)
     {
@@ -202,6 +267,18 @@ public class IdentityServices : IIdentityServices
         });
     }
 
+    public async Task<IEnumerable<RoleResponse>> GetRoleIds()
+    {
+        var roleIds = await _roleManager.Roles
+            .Select(r => new RoleResponse()
+            {
+                Id = r.Id,
+                Name = r.Name!
+            })
+            .ToListAsync();
+
+        return roleIds;
+    }
 
     private async Task AddOrUpdateRefreshTokenAsync(Guid userId, string token, DateTime expiryTime, CancellationToken cancellationToken)
     {

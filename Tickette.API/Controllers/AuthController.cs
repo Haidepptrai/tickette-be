@@ -89,7 +89,7 @@ namespace Tickette.API.Controllers
         public class AssignRoleRequest
         {
             public Guid UserId { get; set; }
-            public Guid RoleId { get; set; }
+            public required IEnumerable<Guid>? RoleId { get; set; }
         }
 
         [HttpDelete("{userId:guid}")]

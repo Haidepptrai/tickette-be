@@ -75,23 +75,6 @@ namespace Tickette.Admin.Controllers
             public string Password { get; set; }
         }
 
-        [HttpPost("assign-role")]
-        public async Task<IActionResult> AssignRole([FromBody] AssignRoleRequest request)
-        {
-            var result = await _identityServices.AssignToRoleAsync(request.UserId, request.RoleId);
-            if (result.Succeeded)
-            {
-                return Ok("Role assigned successfully.");
-            }
-            return BadRequest(result.Errors);
-        }
-
-        public class AssignRoleRequest
-        {
-            public Guid UserId { get; set; }
-            public Guid RoleId { get; set; }
-        }
-
         [HttpDelete("{userId:guid}")]
         public async Task<IActionResult> DeleteUser(Guid userId)
         {

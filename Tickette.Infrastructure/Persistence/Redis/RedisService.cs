@@ -50,14 +50,19 @@ namespace Tickette.Infrastructure.Persistence.Redis
             return await _database.StringDecrementAsync(key, value);
         }
 
-        public async Task<bool> AcquireLockAsync(string key, TimeSpan expiry)
+        public async Task SetBatchAsync(Dictionary<string, string> keyValuePairs)
         {
-            return await _database.LockTakeAsync(key, Environment.MachineName, expiry);
+            var batch = _database.CreateBatch();
+            var tasks = new List<Task>();
+
+            foreach (var kvp in keyValuePairs)
+            {
+                tasks.Add(batch.StringSetAsync(kvp.Key, kvp.Value));
+            }
+
+            batch.Execute();
+            await Task.WhenAll(tasks);
         }
 
-        public async Task<bool> ReleaseLockAsync(string key)
-        {
-            return await _database.LockReleaseAsync(key, Environment.MachineName);
-        }
     }
 }

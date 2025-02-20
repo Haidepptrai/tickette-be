@@ -34,7 +34,7 @@ namespace Tickette.API.Controllers
                             "User ID not found in token."));
                 }
 
-                var query = new GetUserByIdQuery(Guid.Parse(userIdClaim.Value));
+                var query = new GetUserByIdQuery(Guid.Parse(userIdClaim.Value), false);
                 var result =
                     await _queryDispatcher.Dispatch<GetUserByIdQuery, GetUserByIdResponse>(query, cancellationToken);
 
