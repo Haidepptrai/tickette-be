@@ -23,8 +23,6 @@ public sealed class Event : BaseEntity
 
     public string Description { get; set; }
 
-    public string Logo { get; set; }
-
     public string Banner { get; set; }
 
     public DateTime StartDate { get; set; }
@@ -34,6 +32,8 @@ public sealed class Event : BaseEntity
     public string EventSlug { get; private set; }
 
     public ApprovalStatus Status { get; set; }
+
+    public string EventOwnerStripeId { get; init; }
 
     public Category Category { get; set; }
 
@@ -57,8 +57,8 @@ public sealed class Event : BaseEntity
         string ward,
         string streetAddress,
         string description,
-        string logo,
         string banner,
+        string eventOwnerStripeId,
         Guid categoryId,
         DateTime startDate,
         DateTime endDate,
@@ -74,8 +74,8 @@ public sealed class Event : BaseEntity
         StreetAddress = streetAddress;
         CategoryId = categoryId;
         Description = description;
-        Logo = logo;
         Banner = banner;
+        EventOwnerStripeId = eventOwnerStripeId;
         StartDate = startDate;
         EndDate = endDate;
         User = userCreated;
@@ -93,8 +93,8 @@ public sealed class Event : BaseEntity
         string ward,
         string streetAddress,
         string description,
-        string logo,
         string banner,
+        string eventOwnerStripeId,
         Guid categoryId,
         DateTime startDate,
         DateTime endDate,
@@ -133,8 +133,8 @@ public sealed class Event : BaseEntity
             ward,
             streetAddress,
             description,
-            logo,
             banner,
+            eventOwnerStripeId,
             categoryId,
             startDate,
             endDate,

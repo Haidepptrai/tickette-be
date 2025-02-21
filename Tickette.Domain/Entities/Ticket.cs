@@ -106,4 +106,9 @@ public sealed class Ticket : BaseEntity
             throw new ArgumentException("Quantity exceeds remaining tickets.");
         RemainingTickets -= quantity;
     }
+
+    public void IncreaseTickets(int quantity)
+    {
+        RemainingTickets += quantity;
+    }
 }

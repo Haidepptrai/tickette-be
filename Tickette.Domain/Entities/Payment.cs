@@ -1,19 +1,22 @@
 ﻿namespace Tickette.Domain.Entities;
 
-public class Payment
+public sealed class Payment
 {
-    public decimal Amount { get; set; }
+    public decimal Amount { get; init; }
 
-    public string Currency { get; set; }
+    public string Currency { get; init; }
 
-    private Payment(decimal amount, string currency)
+    public string EventOwnerStripeId { get; init; }
+
+    private Payment(decimal amount, string currency, string eventOwnerStripeId)
     {
         Amount = amount;
         Currency = currency;
+        EventOwnerStripeId = eventOwnerStripeId;
     }
 
-    public static Payment Create(decimal amount, string currency = "usd")
+    public static Payment Create(decimal amount, string eventOwnerStripeId, string currency = "usd")
     {
-        return new Payment(amount, currency);
+        return new Payment(amount, currency, eventOwnerStripeId);
     }
 }

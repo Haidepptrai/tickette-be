@@ -14,7 +14,7 @@ public record GetAllEventsQuery
     public int PageSize { get; init; } = 10;
 };
 
-public class GetAllEventsQueryHandler : IQueryHandler<GetAllEventsQuery, PagedResult<EventDetailDto>>
+public class GetAllEventsQueryHandler : IQueryHandler<GetAllEventsQuery, PagedResult<EventPreviewDto>>
 {
     private readonly IApplicationDbContext _context;
     private readonly ILogger<GetAllEventsQueryHandler> _logger;
@@ -25,7 +25,7 @@ public class GetAllEventsQueryHandler : IQueryHandler<GetAllEventsQuery, PagedRe
         _logger = logger;
     }
 
-    public async Task<PagedResult<EventDetailDto>> Handle(GetAllEventsQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<EventPreviewDto>> Handle(GetAllEventsQuery request, CancellationToken cancellationToken)
     {
         try
         {
@@ -44,9 +44,9 @@ public class GetAllEventsQueryHandler : IQueryHandler<GetAllEventsQuery, PagedRe
                 .ToListAsync(cancellationToken);
 
             // Map the entities to DTOs
-            var eventDto = events.Select(e => e.ToEventDetailDto()).ToList();
+            var eventDto = events.Select(e => e.ToEventPreviewDto()).ToList();
 
-            var pageResult = new PagedResult<EventDetailDto>(eventDto, totalCount, request.PageNumber, request.PageSize);
+            var pageResult = new PagedResult<EventPreviewDto>(eventDto, totalCount, request.PageNumber, request.PageSize);
 
             return pageResult;
         }

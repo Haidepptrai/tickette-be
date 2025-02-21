@@ -26,9 +26,9 @@ public class StripePaymentService : IPaymentService
             PaymentMethodTypes = new List<string> { "card" },
             TransferData = new PaymentIntentTransferDataOptions
             {
-                Destination = "acct_1QpYEHHFsj1g5H5Q", // Replace with your own account ID
+                Destination = payment.EventOwnerStripeId
             },
-            ApplicationFeeAmount = 1000 // Platform fee (e.g., $10.00 in cents)
+            ApplicationFeeAmount = 1000
         };
 
         var paymentIntent = await service.CreateAsync(options);

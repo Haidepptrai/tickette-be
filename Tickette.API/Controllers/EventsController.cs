@@ -11,8 +11,10 @@ using Tickette.Application.Features.Events.Common;
 using Tickette.Application.Features.Events.Queries.GetAllEvents;
 using Tickette.Application.Features.Events.Queries.GetEventByCategory;
 using Tickette.Application.Features.Events.Queries.GetEventById;
+using Tickette.Application.Features.Events.Queries.GetEventBySlug;
 using Tickette.Application.Features.Events.Queries.GetEventByUserId;
 using Tickette.Application.Wrappers;
+using Tickette.Domain.Common;
 
 namespace Tickette.API.Controllers;
 
@@ -52,11 +54,11 @@ public class EventsController : ControllerBase
         Summary = "Get All Events",
         Description = "Get all events with pagination"
     )]
-    public async Task<ResponseDto<IEnumerable<EventDetailDto>>> GetAllEvents(GetAllEventsQuery query, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<ResponseDto<IEnumerable<EventPreviewDto>>>> GetAllEvents(GetAllEventsQuery query, CancellationToken cancellationToken = default)
     {
         try
         {
-            var result = await _queryDispatcher.Dispatch<GetAllEventsQuery, PagedResult<EventDetailDto>>(query, cancellationToken);
+            var result = await _queryDispatcher.Dispatch<GetAllEventsQuery, PagedResult<EventPreviewDto>>(query, cancellationToken);
 
             var paginationMeta = new PaginationMeta(
                 result.PageNumber,
@@ -67,11 +69,11 @@ public class EventsController : ControllerBase
 
             var response = ResponseHandler.PaginatedResponse(result.Items, paginationMeta, "Get all events successfully");
 
-            return response;
+            return Ok(response);
         }
         catch (Exception ex)
         {
-            return ResponseHandler.ErrorResponse<IEnumerable<EventDetailDto>>(null, "Internal Server Error", 500);
+            return BadRequest(ResponseHandler.ErrorResponse(Unit.Value, ex.Message, 500));
         }
     }
 
@@ -90,6 +92,22 @@ public class EventsController : ControllerBase
         {
             Console.WriteLine(ex);
             return ResponseHandler.ErrorResponse<EventDetailDto>(null, "Internal Server Error", 500);
+        }
+    }
+
+    // GET event by slug
+    [HttpPost("get-by-slug")]
+    public async Task<ActionResult<ResponseDto<EventDetailDto>>> GetEventBySlug(GetEventBySlugQuery query, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _queryDispatcher.Dispatch<GetEventBySlugQuery, EventDetailDto>(query, cancellationToken);
+            var response = ResponseHandler.SuccessResponse(result, "Get event by slug successfully");
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ResponseHandler.ErrorResponse<EventDetailDto>(null, "Internal Server Error", 500));
         }
     }
 
@@ -113,7 +131,6 @@ public class EventsController : ControllerBase
             }
 
 
-            var logoFile = new FormFileAdapter(commandDto.LogoFile);
             var bannerFile = new FormFileAdapter(commandDto.BannerFile);
 
             var command = new CreateEventCommand(
@@ -131,8 +148,8 @@ public class EventsController : ControllerBase
                 CommitteeName: commandDto.CommitteeName,
                 CommitteeDescription: commandDto.CommitteeDescription,
                 EventDatesInformation: commandDto.EventDates,
-                logoFile,
-                bannerFile
+                bannerFile,
+                EventOwnerStripeId: commandDto.EventOwnerStripeId
             );
 
             var response = await _commandDispatcher.Dispatch<CreateEventCommand, Guid>(command, token);

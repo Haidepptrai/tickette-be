@@ -37,9 +37,6 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
         builder.Property(e => e.Description)
             .IsRequired();
 
-        builder.Property(e => e.Logo)
-            .IsRequired();
-
         builder.Property(e => e.Banner)
             .IsRequired();
 
@@ -65,6 +62,15 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
             .WithMany(c => c.Events)
             .HasForeignKey(e => e.CreatedById)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Property(e => e.EventOwnerStripeId)
+            .HasComment("Stripe Customer ID of the event owner")
+            .IsRequired()
+            .HasMaxLength(255);
+
+        builder.HasIndex(e => e.EventOwnerStripeId)
+            .HasDatabaseName("IX_EventOwnerStripeId")
+            .IsUnique(false);
 
         builder.HasQueryFilter(e => e.DeletedAt == null);
     }

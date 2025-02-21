@@ -19,9 +19,26 @@ public static class EventMapper
         Category = entity.Category.Name,
         Committee = new CommitteeInformation()
         {
-            CommitteeName = entity.Committee.Name,
-            CommitteeDescription = entity.Committee.Description
+            Name = entity.Committee.Name,
+            Description = entity.Committee.Description
         }
+    };
+
+    public static EventPreviewDto ToEventPreviewDto(this Event entity) => new()
+    {
+        Id = entity.Id,
+        Name = entity.Name,
+        LocationName = entity.LocationName,
+        City = entity.City,
+        District = entity.District,
+        Ward = entity.Ward,
+        StreetAddress = entity.StreetAddress,
+        Description = entity.Description,
+        Banner = entity.Banner,
+        StartDate = entity.StartDate,
+        EndDate = entity.EndDate,
+        CategoryName = entity.Category.Name,
+        Slug = entity.EventSlug
     };
 
     public static EventDetailDto ToEventDetailDto(this Event entity) => new()
@@ -34,30 +51,31 @@ public static class EventMapper
         Ward = entity.Ward,
         StreetAddress = entity.StreetAddress,
         Description = entity.Description,
-        Logo = entity.Logo,
         Banner = entity.Banner,
         StartDate = entity.StartDate,
         EndDate = entity.EndDate,
         Status = entity.Status,
         CategoryName = entity.Category.Name,
-        CommitteeInformation = new CommitteeInformation()
+        EventOwnerStripeId = entity.EventOwnerStripeId,
+        Committee = new CommitteeInformation()
         {
-            CommitteeName = entity.Committee.Name,
-            CommitteeDescription = entity.Committee.Description
+            Name = entity.Committee.Name,
+            Description = entity.Committee.Description
         },
         EventDates = entity.EventDates.Select(ev => new EventDateDto()
         {
+            Id = ev.Id,
             StartDate = ev.StartDate,
             EndDate = ev.EndDate,
             Tickets = ev.Tickets.Select(ticket => new TicketDto()
             {
-                TicketId = ticket.Id,
+                Id = ticket.Id,
                 Name = ticket.Name,
                 Currency = "USD",
                 Description = ticket.Description,
                 TotalTickets = ticket.TotalTickets,
-                MinTicketsPerOrder = ticket.MinTicketsPerOrder,
-                MaxTicketsPerOrder = ticket.MaxTicketsPerOrder,
+                MinPerOrder = ticket.MinTicketsPerOrder,
+                MaxPerOrder = ticket.MaxTicketsPerOrder,
                 Price = ticket.Price,
                 SaleStartTime = ticket.SaleStartTime,
                 SaleEndTime = ticket.SaleEndTime,

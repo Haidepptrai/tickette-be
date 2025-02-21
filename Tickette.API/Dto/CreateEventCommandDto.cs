@@ -28,7 +28,7 @@ public class CreateEventCommandDto
 
     public required string CommitteeDescription { get; set; }
 
-    public required IFormFile LogoFile { get; set; }
+    public required string EventOwnerStripeId { get; set; }
 
     public required IFormFile BannerFile { get; set; }
 
