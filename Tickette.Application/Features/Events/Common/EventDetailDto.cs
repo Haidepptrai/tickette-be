@@ -21,8 +21,6 @@ public class EventDetailDto
 
     public required string Description { get; set; }
 
-    public required string Logo { get; set; }
-
     public required string Banner { get; set; }
 
     public DateTime StartDate { get; set; }
@@ -34,7 +32,9 @@ public class EventDetailDto
 
     public required string CategoryName { get; set; }
 
-    public required CommitteeInformation CommitteeInformation { get; set; }
+    public required CommitteeInformation Committee { get; set; }
 
     public IEnumerable<EventDateDto> EventDates { get; init; }
+
+    public string EventOwnerStripeId { get; init; }
 }

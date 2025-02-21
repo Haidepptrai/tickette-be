@@ -11,6 +11,8 @@ namespace Tickette.Application.Features.Orders.Command.CreatePaymentIntent;
 public record CreatePaymentIntentCommand
 {
     public required ICollection<TicketReservation> Tickets { get; set; }
+
+    public required string EventOwnerStripeId { get; init; }
 }
 
 public class CreatePaymentIntentCommandHandler : ICommandHandler<CreatePaymentIntentCommand, PaymentIntentResult>
@@ -54,7 +56,7 @@ public class CreatePaymentIntentCommandHandler : ICommandHandler<CreatePaymentIn
             throw new InvalidOperationException("Total price must be greater than zero.");
         }
 
-        var payment = Payment.Create(totalPrice);
+        var payment = Payment.Create(totalPrice, command.EventOwnerStripeId);
         var paymentIntentResult = await _paymentService.CreatePaymentIntentAsync(payment);
 
         return new PaymentIntentResult

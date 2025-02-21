@@ -2,7 +2,7 @@
 
 public class TicketDto
 {
-    public Guid TicketId { get; set; }
+    public Guid Id { get; set; }
 
     public string Name { get; set; }
 
@@ -10,9 +10,9 @@ public class TicketDto
 
     public int TotalTickets { get; set; }
 
-    public int MinTicketsPerOrder { get; set; }
+    public int MinPerOrder { get; set; }
 
-    public int MaxTicketsPerOrder { get; set; }
+    public int MaxPerOrder { get; set; }
 
     public DateTime SaleStartTime { get; set; }
 

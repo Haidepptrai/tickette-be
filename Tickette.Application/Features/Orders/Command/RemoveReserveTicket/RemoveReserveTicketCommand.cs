@@ -1,4 +1,6 @@
-﻿using Tickette.Application.Common.CQRS;
+﻿using Microsoft.EntityFrameworkCore;
+using Tickette.Application.Common.CQRS;
+using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Common;
@@ -14,10 +16,12 @@ public record RemoveReserveTicketCommand
 public class RemoveReserveTicketCommandHandler : ICommandHandler<RemoveReserveTicketCommand, Unit>
 {
     private readonly IRedisService _redisService;
+    private readonly IApplicationDbContext _context;
 
-    public RemoveReserveTicketCommandHandler(IRedisService redisService)
+    public RemoveReserveTicketCommandHandler(IRedisService redisService, IApplicationDbContext context)
     {
         _redisService = redisService;
+        _context = context;
     }
 
     public async Task<Unit> Handle(RemoveReserveTicketCommand command, CancellationToken cancellation)
@@ -32,6 +36,21 @@ public class RemoveReserveTicketCommandHandler : ICommandHandler<RemoveReserveTi
             {
                 // Increase the tickets quantity back
                 string inventoryKey = $"ticket:{ticket.Id}:remaining_tickets";
+
+                // Update the ticket quantity in database
+                var ticketRecord = await _context.Tickets
+                    .Where(t => t.Id == ticket.Id)
+                    .FirstOrDefaultAsync(cancellation);
+
+
+                if (ticketRecord == null)
+                {
+                    continue;
+                }
+
+                // Increment the ticket quantity
+                ticketRecord.IncreaseTickets(ticket.Quantity);
+
                 await _redisService.IncrementAsync(inventoryKey, ticket.Quantity);
 
                 continue;

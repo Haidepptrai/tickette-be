@@ -22,8 +22,8 @@ public record CreateEventCommand(
     string CommitteeName,
     string CommitteeDescription,
     EventDateInput[] EventDatesInformation,
-    IFileUpload LogoFile,
-    IFileUpload BannerFile
+    IFileUpload BannerFile,
+    string EventOwnerStripeId
 );
 
 
@@ -49,7 +49,6 @@ public class CreateEventCommandHandler : ICommandHandler<CreateEventCommand, Gui
             throw new Exception("Not found user in database");
         }
 
-        var logoUrl = await _fileUploadService.UploadFileAsync(command.LogoFile, "logos");
         var bannerUrl = await _fileUploadService.UploadFileAsync(command.BannerFile, "banners");
 
         var committee = EventCommittee.CreateEventCommittee(command.CommitteeName, command.CommitteeDescription);
@@ -65,9 +64,9 @@ public class CreateEventCommandHandler : ICommandHandler<CreateEventCommand, Gui
             endDate: command.EndDate,
             categoryId: command.CategoryId,
             userCreated: userCreatedResult.Data.user,
-            logo: logoUrl,
             banner: bannerUrl,
-            committee: committee);
+            committee: committee,
+            eventOwnerStripeId: command.EventOwnerStripeId);
 
         // Add ticket information
         foreach (var eventDate in command.EventDatesInformation)

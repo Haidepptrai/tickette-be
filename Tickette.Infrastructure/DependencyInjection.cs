@@ -196,8 +196,6 @@ public static class DependencyInjection
             }
         });
 
-
-
         builder.Services.AddSingleton<IAuthorizationHandler, EventRoleHandler>();
         builder.Services.AddHttpContextAccessor(); // For extracting event id
 

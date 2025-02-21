@@ -35,6 +35,9 @@ public class UpdateEventStatusHandler : ICommandHandler<UpdateEventStatusCommand
             if (eventToUpdate == null)
                 throw new KeyNotFoundException($"Event with ID {command.EventId} was not found.");
 
+            if (eventToUpdate.Status == ApprovalStatus.Approved)
+                throw new InvalidOperationException("Event status cannot be updated once it is approved.");
+
             // Update the event status
             eventToUpdate.Status = command.Status;
 
@@ -51,7 +54,7 @@ public class UpdateEventStatusHandler : ICommandHandler<UpdateEventStatusCommand
 
                         // Only add if it doesn't already exist in Redis
                         var existingValue = await _redisService.GetAsync(inventoryKey);
-                        if (existingValue == null)
+                        if (existingValue == null || existingValue == "0")
                         {
                             redisData[inventoryKey] = ticket.RemainingTickets.ToString();
                         }
