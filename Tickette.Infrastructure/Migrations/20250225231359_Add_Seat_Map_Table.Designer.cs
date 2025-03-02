@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Tickette.Infrastructure.Data;
@@ -11,9 +12,11 @@ using Tickette.Infrastructure.Data;
 namespace Tickette.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250225231359_Add_Seat_Map_Table")]
+    partial class Add_Seat_Map_Table
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -569,11 +572,6 @@ namespace Tickette.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("event_id");
 
-                    b.Property<string>("SeatMap")
-                        .IsRequired()
-                        .HasColumnType("jsonb")
-                        .HasColumnName("seat_map");
-
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("start_date");
@@ -583,17 +581,148 @@ namespace Tickette.Infrastructure.Migrations
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id")
-                        .HasName("pk_event_dates");
+                        .HasName("pk_event_date");
 
                     b.HasIndex("EventId")
-                        .HasDatabaseName("ix_event_dates_event_id");
+                        .HasDatabaseName("ix_event_date_event_id");
 
-                    b.HasIndex("SeatMap")
-                        .HasDatabaseName("ix_event_dates_seat_map");
+                    b.ToTable("event_date", (string)null);
+                });
 
-                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("SeatMap"), "GIN");
+            modelBuilder.Entity("Tickette.Domain.Entities.EventSeat", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
-                    b.ToTable("event_dates", (string)null);
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid>("EventDateId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("event_date_id");
+
+                    b.Property<Guid?>("EventSeatMapId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("event_seat_map_id");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ticket_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_event_seats");
+
+                    b.HasIndex("EventDateId")
+                        .HasDatabaseName("ix_event_seats_event_date_id");
+
+                    b.HasIndex("EventSeatMapId")
+                        .HasDatabaseName("ix_event_seats_event_seat_map_id");
+
+                    b.HasIndex("TicketId")
+                        .HasDatabaseName("ix_event_seats_ticket_id");
+
+                    b.ToTable("event_seats", (string)null);
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.EventSeatMap", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid>("EventDateId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("event_date_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_event_seat_maps");
+
+                    b.ToTable("event_seat_maps", (string)null);
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.EventSeatMapSection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid>("EventDateId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("event_date_id");
+
+                    b.Property<Guid?>("EventSeatMapId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("event_seat_map_id");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantity");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ticket_id");
+
+                    b.Property<Guid?>("TicketId1")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ticket_id1");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_event_seat_map_sections");
+
+                    b.HasIndex("EventDateId")
+                        .HasDatabaseName("ix_event_seat_map_sections_event_date_id");
+
+                    b.HasIndex("EventSeatMapId")
+                        .HasDatabaseName("ix_event_seat_map_sections_event_seat_map_id");
+
+                    b.HasIndex("TicketId")
+                        .HasDatabaseName("ix_event_seat_map_sections_ticket_id");
+
+                    b.HasIndex("TicketId1")
+                        .HasDatabaseName("ix_event_seat_map_sections_ticket_id1");
+
+                    b.ToTable("event_seat_map_sections", (string)null);
                 });
 
             modelBuilder.Entity("Tickette.Domain.Entities.Order", b =>
@@ -1110,9 +1239,169 @@ namespace Tickette.Infrastructure.Migrations
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_event_dates_events_event_id");
+                        .HasConstraintName("fk_event_date_events_event_id");
 
                     b.Navigation("Event");
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.EventSeat", b =>
+                {
+                    b.HasOne("Tickette.Domain.Entities.EventDate", "EventDate")
+                        .WithMany("Seats")
+                        .HasForeignKey("EventDateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_event_seats_event_date_event_date_id");
+
+                    b.HasOne("Tickette.Domain.Entities.EventSeatMap", null)
+                        .WithMany("Seats")
+                        .HasForeignKey("EventSeatMapId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_event_seats_event_seat_maps_event_seat_map_id");
+
+                    b.HasOne("Tickette.Domain.Entities.Ticket", "Ticket")
+                        .WithMany("Seats")
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_event_seats_tickets_ticket_id");
+
+                    b.OwnsOne("Tickette.Domain.ValueObjects.ShapeAttribute", "Attribute", b1 =>
+                        {
+                            b1.Property<Guid>("EventSeatId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("id");
+
+                            b1.Property<string>("Height")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("attribute_height");
+
+                            b1.Property<string>("Name")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("attribute_name");
+
+                            b1.Property<string>("Number")
+                                .HasMaxLength(10)
+                                .HasColumnType("character varying(10)")
+                                .HasColumnName("attribute_number");
+
+                            b1.Property<string>("RowName")
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("attribute_row_name");
+
+                            b1.Property<string>("Width")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("attribute_width");
+
+                            b1.Property<double>("X")
+                                .HasColumnType("double precision")
+                                .HasColumnName("attribute_x");
+
+                            b1.Property<double>("Y")
+                                .HasColumnType("double precision")
+                                .HasColumnName("attribute_y");
+
+                            b1.HasKey("EventSeatId");
+
+                            b1.ToTable("event_seats");
+
+                            b1.WithOwner()
+                                .HasForeignKey("EventSeatId")
+                                .HasConstraintName("fk_event_seats_event_seats_id");
+                        });
+
+                    b.Navigation("Attribute")
+                        .IsRequired();
+
+                    b.Navigation("EventDate");
+
+                    b.Navigation("Ticket");
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.EventSeatMapSection", b =>
+                {
+                    b.HasOne("Tickette.Domain.Entities.EventDate", "EventDate")
+                        .WithMany()
+                        .HasForeignKey("EventDateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_event_seat_map_sections_event_date_event_date_id");
+
+                    b.HasOne("Tickette.Domain.Entities.EventSeatMap", null)
+                        .WithMany("Sections")
+                        .HasForeignKey("EventSeatMapId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_event_seat_map_sections_event_seat_maps_event_seat_map_id");
+
+                    b.HasOne("Tickette.Domain.Entities.Ticket", "Ticket")
+                        .WithMany()
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_event_seat_map_sections_tickets_ticket_id");
+
+                    b.HasOne("Tickette.Domain.Entities.Ticket", null)
+                        .WithMany("Sections")
+                        .HasForeignKey("TicketId1")
+                        .HasConstraintName("fk_event_seat_map_sections_tickets_ticket_id1");
+
+                    b.OwnsOne("Tickette.Domain.ValueObjects.ShapeAttribute", "Attribute", b1 =>
+                        {
+                            b1.Property<Guid>("EventSeatMapSectionId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("id");
+
+                            b1.Property<string>("Height")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("attribute_height");
+
+                            b1.Property<string>("Name")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("attribute_name");
+
+                            b1.Property<string>("Number")
+                                .HasMaxLength(10)
+                                .HasColumnType("character varying(10)")
+                                .HasColumnName("attribute_number");
+
+                            b1.Property<string>("RowName")
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("attribute_row_name");
+
+                            b1.Property<string>("Width")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("attribute_width");
+
+                            b1.Property<double>("X")
+                                .HasColumnType("double precision")
+                                .HasColumnName("attribute_x");
+
+                            b1.Property<double>("Y")
+                                .HasColumnType("double precision")
+                                .HasColumnName("attribute_y");
+
+                            b1.HasKey("EventSeatMapSectionId");
+
+                            b1.ToTable("event_seat_map_sections");
+
+                            b1.WithOwner()
+                                .HasForeignKey("EventSeatMapSectionId")
+                                .HasConstraintName("fk_event_seat_map_sections_event_seat_map_sections_id");
+                        });
+
+                    b.Navigation("Attribute")
+                        .IsRequired();
+
+                    b.Navigation("EventDate");
+
+                    b.Navigation("Ticket");
                 });
 
             modelBuilder.Entity("Tickette.Domain.Entities.Order", b =>
@@ -1176,7 +1465,7 @@ namespace Tickette.Infrastructure.Migrations
                         .HasForeignKey("EventDateId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_tickets_event_dates_event_date_id");
+                        .HasConstraintName("fk_tickets_event_date_event_date_id");
 
                     b.Navigation("EventDate");
                 });
@@ -1205,12 +1494,28 @@ namespace Tickette.Infrastructure.Migrations
 
             modelBuilder.Entity("Tickette.Domain.Entities.EventDate", b =>
                 {
+                    b.Navigation("Seats");
+
                     b.Navigation("Tickets");
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.EventSeatMap", b =>
+                {
+                    b.Navigation("Seats");
+
+                    b.Navigation("Sections");
                 });
 
             modelBuilder.Entity("Tickette.Domain.Entities.Order", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.Ticket", b =>
+                {
+                    b.Navigation("Seats");
+
+                    b.Navigation("Sections");
                 });
 
             modelBuilder.Entity("Tickette.Domain.Entities.User", b =>

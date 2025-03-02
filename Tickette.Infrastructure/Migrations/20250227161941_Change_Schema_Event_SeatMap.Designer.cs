@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Tickette.Infrastructure.Data;
@@ -11,9 +12,11 @@ using Tickette.Infrastructure.Data;
 namespace Tickette.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250227161941_Change_Schema_Event_SeatMap")]
+    partial class Change_Schema_Event_SeatMap
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -588,12 +591,92 @@ namespace Tickette.Infrastructure.Migrations
                     b.HasIndex("EventId")
                         .HasDatabaseName("ix_event_dates_event_id");
 
-                    b.HasIndex("SeatMap")
-                        .HasDatabaseName("ix_event_dates_seat_map");
-
-                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("SeatMap"), "GIN");
-
                     b.ToTable("event_dates", (string)null);
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.EventSeat", b =>
+                {
+                    b.Property<string>("Fill")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("fill");
+
+                    b.Property<string>("Height")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("height");
+
+                    b.Property<bool>("IsOrdered")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_ordered");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("number");
+
+                    b.Property<string>("RowName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("row_name");
+
+                    b.Property<string>("Width")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("width");
+
+                    b.Property<double>("X")
+                        .HasColumnType("double precision")
+                        .HasColumnName("x");
+
+                    b.Property<double>("Y")
+                        .HasColumnType("double precision")
+                        .HasColumnName("y");
+
+                    b.ToTable("event_seat", (string)null);
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.EventSeatMap", b =>
+                {
+                    b.ToTable("event_seat_map", (string)null);
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.EventSeatMapSection", b =>
+                {
+                    b.Property<string>("Fill")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("fill");
+
+                    b.Property<string>("Height")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("height");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("type");
+
+                    b.Property<string>("Width")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("width");
+
+                    b.Property<double>("X")
+                        .HasColumnType("double precision")
+                        .HasColumnName("x");
+
+                    b.Property<double>("Y")
+                        .HasColumnType("double precision")
+                        .HasColumnName("y");
+
+                    b.ToTable("event_seat_map_sections", (string)null);
                 });
 
             modelBuilder.Entity("Tickette.Domain.Entities.Order", b =>

@@ -23,11 +23,11 @@ public interface IApplicationDbContext
 
     DbSet<Coupon> Coupons { get; set; }
 
-    DbSet<EventSeat> EventSeats { get; set; }
-
     DbSet<RefreshToken> RefreshTokens { get; set; }
 
     DbSet<EmailUnsubscription> EmailUnsubscriptions { get; set; }
+
+    DbSet<EventDate> EventDates { get; set; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }
