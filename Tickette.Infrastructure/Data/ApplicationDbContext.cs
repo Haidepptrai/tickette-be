@@ -21,9 +21,9 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
     public DbSet<Coupon> Coupons { get; set; }
-    public DbSet<EventSeat> EventSeats { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<EmailUnsubscription> EmailUnsubscriptions { get; set; }
+    public DbSet<EventDate> EventDates { get; set; }
     public DbSet<Category> Categories { get; set; }
     public DbSet<CommitteeMember> CommitteeMembers { get; set; }
     public DbSet<CommitteeRole> CommitteeRoles { get; set; }
@@ -49,7 +49,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
         builder.Entity<IdentityRoleClaim<Guid>>(b => b.ToTable("identity_role_claims"));
         builder.Entity<IdentityUserToken<Guid>>(b => b.ToTable("identity_user_tokens"));
 
-        // ✅ Apply query filters dynamically for `Event`
+        // Apply query filters dynamically for `Event`
         builder.Entity<Event>().HasQueryFilter(e =>
             !_isAdminOrModerator || (e.DeletedAt == null && e.Status == ApprovalStatus.Approved));
     }
@@ -61,7 +61,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
             .Select(c => c.Value)
             .ToList();
 
-        // ✅ Dynamically update the filter condition per request
+        // Dynamically update the filter condition per request
         _isAdminOrModerator = userRoles?.Contains("Admin") == true || userRoles?.Contains("Moderator") == true;
     }
 }

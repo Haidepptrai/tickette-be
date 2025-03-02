@@ -28,8 +28,6 @@ public sealed class Ticket : BaseEntity
 
     public EventDate EventDate { get; private set; }
 
-    public ICollection<EventSeat>? Seats { get; set; } = new List<EventSeat>();
-
     protected Ticket() { }
 
     private Ticket(

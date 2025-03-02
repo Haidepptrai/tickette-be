@@ -1,53 +1,53 @@
-﻿using Tickette.Domain.Common;
+﻿using System.Text.Json.Serialization;
 
 namespace Tickette.Domain.Entities;
 
-public sealed class EventSeat : BaseEntity
+public sealed class EventSeat
 {
-    public Guid EventId { get; private set; }
+    [JsonPropertyName("height")]
+    public string Height { get; private set; }
 
-    public Guid TicketId { get; private set; }
+    [JsonPropertyName("width")]
+    public string Width { get; private set; }
 
-    public Guid EventDateId { get; private set; }
+    [JsonPropertyName("x")]
+    public double X { get; private set; }
 
-    public int Row { get; private set; }
+    [JsonPropertyName("y")]
+    public double Y { get; private set; }
 
-    public int Column { get; private set; }
+    [JsonPropertyName("number")]
+    public string Number { get; private set; }
 
-    public bool IsAvailable { get; private set; }
+    [JsonPropertyName("rowName")]
+    public string RowName { get; private set; }
 
-    public EventDate EventDate { get; set; }
+    [JsonPropertyName("fill")]
+    public string Fill { get; private set; }
 
-    public Ticket Ticket { get; set; }
+    [JsonPropertyName("isOrdered")]
+    public bool IsOrdered { get; private set; }
 
-    private EventSeat() { }
-
-    private EventSeat(int row, int column, EventDate eventDate, Ticket ticket)
+    [JsonConstructor]
+    public EventSeat(double x, double y, string width, string height, string number, string rowName, string fill)
     {
-        if (row <= 0)
-        {
-            throw new ArgumentException("Row must be greater than zero.", nameof(row));
-        }
-
-        if (column <= 0)
-        {
-            throw new ArgumentException("Column must be greater than zero.", nameof(column));
-        }
-
-        EventDate = eventDate;
-        Ticket = ticket;
-        Row = row;
-        Column = column;
-        IsAvailable = true;
+        X = x;
+        Y = y;
+        Width = width;
+        Height = height;
+        Number = number;
+        RowName = rowName;
+        Fill = fill;
+        IsOrdered = false;
     }
 
-    public static EventSeat CreateEventSeat(int row, int column, EventDate eventDate, Ticket ticket)
+    public static EventSeat CreateEventSeat(double x, double y, string width, string height, string number, string rowName, string fill)
     {
-        return new EventSeat(row, column, eventDate, ticket);
+        return new EventSeat(x, y, width, height, number, rowName, fill);
     }
 
-    public void SetAsReserved()
+    public void SetIsOrdered()
     {
-        IsAvailable = false;
+        IsOrdered = true;
     }
 }

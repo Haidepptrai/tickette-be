@@ -14,9 +14,9 @@ public class EventDate : BaseEntity
 
     public ICollection<Ticket> Tickets { get; set; }
 
-    public ICollection<EventSeat> Seats { get; set; } = new List<EventSeat>();
+    public EventSeatMap SeatMap { get; set; }
 
-    protected EventDate() { }
+    private EventDate() { }
 
     public EventDate(DateTime startDate, DateTime endDate)
     {
@@ -33,5 +33,10 @@ public class EventDate : BaseEntity
     public void AddTickets(ICollection<Ticket> tickets)
     {
         Tickets = tickets;
+    }
+
+    public void AddSeatMap(EventSeatMap seatMap)
+    {
+        SeatMap = seatMap;
     }
 }
