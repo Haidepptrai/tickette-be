@@ -2,7 +2,7 @@
 using Tickette.Application.Common.CQRS;
 using Tickette.Domain.Common;
 
-namespace Tickette.Application.Features.Seatmap.SaveSeatMap;
+namespace Tickette.Application.Features.Seatmap.Command.SaveSeatMap;
 
 using Tickette.Application.Common.Interfaces;
 using Tickette.Domain.Entities;

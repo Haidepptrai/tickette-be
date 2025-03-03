@@ -2,9 +2,11 @@
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.EventDates.Common;
 using Tickette.Application.Features.EventDates.Query;
-using Tickette.Application.Features.Seatmap.SaveSeatMap;
+using Tickette.Application.Features.Seatmap.Command.SaveSeatMap;
+using Tickette.Application.Features.Seatmap.Query;
 using Tickette.Application.Wrappers;
 using Tickette.Domain.Common;
+using Tickette.Domain.Entities;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -36,6 +38,13 @@ namespace Tickette.API.Controllers
         {
             var eventDates = await _queryDispatcher.Dispatch<GetEventDatesQuery, IEnumerable<EventDateForSeatMapDto>>(query, cancellationToken);
             return Ok(ResponseHandler.SuccessResponse(eventDates, "Data Retrieve Successfully"));
+        }
+
+        [HttpPost("get-event-date/seat-map")]
+        public async Task<ActionResult<ResponseDto<EventDateForSeatMapDto>>> GetEventDateSeatMap([FromBody] GetEventDateSeatMapQuery query, CancellationToken cancellationToken)
+        {
+            var eventDate = await _queryDispatcher.Dispatch<GetEventDateSeatMapQuery, EventSeatMap>(query, cancellationToken);
+            return Ok(ResponseHandler.SuccessResponse(eventDate, "Data Retrieve Successfully"));
         }
     }
 }

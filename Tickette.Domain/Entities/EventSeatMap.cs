@@ -2,9 +2,9 @@
 
 public sealed class EventSeatMap
 {
-    public ICollection<EventSeatMapSection>? Shapes { get; private set; }
+    public ICollection<EventSeatMapSection>? Shapes { get; set; }
 
-    public ICollection<TicketSeatMapping>? Tickets { get; private set; } = new List<TicketSeatMapping>();
+    public ICollection<TicketSeatMapping>? Tickets { get; set; }
 
     public EventSeatMap() { }
 

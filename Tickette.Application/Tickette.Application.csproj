@@ -27,10 +27,12 @@
     <Folder Include="Features\Orders\Command\CreatePaymentIntent\" />
     <Folder Include="Features\Orders\Query\ValidateReservation\" />
     <Folder Include="Features\QRCode\Commands\" />
+    <Folder Include="Features\Seatmap\Common\" />
     <Folder Include="Features\Tickets\Command\" />
     <Folder Include="Features\Tickets\Query\" />
     <Folder Include="Factories\" />
     <Folder Include="Features\Users\Command\" />
+    <Folder Include="Exceptions\" />
   </ItemGroup>
 
 </Project>

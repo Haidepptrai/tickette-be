@@ -6,7 +6,8 @@ public static class SerializationSettings
 {
     public static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
     {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase, // Converts to lowercase with camelCase
-        IncludeFields = true
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true,
+        PropertyNameCaseInsensitive = true
     };
 }
