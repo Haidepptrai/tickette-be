@@ -10,18 +10,18 @@ public class EventDateConfiguration : IEntityTypeConfiguration<EventDate>
 {
     public void Configure(EntityTypeBuilder<EventDate> builder)
     {
-        builder.Property(e => e.StartDate)
+        builder.Property(ed => ed.StartDate)
             .IsRequired();
 
-        builder.Property(e => e.EndDate)
+        builder.Property(ed => ed.EndDate)
             .IsRequired();
 
-        builder.HasOne(e => e.Event)
-            .WithMany(e => e.EventDates)
-            .HasForeignKey(e => e.EventId)
+        builder.HasOne(ed => ed.Event)
+            .WithMany(ed => ed.EventDates)
+            .HasForeignKey(ed => ed.EventId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.Property(e => e.SeatMap)
+        builder.Property(ed => ed.SeatMap)
             .HasColumnType("jsonb")
             .HasConversion(
                 v => JsonSerializer.Serialize(v, SerializationSettings.JsonOptions),
@@ -32,6 +32,6 @@ public class EventDateConfiguration : IEntityTypeConfiguration<EventDate>
         builder.HasIndex(ed => ed.SeatMap)
             .HasMethod("GIN");
 
-        builder.HasQueryFilter(e => e.DeletedAt == null);
+        builder.HasQueryFilter(ed => ed.DeletedAt == null);
     }
 }
