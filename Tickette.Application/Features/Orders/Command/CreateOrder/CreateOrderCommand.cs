@@ -6,6 +6,7 @@ using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Common.Models;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Entities;
+using Tickette.Infrastructure.Helpers;
 
 namespace Tickette.Application.Features.Orders.Command.CreateOrder;
 
@@ -80,14 +81,14 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
 
         foreach (var ticket in query.Tickets)
         {
-            string reservationKey = $"reservation:{ticket.Id}:{query.UserId}";
+            string reservationKey = RedisKeys.GetReservationKey(ticket.Id, query.UserId);
             var exists = await _redisService.KeyExistsAsync(reservationKey);
 
             // No reservation found
             if (!exists)
             {
                 // Increase the tickets quantity back
-                string inventoryKey = $"ticket:{ticket.Id}:remaining_tickets";
+                string inventoryKey = RedisKeys.GetTicketQuantityKey(ticket.Id);
                 await _redisService.IncrementAsync(inventoryKey, ticket.Quantity);
 
                 continue;
