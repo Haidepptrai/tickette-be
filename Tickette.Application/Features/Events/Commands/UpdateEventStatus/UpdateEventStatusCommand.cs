@@ -4,6 +4,7 @@ using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Domain.Entities;
 using Tickette.Domain.Enums;
+using Tickette.Infrastructure.Helpers;
 
 namespace Tickette.Application.Features.Events.Commands.UpdateEventStatus;
 
@@ -50,7 +51,7 @@ public class UpdateEventStatusHandler : ICommandHandler<UpdateEventStatusCommand
                 {
                     foreach (var ticket in eventDate.Tickets)
                     {
-                        string inventoryKey = $"ticket:{ticket.Id}:remaining_tickets";
+                        string inventoryKey = RedisKeys.GetTicketQuantityKey(ticket.Id);
 
                         // Only add if it doesn't already exist in Redis
                         var existingValue = await _redisService.GetAsync(inventoryKey);

@@ -5,6 +5,7 @@ using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Common;
+using Tickette.Infrastructure.Helpers;
 
 namespace Tickette.Application.Features.Orders.Command.ReserveTicket;
 
@@ -29,7 +30,8 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
     {
         foreach (var ticket in request.Tickets)
         {
-            string inventoryKey = $"ticket:{ticket.Id}:remaining_tickets";
+
+            string inventoryKey = RedisKeys.GetTicketQuantityKey(ticket.Id);
 
             // Atomic decrement in Redis to prevent overselling
             long remainingTickets = await _redisService.DecrementAsync(inventoryKey, ticket.Quantity);
@@ -42,7 +44,7 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
             }
 
             // Store only the quantity locked by the user (not the entire command)
-            string reservationKey = $"reservation:{ticket.Id}:{request.UserId}";
+            string reservationKey = RedisKeys.GetReservationKey(ticket.Id, request.UserId);
 
             var reservationData = new
             {

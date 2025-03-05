@@ -4,6 +4,7 @@ using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Common;
+using Tickette.Infrastructure.Helpers;
 
 namespace Tickette.Application.Features.Orders.Command.RemoveReserveTicket;
 
@@ -28,14 +29,14 @@ public class RemoveReserveTicketCommandHandler : ICommandHandler<RemoveReserveTi
     {
         foreach (var ticket in command.Tickets)
         {
-            string reservationKey = $"reservation:{ticket.Id}:{command.UserId}";
+            string reservationKey = RedisKeys.GetReservationKey(ticket.Id, command.UserId);
             var exists = await _redisService.KeyExistsAsync(reservationKey);
 
             // No reservation found
             if (!exists)
             {
                 // Increase the tickets quantity back
-                string inventoryKey = $"ticket:{ticket.Id}:remaining_tickets";
+                string inventoryKey = RedisKeys.GetTicketQuantityKey(ticket.Id);
 
                 // Update the ticket quantity in database
                 var ticketRecord = await _context.Tickets
