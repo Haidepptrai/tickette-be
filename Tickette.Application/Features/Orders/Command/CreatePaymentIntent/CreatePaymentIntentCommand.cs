@@ -3,6 +3,7 @@ using Tickette.Application.Common;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Stripe;
+using Tickette.Application.Exceptions;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Entities;
 
@@ -40,12 +41,12 @@ public class CreatePaymentIntentCommandHandler : ICommandHandler<CreatePaymentIn
 
             if (ticketInfo == null)
             {
-                throw new ArgumentException($"Invalid Ticket ID: {ticket.Id}");
+                throw new NotFoundException("Ticket", ticket.Id);
             }
 
             if (ticket.Quantity <= 0 || ticket.Quantity > ticketInfo.RemainingTickets)
             {
-                throw new ArgumentException($"Invalid quantity for Ticket ID: {ticket.Id}");
+                throw new InvalidQuantityException();
             }
 
             totalPrice += ticketInfo.Price * ticket.Quantity;
@@ -53,7 +54,7 @@ public class CreatePaymentIntentCommandHandler : ICommandHandler<CreatePaymentIn
 
         if (totalPrice <= 0)
         {
-            throw new InvalidOperationException("Total price must be greater than zero.");
+            throw new InvalidOperationException("An error occurred while calculate pricing.");
         }
 
         var payment = Payment.Create(totalPrice, command.EventOwnerStripeId);

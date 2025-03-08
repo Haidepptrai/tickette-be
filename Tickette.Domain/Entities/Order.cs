@@ -48,22 +48,22 @@ public sealed class Order : BaseEntity
         return new Order(eventId, buyerId, buyerEmail, buyerName, buyerPhone);
     }
 
-    public void AddOrderItem(Guid ticketId, decimal ticketPrice, int quantity, List<EventSeat>? seats)
+    public void AddOrderItem(OrderItem item)
     {
-        if (quantity <= 0)
+        if (item.Quantity <= 0)
         {
-            throw new ArgumentException("Quantity must be greater than zero.", nameof(quantity));
+            throw new ArgumentException("Quantity must be greater than zero.", nameof(item.Quantity));
         }
 
-        var existingItem = _items.SingleOrDefault(x => x.TicketId == ticketId);
+        var existingItem = _items.SingleOrDefault(x => x.TicketId == item.TicketId);
 
         if (existingItem is not null)
         {
-            existingItem.AddQuantity(quantity);
+            existingItem.AddQuantity(item.Quantity);
         }
         else
         {
-            _items.Add(new OrderItem(ticketId, ticketPrice, quantity, seats));
+            _items.Add(item);
         }
 
         CalculateTotals();

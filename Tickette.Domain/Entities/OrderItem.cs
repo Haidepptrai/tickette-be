@@ -20,12 +20,11 @@ public sealed class OrderItem : BaseEntity
 
     public Ticket Ticket { get; private set; }
 
-    public ICollection<EventSeat> Seats = new List<EventSeat>();
-
+    public string? TicketSection { get; private set; }
 
     private OrderItem() { }
 
-    public OrderItem(Guid ticketId, decimal price, int quantity, List<EventSeat>? seats)
+    public OrderItem(Guid ticketId, decimal price, int quantity, string? ticketSection)
     {
         if (quantity <= 0)
         {
@@ -35,13 +34,13 @@ public sealed class OrderItem : BaseEntity
         TicketId = ticketId;
         Price = price;
         Quantity = quantity;
-        Seats = seats ?? [];
+        TicketSection = ticketSection;
         IsScanned = false;
     }
 
-    public static OrderItem Create(Guid ticketId, decimal price, int quantity, List<EventSeat>? seats)
+    public static OrderItem Create(Guid ticketId, decimal price, int quantity, string? ticketSection)
     {
-        return new OrderItem(ticketId, price, quantity, seats);
+        return new OrderItem(ticketId, price, quantity, ticketSection);
     }
 
     public void SetAsScanned()

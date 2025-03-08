@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-using System.IdentityModel.Tokens.Jwt;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.Orders.Command.CreateOrder;
 using Tickette.Application.Features.Orders.Command.RemoveReserveTicket;
@@ -20,7 +19,7 @@ namespace Tickette.API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class OrdersController : ControllerBase
+public class OrdersController : BaseController
 {
     private readonly ICommandDispatcher _commandDispatcher;
     private readonly IQueryDispatcher _queryDispatcher;
@@ -38,18 +37,12 @@ public class OrdersController : ControllerBase
         try
         {
             // Extract UserId from JWT token claims
-            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub);
-            if (userIdClaim == null || string.IsNullOrWhiteSpace(userIdClaim.Value))
-            {
-                return BadRequest(
-                    ResponseHandler.ErrorResponse<List<OrderedTicketGroupListDto>>(null,
-                        "User ID not found in token."));
-            }
+            var userId = GetUserId();
 
             // Set the UserId in the query object
             var query = new ReviewOrdersQuery
             {
-                UserId = Guid.Parse(userIdClaim.Value)
+                UserId = Guid.Parse(userId)
             };
 
             // Dispatch the query
@@ -97,57 +90,28 @@ public class OrdersController : ControllerBase
     [HttpPost("create")]
     [SwaggerOperation(summary: "Create order for the user after confirm payment")]
     [Authorize]
-    public async Task<ResponseDto<CreateOrderResponse>> CreateOrder([FromBody] CreateOrderCommand command,
-        CancellationToken cancellation)
+    public async Task<ResponseDto<CreateOrderResponse>> CreateOrder([FromBody] CreateOrderCommand command, CancellationToken cancellation)
     {
-        try
-        {
-            var response =
-                await _commandDispatcher.Dispatch<CreateOrderCommand, CreateOrderResponse>(command, cancellation);
-
-            return ResponseHandler.SuccessResponse(response, "Order created successfully");
-        }
-        catch (Exception ex)
-        {
-            return ResponseHandler.ErrorResponse<CreateOrderResponse>(null, "An error while creating order");
-        }
+        var response = await _commandDispatcher.Dispatch<CreateOrderCommand, CreateOrderResponse>(command, cancellation);
+        return ResponseHandler.SuccessResponse(response, "Order created successfully");
     }
 
     [HttpPost("validate-reservation")]
     [SwaggerOperation(summary: "Validate the reservation before creating the order")]
     [Authorize]
-    public async Task<ActionResult<ResponseDto<bool>>> ValidateReservation([FromBody] ValidateReservationQuery query,
-        CancellationToken cancellation)
+    public async Task<ActionResult<ResponseDto<Unit>>> ValidateReservation([FromBody] ValidateReservationQuery query, CancellationToken cancellation)
     {
-        try
-        {
-            var response =
-                await _queryDispatcher.Dispatch<ValidateReservationQuery, bool>(query, cancellation);
-
-            return Ok(ResponseHandler.SuccessResponse(response, "Tickets is still in reserved"));
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ResponseHandler.ErrorResponse(false, ex.Message));
-        }
+        var response = await _queryDispatcher.Dispatch<ValidateReservationQuery, Unit>(query, cancellation);
+        return Ok(ResponseHandler.SuccessResponse(response, "Tickets is still in reserved"));
     }
 
     [HttpPost("reserve-tickets")]
     [SwaggerOperation(summary: "Reserve tickets for the user before confirm payment")]
     [Authorize]
-    public async Task<ActionResult<ResponseDto<Unit>>> ReserveTickets([FromBody] ReserveTicketCommand command,
-        CancellationToken cancellation)
+    public async Task<ActionResult<ResponseDto<Unit>>> ReserveTickets([FromBody] ReserveTicketCommand command, CancellationToken cancellation)
     {
-        try
-        {
-            var response =
-                await _commandDispatcher.Dispatch<ReserveTicketCommand, Unit>(command, cancellation);
-            return Ok(ResponseHandler.SuccessResponse(response, "Tickets reserved successfully"));
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ResponseHandler.ErrorResponse(Unit.Value, ex.Message));
-        }
+        var response = await _commandDispatcher.Dispatch<ReserveTicketCommand, Unit>(command, cancellation);
+        return Ok(ResponseHandler.SuccessResponse(response, "Tickets reserved successfully"));
     }
 
     [HttpPost("remove-tickets-reserve")]
@@ -156,16 +120,7 @@ public class OrdersController : ControllerBase
     public async Task<ActionResult<ResponseDto<Unit>>>
         RemoveReserve([FromBody] RemoveReserveTicketCommand command, CancellationToken cancellation)
     {
-        try
-        {
-            var response =
-                await _commandDispatcher.Dispatch<RemoveReserveTicketCommand, Unit>(command, cancellation);
-            return Ok(ResponseHandler.SuccessResponse(response, "Reservation removed successfully"));
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ResponseHandler.ErrorResponse(Unit.Value, ex.Message));
-        }
+        var response = await _commandDispatcher.Dispatch<RemoveReserveTicketCommand, Unit>(command, cancellation);
+        return Ok(ResponseHandler.SuccessResponse(response, "Reservation removed successfully"));
     }
-
 }

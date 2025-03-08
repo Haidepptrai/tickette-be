@@ -1,0 +1,68 @@
+﻿using System.Text.Json;
+using Tickette.Application.Exceptions;
+using Tickette.Application.Wrappers;
+using Tickette.Domain.Common;
+
+namespace Tickette.API.Middleware;
+
+public class ExceptionHandlingMiddleware
+{
+    private readonly RequestDelegate _next;
+    private readonly ILogger<ExceptionHandlingMiddleware> _logger;
+
+    public ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
+    {
+        _next = next;
+        _logger = logger;
+    }
+
+    public async Task Invoke(HttpContext context)
+    {
+        try
+        {
+            await _next(context);
+        }
+        catch (InsufficientTicketsException ex)
+        {
+            _logger.LogError(ex, ex.Message);
+            await HandleExceptionAsync(context, 409, ex.Message);
+        }
+        catch (NotFoundTicketReservationException ex)
+        {
+            await HandleExceptionAsync(context, 404, ex.Message);
+        }
+        catch (NotFoundException ex)
+        {
+            await HandleExceptionAsync(context, 404, ex.Message);
+        }
+        catch (InvalidQuantityException ex)
+        {
+            await HandleExceptionAsync(context, 400, ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            await HandleExceptionAsync(context, 400, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, ex.Message);
+            await HandleExceptionAsync(context, 500, "An error has occurred");
+        }
+    }
+
+    private static Task HandleExceptionAsync(HttpContext context, int statusCode, string message)
+    {
+        context.Response.ContentType = "application/json";
+        context.Response.StatusCode = statusCode;
+
+        var response = context.Response.StatusCode switch
+        {
+            409 => ResponseHandler.ErrorResponse(Unit.Value, message, statusCode),
+            400 => ResponseHandler.ErrorResponse(Unit.Value, message, statusCode),
+            404 => ResponseHandler.ErrorResponse(Unit.Value, message, statusCode),
+            _ => ResponseHandler.ErrorResponse(Unit.Value, message, statusCode)
+        };
+
+        return context.Response.WriteAsync(JsonSerializer.Serialize(response));
+    }
+}
