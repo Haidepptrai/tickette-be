@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.OpenApi.Models;
 using System.Text.Json;
 using Tickette.API.Helpers;
+using Tickette.API.Middleware;
 using Tickette.Infrastructure;
 
 
@@ -83,6 +84,8 @@ namespace Tickette.API
 
 
             var app = builder.Build();
+
+            app.UseMiddleware<ExceptionHandlingMiddleware>();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())

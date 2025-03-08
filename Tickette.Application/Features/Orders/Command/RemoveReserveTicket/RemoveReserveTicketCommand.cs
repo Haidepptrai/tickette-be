@@ -43,7 +43,6 @@ public class RemoveReserveTicketCommandHandler : ICommandHandler<RemoveReserveTi
                     .Where(t => t.Id == ticket.Id)
                     .FirstOrDefaultAsync(cancellation);
 
-
                 if (ticketRecord == null)
                 {
                     continue;

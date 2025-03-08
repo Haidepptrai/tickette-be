@@ -1,4 +1,5 @@
-﻿using Tickette.Domain.Common;
+﻿using Tickette.Application.Exceptions;
+using Tickette.Domain.Common;
 
 namespace Tickette.Domain.Entities;
 
@@ -108,5 +109,11 @@ public sealed class Ticket : BaseEntity
     public void IncreaseTickets(int quantity)
     {
         RemainingTickets += quantity;
+    }
+
+    public void ValidateTicket(int quantity)
+    {
+        if (quantity <= 0 || quantity < MinTicketsPerOrder || quantity > MaxTicketsPerOrder)
+            throw new InvalidQuantityException();
     }
 }

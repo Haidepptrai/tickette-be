@@ -32,7 +32,6 @@
     <Folder Include="Features\Tickets\Query\" />
     <Folder Include="Factories\" />
     <Folder Include="Features\Users\Command\" />
-    <Folder Include="Exceptions\" />
   </ItemGroup>
 
 </Project>

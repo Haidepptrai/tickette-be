@@ -40,7 +40,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
         // Create an order
         var order = Order.CreateOrder(query.EventId, query.UserId, query.BuyerEmail, query.BuyerName, query.BuyerPhone);
 
-        string ticketDetailsHtml = "<tr><th>Ticket Type</th><th>Quantity</th><th>Total Price</th></tr>";
+        string ticketDetailsHtml = string.Empty;
         // Add order items
         foreach (var ticket in query.Tickets)
         {
@@ -53,8 +53,8 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
                 decimal totalPrice = ticketInfo.Price * ticket.Quantity;
                 ticketDetailsHtml += $"<tr><td>{ticketInfo.Name}</td><td>{ticket.Quantity}</td><td>${totalPrice:F2}</td></tr>";
 
-                var orderItem = OrderItem.Create(ticket.Id, ticketInfo.Price, ticket.Quantity, null);
-                order.AddOrderItem(orderItem.TicketId, orderItem.Price, orderItem.Quantity, null);
+                var orderItem = OrderItem.Create(ticket.Id, ticketInfo.Price, ticket.Quantity, ticket.SectionName);
+                order.AddOrderItem(orderItem);
             }
         }
 

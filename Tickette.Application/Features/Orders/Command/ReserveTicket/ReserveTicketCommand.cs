@@ -1,8 +1,10 @@
-﻿using System.Text.Json;
+﻿using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Interfaces.Redis;
+using Tickette.Application.Exceptions;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Common;
 using Tickette.Infrastructure.Helpers;
@@ -19,17 +21,27 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
 {
     private readonly IMessageProducer _messageProducer;
     private readonly IRedisService _redisService;
+    private readonly IApplicationDbContext _context;
 
     public ReserveTicketCommandHandler(IMessageProducer messageProducer, IRedisService redisService, IApplicationDbContext context)
     {
         _messageProducer = messageProducer;
         _redisService = redisService;
+        _context = context;
     }
 
     public async Task<Unit> Handle(ReserveTicketCommand request, CancellationToken cancellationToken)
     {
         foreach (var ticket in request.Tickets)
         {
+            // Is the ticket valid?
+            var ticketEntity = await _context.Tickets.FirstOrDefaultAsync(t => t.Id == ticket.Id, cancellationToken);
+            if (ticketEntity == null)
+            {
+                throw new NotFoundException("Ticket", ticket.Id);
+            }
+
+            ticketEntity.ValidateTicket(ticket.Quantity);
 
             string inventoryKey = RedisKeys.GetTicketQuantityKey(ticket.Id);
 
@@ -40,19 +52,13 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
             {
                 // Rollback if oversold
                 await _redisService.IncrementAsync(inventoryKey, ticket.Quantity);
-                throw new Exception($"Not enough tickets available for Ticket {ticket.Id}");
+                throw new InsufficientTicketsException();
             }
 
             // Store only the quantity locked by the user (not the entire command)
             string reservationKey = RedisKeys.GetReservationKey(ticket.Id, request.UserId);
 
-            var reservationData = new
-            {
-                UserId = request.UserId,
-                Quantity = ticket.Quantity,
-                ReservedAt = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(15)
-            };
+            var reservationData = new ReservationInformation(request.UserId, ticket.Id, ticket.Quantity);
 
             await _redisService.SetAsync(reservationKey, JsonSerializer.Serialize(reservationData), 15);
         }

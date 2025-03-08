@@ -88,7 +88,7 @@ public class UpdateEventStatusHandler : ICommandHandler<UpdateEventStatusCommand
         {
             foreach (var ticket in eventDate.Tickets)
             {
-                string inventoryKey = $"ticket:{ticket.Id}:remaining_tickets";
+                string inventoryKey = RedisKeys.GetTicketQuantityKey(ticket.Id);
 
                 var cachedValue = await _redisService.GetAsync(inventoryKey);
                 if (cachedValue == null)
