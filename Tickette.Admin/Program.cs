@@ -74,6 +74,10 @@ namespace Tickette.Admin
 
             var app = builder.Build();
 
+            app.UseAuthentication();
+
+            app.UseAuthorization();
+
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
@@ -81,13 +85,7 @@ namespace Tickette.Admin
                 app.UseSwaggerUI();
             }
 
-            //app.UseExceptionHandler("/errors");
-
             app.UseHttpsRedirection();
-
-            app.UseAuthentication();
-
-            app.UseAuthorization();
 
             app.MapControllers();
 

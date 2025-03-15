@@ -242,7 +242,8 @@ public class IdentityServices : IIdentityServices
                 FullName = request.Name,
                 Email = request.Email,
                 EmailConfirmed = true,
-                ProfilePicture = request.Image
+                ProfilePicture = request.Image,
+                UserName = request.Email
             };
 
             var createResult = await _userManager.CreateAsync(user);

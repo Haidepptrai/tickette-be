@@ -6,6 +6,7 @@ using System.Text.Json;
 using Tickette.API.Helpers;
 using Tickette.API.Middleware;
 using Tickette.Infrastructure;
+using Tickette.Infrastructure.Hubs;
 
 
 namespace Tickette.API
@@ -41,6 +42,8 @@ namespace Tickette.API
             builder.AddS3Service();
             builder.AddMachineLearningModel();
             builder.AddEmailService();
+            builder.AddSignalRService();
+            builder.AddCorsService();
 
             //Add Swagger
             builder.Services.AddEndpointsApiExplorer();
@@ -85,6 +88,9 @@ namespace Tickette.API
 
             var app = builder.Build();
 
+            app.UseAuthentication();
+            app.UseAuthorization();
+
             app.UseMiddleware<ExceptionHandlingMiddleware>();
 
             // Configure the HTTP request pipeline.
@@ -94,13 +100,11 @@ namespace Tickette.API
                 app.UseSwaggerUI();
             }
 
-            //app.UseExceptionHandler("/errors");
+            app.UseCors("AllowDevelopment");
+
+            app.MapHub<ChatSupportHub>("/chat-support");
 
             app.UseHttpsRedirection();
-
-            app.UseAuthentication();
-
-            app.UseAuthorization();
 
             app.MapControllers();
 

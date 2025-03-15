@@ -25,7 +25,8 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions"
+      Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.0" />
     <PackageReference Include="Microsoft.ML" Version="4.0.1" />
     <PackageReference Include="Microsoft.ML.FastTree" Version="4.0.1" />
@@ -50,7 +51,7 @@
     <Folder Include="Authorization\Requirements\" />
     <Folder Include="Authentication\" />
     <Folder Include="Messaging\Feature\" />
-    <Folder Include="Repositories\" />
+    <Folder Include="Prediction\Models\" />
   </ItemGroup>
 
   <ItemGroup>

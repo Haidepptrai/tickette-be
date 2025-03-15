@@ -18,6 +18,9 @@
   <ItemGroup>
     <Folder Include="Features\Auth\Query\" />
     <Folder Include="Features\Categories\Common\" />
+    <Folder Include="Features\ChatMessages\Command\" />
+    <Folder Include="Features\ChatMessages\Common\" />
+    <Folder Include="Features\ChatMessages\Query\" />
     <Folder Include="Features\CommitteeMembers\Command\AddCommitteeMember\" />
     <Folder Include="Features\CommitteeMembers\Command\ChangeCommitteeMemberRole\" />
     <Folder Include="Features\CommitteeMembers\Query\GetAllCommitteeMemberOfEvent\" />
