@@ -9,7 +9,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
+using System.Configuration;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
@@ -33,6 +36,7 @@ using Tickette.Infrastructure.Hubs;
 using Tickette.Infrastructure.Identity;
 using Tickette.Infrastructure.Messaging;
 using Tickette.Infrastructure.Messaging.Feature;
+using Tickette.Infrastructure.Persistence;
 using Tickette.Infrastructure.Persistence.Redis;
 using Tickette.Infrastructure.Prediction;
 using Tickette.Infrastructure.Services;
@@ -267,7 +271,63 @@ public static class DependencyInjection
 
     public static void AddRedisSettings(this IHostApplicationBuilder builder)
     {
+        builder.Services.Configure<RedisSettings>(builder.Configuration.GetSection("Redis"));
+
+        // Register Redis Connection
+        builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
+        {
+            var settings = provider.GetRequiredService<IOptions<RedisSettings>>().Value;
+
+            var configOptions = new ConfigurationOptions
+            {
+                EndPoints = { settings.ConnectionString },
+                Password = settings.Password,
+                User = settings.User,
+
+                // Connection settings
+                ConnectTimeout = settings.ConnectTimeout,
+                SyncTimeout = settings.SyncTimeout,
+                ConnectRetry = settings.ConnectRetry,
+                AbortOnConnectFail = settings.AbortOnConnectFail,
+
+                // Security settings
+                Ssl = settings.Ssl,
+                AllowAdmin = settings.AllowAdmin,
+
+                // Database settings
+                DefaultDatabase = settings.DefaultDatabase
+            };
+
+            return ConnectionMultiplexer.Connect(configOptions);
+        });
+
+        // Add Redis distributed cache
+        builder.Services.AddStackExchangeRedisCache(options =>
+        {
+            var settings = builder.Configuration.GetSection("Redis").Get<RedisSettings>() ?? throw new SettingsPropertyNotFoundException("Cannot find Redis settings");
+
+            options.Configuration = settings.ConnectionString;
+            options.InstanceName = settings.InstanceName;
+
+            // Set configuration options if needed
+            var configOptions = new ConfigurationOptions
+            {
+                EndPoints = { settings.ConnectionString },
+                Password = settings.Password,
+                ConnectTimeout = settings.ConnectTimeout,
+                SyncTimeout = settings.SyncTimeout,
+                AbortOnConnectFail = settings.AbortOnConnectFail,
+                Ssl = settings.Ssl,
+                DefaultDatabase = settings.DefaultDatabase
+            };
+
+            configOptions.EndPoints.Add(settings.ConnectionString);
+
+            options.ConfigurationOptions = configOptions;
+        });
+
         builder.Services.AddSingleton<IRedisService, RedisService>();
+        builder.Services.AddSingleton<IAgentAvailabilityService, AgentAvailabilityService>();
     }
 
     public static void AddStripeSettings(this IHostApplicationBuilder builder)

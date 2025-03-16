@@ -1,29 +1,38 @@
-﻿using MailKit.Security;
-using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.JsonWebTokens;
+using System.Security.Authentication;
 using System.Security.Claims;
+using Tickette.Application.Common.Interfaces.Redis;
 
 namespace Tickette.Infrastructure.Hubs;
 
 public class ChatSupportHub : Hub
 {
-    private static readonly List<string> AgentPool = new();
+    private readonly IAgentAvailabilityService _agentManagementService;
+
+    public ChatSupportHub(IAgentAvailabilityService agentManagementService)
+    {
+        _agentManagementService = agentManagementService;
+    }
 
     // Send message to a specific group
-    public async Task SendMessage(string groupId, string message)
+    public async Task SendMessage(string supportRoomId, string message, string userName, string userEmail)
     {
-        var userName = Context.User?.FindFirstValue(JwtRegisteredClaimNames.Name);
+        var userId = Context.User?.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? throw new AuthenticationException("Cannot find credential");
 
-        await Clients.Group(groupId).SendAsync("ReceiveMessage", userName, message);
+        await Clients.Group(supportRoomId).SendAsync("ReceiveMessage", userId, message);
+        await Clients.Group(supportRoomId).SendAsync("UserInformationToAgent", userName, userEmail);
     }
 
     public override async Task OnConnectedAsync()
     {
         var userRole = Context.User?.FindFirstValue(ClaimTypes.Role);
+        // Get the group that user is in
 
         if (userRole == "Agent")
         {
-            await AgentAddInPool(Context.User?.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? throw new AuthenticationException("Cannot find credential"));
+            var userId = Context.User?.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? throw new AuthenticationException("Cannot find credential");
+            await AgentAddInPool(userId);
         }
         else
         {
@@ -35,7 +44,15 @@ public class ChatSupportHub : Hub
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        await Clients.All.SendAsync("UserDisconnected", Context.ConnectionId);
+        var userRole = Context.User?.FindFirstValue(ClaimTypes.Role);
+
+        if (userRole == "Agent")
+        {
+            var userId = Context.User?.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? throw new AuthenticationException("Cannot find credential");
+            await _agentManagementService.RemoveAgentFromPool(userId);
+        }
+
+
         await base.OnDisconnectedAsync(exception);
     }
 
@@ -44,12 +61,7 @@ public class ChatSupportHub : Hub
     /// </summary>
     private async Task AgentAddInPool(string agentId)
     {
-        if (!AgentPool.Contains(agentId ?? throw new AuthenticationException("Cannot find credential")))
-        {
-            AgentPool.Add(Context.ConnectionId);
-        }
-
-        await Clients.All.SendAsync("AgentAdded", agentId);
+        await _agentManagementService.SetAgentAvailableAsync(agentId, Context.ConnectionId);
     }
 
     /// <summary>
@@ -57,13 +69,20 @@ public class ChatSupportHub : Hub
     /// </summary>
     private async Task UserConnectToAgent()
     {
+        var getAvailableAgent = await _agentManagementService.GetNextAvailableAgentAsync();
+
+        if (getAvailableAgent is null)
+        {
+            await Clients.Caller.SendAsync("NoAgentAvailable");
+        }
+
         // Create a group for the agent and user to communicate
-        string groupId = $"{AgentPool[0]}_{Context.ConnectionId}";
+        string groupId = $"{getAvailableAgent?.ConnectionString}_{Context.ConnectionId}";
 
         // Add both the agent and user to the group
-        await Groups.AddToGroupAsync(AgentPool[0], groupId);
+        await Groups.AddToGroupAsync(getAvailableAgent.ConnectionString, groupId);
         await Groups.AddToGroupAsync(Context.ConnectionId, groupId);
 
-        await Clients.Group(groupId).SendAsync("SupportRoomCreated", groupId);
+        await Clients.Group(groupId).SendAsync("SupportRoomCreated", groupId, getAvailableAgent.AgentId);
     }
 }
