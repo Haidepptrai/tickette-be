@@ -328,6 +328,7 @@ public static class DependencyInjection
 
         builder.Services.AddSingleton<IRedisService, RedisService>();
         builder.Services.AddSingleton<IAgentAvailabilityService, AgentAvailabilityService>();
+        builder.Services.AddSingleton<IChatRoomManagementService, ChatRoomManagementService>();
     }
 
     public static void AddStripeSettings(this IHostApplicationBuilder builder)

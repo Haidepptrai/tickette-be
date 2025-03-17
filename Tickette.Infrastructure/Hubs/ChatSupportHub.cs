@@ -3,16 +3,19 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using System.Security.Authentication;
 using System.Security.Claims;
 using Tickette.Application.Common.Interfaces.Redis;
+using Tickette.Application.DTOs.Hub;
 
 namespace Tickette.Infrastructure.Hubs;
 
 public class ChatSupportHub : Hub
 {
     private readonly IAgentAvailabilityService _agentManagementService;
+    private readonly IChatRoomManagementService _chatRoomManagementService;
 
-    public ChatSupportHub(IAgentAvailabilityService agentManagementService)
+    public ChatSupportHub(IAgentAvailabilityService agentManagementService, IChatRoomManagementService chatRoomManagementService)
     {
         _agentManagementService = agentManagementService;
+        _chatRoomManagementService = chatRoomManagementService;
     }
 
     // Send message to a specific group
@@ -20,8 +23,7 @@ public class ChatSupportHub : Hub
     {
         var userId = Context.User?.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? throw new AuthenticationException("Cannot find credential");
 
-        await Clients.Group(supportRoomId).SendAsync("ReceiveMessage", userId, message);
-        await Clients.Group(supportRoomId).SendAsync("UserInformationToAgent", userName, userEmail);
+        await Clients.Group(supportRoomId).SendAsync("ReceiveMessage", supportRoomId, userId, message);
     }
 
     public override async Task OnConnectedAsync()
@@ -33,10 +35,6 @@ public class ChatSupportHub : Hub
         {
             var userId = Context.User?.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? throw new AuthenticationException("Cannot find credential");
             await AgentAddInPool(userId);
-        }
-        else
-        {
-            await UserConnectToAgent();
         }
 
         await base.OnConnectedAsync();
@@ -52,6 +50,12 @@ public class ChatSupportHub : Hub
             await _agentManagementService.RemoveAgentFromPool(userId);
         }
 
+        var deletedRooms = await _chatRoomManagementService.DeleteChatRoomAsync(Context.ConnectionId);
+
+        foreach (var room in deletedRooms)
+        {
+            await Clients.Group(room).SendAsync("UserDisconnected");
+        }
 
         await base.OnDisconnectedAsync(exception);
     }
@@ -67,7 +71,7 @@ public class ChatSupportHub : Hub
     /// <summary>
     /// When a user connects, try to connect them to an agent
     /// </summary>
-    private async Task UserConnectToAgent()
+    public async Task UserConnectToAgent(string customerName, string customerEmail)
     {
         var getAvailableAgent = await _agentManagementService.GetNextAvailableAgentAsync();
 
@@ -83,6 +87,12 @@ public class ChatSupportHub : Hub
         await Groups.AddToGroupAsync(getAvailableAgent.ConnectionString, groupId);
         await Groups.AddToGroupAsync(Context.ConnectionId, groupId);
 
+        var chatRoomInfo = new ChatRoom(groupId, Context.ConnectionId, getAvailableAgent.ConnectionString);
+
+        await _chatRoomManagementService.CreateChatRoomAsync(chatRoomInfo);
+
         await Clients.Group(groupId).SendAsync("SupportRoomCreated", groupId, getAvailableAgent.AgentId);
+        await Clients.Group(groupId).SendAsync("UserInformationToAgent", groupId, customerName, customerEmail);
+
     }
 }

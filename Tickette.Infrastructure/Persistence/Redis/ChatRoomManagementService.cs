@@ -1,9 +1,11 @@
 ﻿using Microsoft.Extensions.Options;
 using StackExchange.Redis;
+using Tickette.Application.Common.Interfaces.Redis;
+using Tickette.Application.DTOs.Hub;
 
 namespace Tickette.Infrastructure.Persistence.Redis;
 
-public class ChatRoomManagementService
+public class ChatRoomManagementService : IChatRoomManagementService
 {
     private readonly IConnectionMultiplexer _redis;
     private readonly RedisSettings _redisSettings;
@@ -14,29 +16,25 @@ public class ChatRoomManagementService
         _redisSettings = redisSettings.Value;
     }
 
-    private string GetChatRoomKey(string roomId) => $"{_redisSettings.InstanceName}chatroom:{roomId}";
+    private string GetUserConnectionString(string userConnectionString) => $"{_redisSettings.InstanceName}connection_string:{userConnectionString}";
 
-    // Create chat room
+    /// <summary>
+    /// When a chat room is created, store the room information in the connection's lookup
+    /// </summary>
+    /// <param name="roomInfo">
+    /// Include information about room id, connection string of
+    /// both customer and agent
+    /// </param>
+    /// <returns></returns>
     public async Task CreateChatRoomAsync(ChatRoom roomInfo)
     {
         try
         {
             var db = _redis.GetDatabase();
-            var chatRoomKey = GetChatRoomKey(roomInfo.RoomId);
-
-            await db.HashSetAsync(chatRoomKey, [
-                new HashEntry("room_id", roomInfo.RoomId),
-                new HashEntry("customer_connection_string", roomInfo.CustomerConnectionString),
-                new HashEntry("agent_connection_string", roomInfo.AgentConnectionString)
-            ]);
 
             // Store room in the connection's lookup
-            await db.SetAddAsync($"connection_string:{roomInfo.CustomerConnectionString}", roomInfo.RoomId);
-            await db.SetAddAsync($"connection_string:{roomInfo.AgentConnectionString}", roomInfo.RoomId);
-
-
-            // Set expiration on chat room details to avoid memory leak
-            await db.KeyExpireAsync(chatRoomKey, TimeSpan.FromMinutes(30));
+            await db.SetAddAsync(GetUserConnectionString(roomInfo.CustomerConnectionString), roomInfo.RoomId);
+            await db.SetAddAsync(GetUserConnectionString(roomInfo.AgentConnectionString), roomInfo.RoomId);
         }
         catch (Exception ex)
         {
@@ -44,24 +42,22 @@ public class ChatRoomManagementService
         }
     }
 
+    /// <summary>
+    /// When a chat room is deleted, remove the room information from the connection's lookup
+    /// </summary>
+    /// <param name="userConnectionString">
+    /// Connection string from either customer or agent that disconnected
+    /// </param>
+    /// <returns>A list of room that the user left</returns>
+
     public async Task<string[]> DeleteChatRoomAsync(string userConnectionString)
     {
         try
         {
             var db = _redis.GetDatabase();
-            var roomIds = await db.SetMembersAsync($"connection_string:{userConnectionString}");
-            foreach (var roomId in roomIds)
-            {
-                if (roomId.IsNullOrEmpty)
-                {
-                    continue;
-                }
+            var roomIds = await db.SetMembersAsync(GetUserConnectionString(userConnectionString));
 
-                var chatRoomKey = GetChatRoomKey(roomId);
-                await db.KeyDeleteAsync(chatRoomKey);
-            }
-
-            await db.KeyDeleteAsync($"connection_string:{userConnectionString}");
+            await db.KeyDeleteAsync(GetUserConnectionString(userConnectionString));
             return roomIds.Select(x => x.ToString()).ToArray();
         }
         catch (Exception ex)
@@ -70,21 +66,5 @@ public class ChatRoomManagementService
             return [];
         }
 
-    }
-}
-
-public record ChatRoom
-{
-    public string RoomId { get; init; }
-
-    public string CustomerConnectionString { get; init; }
-
-    public string AgentConnectionString { get; init; }
-
-    public ChatRoom(string roomId, string customerConnectionString, string agentConnectionString)
-    {
-        RoomId = roomId;
-        CustomerConnectionString = customerConnectionString;
-        AgentConnectionString = agentConnectionString;
     }
 }
