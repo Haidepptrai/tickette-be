@@ -4,7 +4,7 @@ namespace Tickette.Infrastructure.Persistence;
 
 public static class SerializationSettings
 {
-    public static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
+    public static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true,

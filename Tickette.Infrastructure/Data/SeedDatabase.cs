@@ -11,28 +11,27 @@ public static class SeedDatabase
 {
     public static async Task SeedCategories(ApplicationDbContext dbContext)
     {
-        if (!dbContext.Categories.Any())
+        var categories = new List<Category>
         {
-            var categories = new List<Category>
+            Category.CreateCategory("Concerts"),
+            Category.CreateCategory("Theater"),
+            Category.CreateCategory("Sports"),
+            Category.CreateCategory("Festivals"),
+            Category.CreateCategory("Conferences"),
+            Category.CreateCategory("Workshops"),
+            Category.CreateCategory("Comedy Shows"),
+            Category.CreateCategory("Family Events")
+        };
+
+        foreach (var cat in categories)
+        {
+            var existingCategory = await dbContext.Categories.FirstOrDefaultAsync(c => c.Name == cat.Name);
+            if (existingCategory == null)
             {
-                Category.CreateCategory("Concerts"),
-                Category.CreateCategory("Theater"),
-                Category.CreateCategory("Sports"),
-                Category.CreateCategory("Festivals"),
-                Category.CreateCategory("Conferences"),
-                Category.CreateCategory("Workshops"),
-                Category.CreateCategory("Comedy Shows"),
-                Category.CreateCategory("Family Events")
-            };
+                await dbContext.Categories.AddAsync(cat);
+            }
 
-            dbContext.Categories.AddRange(categories);
             await dbContext.SaveChangesAsync();
-
-            Console.WriteLine("Seeded categories successfully.");
-        }
-        else
-        {
-            Console.WriteLine("Categories already exist.");
         }
     }
 

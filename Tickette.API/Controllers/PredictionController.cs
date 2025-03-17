@@ -35,14 +35,21 @@ namespace Tickette.API.Controllers
         {
             try
             {
-                //var recommendations = await _recommendationService.GetRecommendationsAsync(userId);
-                //return Ok(recommendations);
+                var recommendations = await _recommendationService.GetRecommendationsAsync(userId);
+                return Ok(recommendations);
                 return Ok();
             }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
+        }
+
+        [HttpGet("test-user-id")]
+        public IActionResult GetTestUserId()
+        {
+            var testUserId = _recommendationService.GetTestUserId();
+            return Ok(testUserId);
         }
     }
 }

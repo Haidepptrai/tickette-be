@@ -6,4 +6,9 @@ public interface ITrainingModelService
     /// Trains the AI model.
     /// </summary>
     void TrainModel();
+    
+    /// <summary>
+    /// Gets the path where the trained model is saved
+    /// </summary>
+    string GetModelPath();
 }

@@ -9,8 +9,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
+using System.Configuration;
+using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Email;
@@ -27,9 +32,11 @@ using Tickette.Infrastructure.CQRS;
 using Tickette.Infrastructure.Data;
 using Tickette.Infrastructure.Email;
 using Tickette.Infrastructure.FileStorage;
+using Tickette.Infrastructure.Hubs;
 using Tickette.Infrastructure.Identity;
 using Tickette.Infrastructure.Messaging;
 using Tickette.Infrastructure.Messaging.Feature;
+using Tickette.Infrastructure.Persistence;
 using Tickette.Infrastructure.Persistence.Redis;
 using Tickette.Infrastructure.Prediction;
 using Tickette.Infrastructure.Services;
@@ -87,7 +94,7 @@ public static class DependencyInjection
                     ValidIssuer = builder.Configuration["Jwt:Issuer"],
                     ValidAudience = builder.Configuration["Jwt:Audience"],
                     IssuerSigningKey = new SymmetricSecurityKey(key),
-                    RoleClaimType = "roles"
+                    RoleClaimType = ClaimTypes.Role
                 };
 
                 // Disable claim type remapping
@@ -149,6 +156,21 @@ public static class DependencyInjection
                         };
 
                         return context.Response.WriteAsJsonAsync(problemDetails);
+                    },
+
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+
+                        // If the request is for our hub...
+                        var path = context.HttpContext.Request.Path;
+                        if (!string.IsNullOrEmpty(accessToken) &&
+                            path.StartsWithSegments("/chat-support"))
+                        {
+                            // Read the token out of the query string
+                            context.Token = accessToken;
+                        }
+                        return Task.CompletedTask;
                     }
                 };
 
@@ -249,7 +271,64 @@ public static class DependencyInjection
 
     public static void AddRedisSettings(this IHostApplicationBuilder builder)
     {
+        builder.Services.Configure<RedisSettings>(builder.Configuration.GetSection("Redis"));
+
+        // Register Redis Connection
+        builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
+        {
+            var settings = provider.GetRequiredService<IOptions<RedisSettings>>().Value;
+
+            var configOptions = new ConfigurationOptions
+            {
+                EndPoints = { settings.ConnectionString },
+                Password = settings.Password,
+                User = settings.User,
+
+                // Connection settings
+                ConnectTimeout = settings.ConnectTimeout,
+                SyncTimeout = settings.SyncTimeout,
+                ConnectRetry = settings.ConnectRetry,
+                AbortOnConnectFail = settings.AbortOnConnectFail,
+
+                // Security settings
+                Ssl = settings.Ssl,
+                AllowAdmin = settings.AllowAdmin,
+
+                // Database settings
+                DefaultDatabase = settings.DefaultDatabase
+            };
+
+            return ConnectionMultiplexer.Connect(configOptions);
+        });
+
+        // Add Redis distributed cache
+        builder.Services.AddStackExchangeRedisCache(options =>
+        {
+            var settings = builder.Configuration.GetSection("Redis").Get<RedisSettings>() ?? throw new SettingsPropertyNotFoundException("Cannot find Redis settings");
+
+            options.Configuration = settings.ConnectionString;
+            options.InstanceName = settings.InstanceName;
+
+            // Set configuration options if needed
+            var configOptions = new ConfigurationOptions
+            {
+                EndPoints = { settings.ConnectionString },
+                Password = settings.Password,
+                ConnectTimeout = settings.ConnectTimeout,
+                SyncTimeout = settings.SyncTimeout,
+                AbortOnConnectFail = settings.AbortOnConnectFail,
+                Ssl = settings.Ssl,
+                DefaultDatabase = settings.DefaultDatabase
+            };
+
+            configOptions.EndPoints.Add(settings.ConnectionString);
+
+            options.ConfigurationOptions = configOptions;
+        });
+
         builder.Services.AddSingleton<IRedisService, RedisService>();
+        builder.Services.AddSingleton<IAgentAvailabilityService, AgentAvailabilityService>();
+        builder.Services.AddSingleton<IChatRoomManagementService, ChatRoomManagementService>();
     }
 
     public static void AddStripeSettings(this IHostApplicationBuilder builder)
@@ -290,5 +369,45 @@ public static class DependencyInjection
         builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 
         builder.Services.TryAddScoped<IEmailService, EmailService>();
+    }
+
+    public static void AddSignalRService(this IHostApplicationBuilder builder)
+    {
+        builder.Services.AddSignalR(options =>
+        {
+            options.MaximumReceiveMessageSize = 102400; // 100 KB
+
+            options.StreamBufferCapacity = 20; // 20 messages
+
+            // Configure timeouts for better client experience and resource management
+            options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
+            options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+
+            // Limit the number of concurrent hub methods per connection
+            options.MaximumParallelInvocationsPerClient = 5;
+        }).AddJsonProtocol(options =>
+        {
+            // Optimize JSON serialization
+            options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+            options.PayloadSerializerOptions.WriteIndented = false;
+        }).AddHubOptions<ChatSupportHub>(options =>
+        {
+            // Add user-specific options for the chat hub
+            options.DisableImplicitFromServicesParameters = true;
+        });
+    }
+
+    public static void AddCorsService(this IHostApplicationBuilder builder)
+    {
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowDevelopment",
+                policy => policy
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials()
+                    .WithOrigins("http://localhost:3000", "http://localhost:3001")
+            );
+        });
     }
 }
