@@ -4,9 +4,9 @@ using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Email;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Common.Models;
+using Tickette.Application.Exceptions;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Entities;
-using Tickette.Infrastructure.Helpers;
 
 namespace Tickette.Application.Features.Orders.Command.CreateOrder;
 
@@ -25,14 +25,14 @@ public record CreateOrderCommand
 public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, CreateOrderResponse>
 {
     private readonly IApplicationDbContext _context;
-    private readonly IRedisService _redisService;
+    private readonly IReservationService _reservationService;
     private readonly IEmailService _emailService;
 
-    public CreateOrderCommandHandler(IApplicationDbContext context, IRedisService redisService, IEmailService emailService)
+    public CreateOrderCommandHandler(IApplicationDbContext context, IEmailService emailService, IReservationService reservationService)
     {
         _context = context;
-        _redisService = redisService;
         _emailService = emailService;
+        _reservationService = reservationService;
     }
 
     public async Task<CreateOrderResponse> Handle(CreateOrderCommand query, CancellationToken cancellation)
@@ -53,7 +53,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
                 decimal totalPrice = ticketInfo.Price * ticket.Quantity;
                 ticketDetailsHtml += $"<tr><td>{ticketInfo.Name}</td><td>{ticket.Quantity}</td><td>${totalPrice:F2}</td></tr>";
 
-                var orderItem = OrderItem.Create(ticket.Id, ticketInfo.Price, ticket.Quantity, ticket.SectionName);
+                var orderItem = OrderItem.Create(ticket.Id, ticketInfo.Price, ticket.Quantity, ticket.SectionName, ticket.SeatsChosen?.ToList());
                 order.AddOrderItem(orderItem);
             }
         }
@@ -81,21 +81,13 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
 
         foreach (var ticket in query.Tickets)
         {
-            string reservationKey = RedisKeys.GetReservationKey(ticket.Id, query.UserId);
-            var exists = await _redisService.KeyExistsAsync(reservationKey);
+            var exist = await _reservationService.ValidateReservationAsync(ticket.Id, query.UserId);
 
-            // No reservation found
-            if (!exists)
+            if (!exist)
             {
-                // Increase the tickets quantity back
-                string inventoryKey = RedisKeys.GetTicketQuantityKey(ticket.Id);
-                await _redisService.IncrementAsync(inventoryKey, ticket.Quantity);
-
-                continue;
+                await _reservationService.ReleaseReservationAsync(ticket.Id, query.UserId);
+                throw new NotFoundTicketReservationException();
             }
-
-            // Remove the reservation from Redis
-            await _redisService.DeleteKeyAsync(reservationKey);
         }
 
         // Send email

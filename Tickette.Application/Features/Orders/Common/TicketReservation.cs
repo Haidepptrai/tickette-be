@@ -1,4 +1,5 @@
 ﻿using Tickette.Application.Exceptions;
+using Tickette.Domain.Entities;
 
 namespace Tickette.Application.Features.Orders.Common;
 
@@ -10,7 +11,9 @@ public record TicketReservation
 
     public string? SectionName { get; init; }
 
-    public TicketReservation(Guid id, int quantity, string? sectionName)
+    public IEnumerable<SeatOrder>? SeatsChosen { get; init; }
+
+    public TicketReservation(Guid id, int quantity, string? sectionName, IEnumerable<SeatOrder>? seatsChosen)
     {
         if (quantity <= 0)
         {
@@ -20,5 +23,6 @@ public record TicketReservation
         Id = id;
         Quantity = quantity;
         SectionName = sectionName;
+        SeatsChosen = seatsChosen;
     }
 }
