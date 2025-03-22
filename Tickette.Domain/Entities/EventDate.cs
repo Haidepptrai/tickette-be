@@ -14,7 +14,7 @@ public class EventDate : BaseEntity
 
     public ICollection<Ticket> Tickets { get; set; }
 
-    public EventSeatMap SeatMap { get; set; }
+    public EventSeatMap? SeatMap { get; set; }
 
     private EventDate() { }
 

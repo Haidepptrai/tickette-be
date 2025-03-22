@@ -327,6 +327,7 @@ public static class DependencyInjection
         });
 
         builder.Services.AddSingleton<IRedisService, RedisService>();
+        builder.Services.AddSingleton<IReservationService, ReservationService>();
         builder.Services.AddSingleton<IAgentAvailabilityService, AgentAvailabilityService>();
         builder.Services.AddSingleton<IChatRoomManagementService, ChatRoomManagementService>();
     }

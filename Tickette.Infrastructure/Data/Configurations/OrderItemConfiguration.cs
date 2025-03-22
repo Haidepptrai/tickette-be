@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using System.Text.Json;
 using Tickette.Domain.Entities;
+using Tickette.Infrastructure.Persistence;
 
 namespace Tickette.Infrastructure.Data.Configurations;
 
@@ -17,6 +19,13 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
 
         builder.Property(e => e.IsScanned)
             .IsRequired();
+
+        builder.Property(oi => oi.SeatsOrdered)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, SerializationSettings.JsonOptions),
+                v => JsonSerializer.Deserialize<List<SeatOrder>>(v, SerializationSettings.JsonOptions)
+                     ?? new List<SeatOrder>());
 
         builder.HasOne(o => o.Order)
             .WithMany(order => order.Items)
