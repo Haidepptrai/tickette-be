@@ -1,4 +1,5 @@
-﻿using Tickette.Domain.Entities;
+﻿using Tickette.Application.Features.Events.Common.Client;
+using Tickette.Domain.Entities;
 
 namespace Tickette.Application.Features.CommitteeMembers.Common;
 

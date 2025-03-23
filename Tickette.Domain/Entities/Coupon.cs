@@ -13,23 +13,26 @@ public sealed class Coupon : BaseEntity
 
     public DiscountType DiscountType { get; private set; }
 
+    public DateTime StartValidDate { get; private set; }
+
     public DateTime ExpiryDate { get; private set; }
 
     public bool IsActive { get; private set; }
 
     public Event Event { get; set; }
 
-    private Coupon(Guid eventId, string code, decimal discountValue, DiscountType discountType, DateTime expiryDate)
+    private Coupon(Guid eventId, string code, decimal discountValue, DiscountType discountType, DateTime startValidDate, DateTime expiryDate)
     {
         EventId = eventId;
         Code = code.ToUpper();
         DiscountValue = discountValue;
         DiscountType = discountType;
+        StartValidDate = startValidDate;
         ExpiryDate = expiryDate;
         IsActive = true;
     }
 
-    public static Coupon CreateCoupon(Guid eventId, string code, decimal discountValue, DiscountType discountType, DateTime expiryDate)
+    public static Coupon CreateCoupon(Guid eventId, string code, decimal discountValue, DiscountType discountType, DateTime validFrom, DateTime expiryDate)
     {
         //Conditional check
         if (string.IsNullOrWhiteSpace(code))
@@ -47,7 +50,7 @@ public sealed class Coupon : BaseEntity
             throw new ArgumentException("Discount value must be greater than zero.", nameof(discountValue));
         }
 
-        return new Coupon(eventId, code, discountValue, discountType, expiryDate);
+        return new Coupon(eventId, code, discountValue, discountType, validFrom, expiryDate);
     }
 
     public decimal CalculateDiscount(decimal originalPrice)
@@ -57,9 +60,9 @@ public sealed class Coupon : BaseEntity
             throw new InvalidOperationException("The coupon is not active.");
         }
 
-        if (DateTime.UtcNow > ExpiryDate)
+        if (DateTime.UtcNow > ExpiryDate || DateTime.UtcNow < StartValidDate)
         {
-            throw new InvalidOperationException("The coupon has expired.");
+            throw new InvalidOperationException("The coupon is not valid.");
         }
 
         return DiscountType switch

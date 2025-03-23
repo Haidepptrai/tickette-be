@@ -2,6 +2,6 @@
 
 public enum DiscountType
 {
-    Flat, // Flat discount (e.g., $10 off)
-    Percentage // Percentage discount (e.g., 15% off)
+    Flat = 0, // Flat discount (e.g., $10 off)
+    Percentage = 1// Percentage discount (e.g., 15% off)
 }

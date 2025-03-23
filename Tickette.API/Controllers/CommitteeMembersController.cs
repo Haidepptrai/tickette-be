@@ -3,8 +3,8 @@ using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.CommitteeMembers.Command.AddCommitteeMember;
 using Tickette.Application.Features.CommitteeMembers.Command.ChangeCommitteeMemberRole;
 using Tickette.Application.Features.CommitteeMembers.Command.RemoveCommitteeMember;
-using Tickette.Application.Features.CommitteeMembers.Common;
 using Tickette.Application.Features.CommitteeMembers.Query.GetAllCommitteeMemberOfEvent;
+using Tickette.Application.Features.Events.Common.Client;
 using Tickette.Application.Wrappers;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860

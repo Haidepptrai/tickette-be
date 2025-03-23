@@ -6,7 +6,6 @@ using Tickette.Application.Features.Coupons.Command.CreateCoupon;
 using Tickette.Application.Features.Coupons.Common;
 using Tickette.Application.Features.Coupons.Query.CalculateDiscountQuery;
 using Tickette.Application.Wrappers;
-using Constant = Tickette.Domain.Common.Constant;
 
 namespace Tickette.API.Controllers
 {
@@ -23,29 +22,18 @@ namespace Tickette.API.Controllers
             _queryDispatcher = queryDispatcher;
         }
 
-        [HttpPost]
+        [HttpPost("create")]
         [SwaggerOperation(
             Summary = "Create Coupon",
             Description = "Create a new coupon for an event"
         )]
-        [Authorize(Policy = Constant.COMMITTEE_MEMBER_ROLES.EventOwner)]
-        public async Task<IActionResult> CreateCoupon([FromBody] CreateCouponCommand command, CancellationToken cancellation = default)
+        //[Authorize(Policy = Constant.COMMITTEE_MEMBER_ROLES.EventOwner)]
+        public async Task<ActionResult<ResponseDto<CreateCouponResponse>>> CreateCoupon([FromBody] CreateCouponCommand command, CancellationToken cancellation = default)
         {
-            try
-            {
-                var response = await _commandDispatcher.Dispatch<CreateCouponCommand, ResponseDto<CreateCouponResponse>>(command, cancellation);
 
-                if (!response.Success)
-                {
-                    return BadRequest(response);
-                }
+            var response = await _commandDispatcher.Dispatch<CreateCouponCommand, ResponseDto<CreateCouponResponse>>(command, cancellation);
 
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ResponseHandler.ErrorResponse<CreateCouponResponse>(null, ex.Message));
-            }
+            return Ok(response);
         }
 
         [HttpPost("calculate-discount")]

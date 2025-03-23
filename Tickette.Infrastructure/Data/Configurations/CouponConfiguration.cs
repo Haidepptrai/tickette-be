@@ -22,14 +22,18 @@ public class CouponConfiguration : IEntityTypeConfiguration<Coupon>
             .HasConversion(
                 v => v.ToString(), // Convert enum to string for database
                 v => (DiscountType)Enum.Parse(typeof(DiscountType), v))
-            .HasMaxLength(20);
+            .HasMaxLength(20)
+            .HasComment("0 = Flat; 1 = Percentage")
+            ;
 
         builder.Property(c => c.ExpiryDate)
             .IsRequired();
 
-        builder.Property(c => c.IsActive)
+        builder.Property(c => c.StartValidDate)
             .IsRequired();
 
+        builder.Property(c => c.IsActive)
+            .IsRequired();
 
         // Ensures each coupon code (Code) is unique within a specific event (EventDateId). 
         // Prevents duplicates in the same event while allowing reuse across different events.

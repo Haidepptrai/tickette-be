@@ -123,7 +123,7 @@ public sealed class Event : BaseEntity
         if (startDate >= endDate)
             throw new ArgumentException("Start date must be earlier than end date.", nameof(startDate));
 
-        var committeeCreation = EventCommittee.CreateEventCommittee(committee.Name, committee.Description);
+        var committeeCreation = EventCommittee.CreateEventCommittee(committee.Logo, committee.Name, committee.Description);
 
         return new Event(
             name,
@@ -143,9 +143,9 @@ public sealed class Event : BaseEntity
             );
     }
 
-    public void AddCommittee(string name, string description)
+    public void AddCommittee(string logo, string name, string description)
     {
-        Committee = EventCommittee.CreateEventCommittee(name, description);
+        Committee = EventCommittee.CreateEventCommittee(logo, name, description);
     }
 
     public void AddDefaultMembers(CommitteeMember member)

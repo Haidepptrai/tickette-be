@@ -1,4 +1,5 @@
-﻿using Tickette.Domain.Entities;
+﻿using Tickette.Application.Features.Events.Common.Client;
+using Tickette.Domain.Entities;
 
 namespace Tickette.Application.Features.Events.Common;
 
@@ -19,6 +20,7 @@ public static class EventMapper
         Category = entity.Category.Name,
         Committee = new CommitteeInformation()
         {
+            Logo = entity.Committee.Logo,
             Name = entity.Committee.Name,
             Description = entity.Committee.Description
         }
@@ -59,6 +61,7 @@ public static class EventMapper
         EventOwnerStripeId = entity.EventOwnerStripeId,
         Committee = new CommitteeInformation()
         {
+            Logo = entity.Committee.Logo,
             Name = entity.Committee.Name,
             Description = entity.Committee.Description
         },
@@ -83,4 +86,58 @@ public static class EventMapper
             })
         })
     };
+
+    public static EventDetailStatisticDto ToEventDetailStatisticDto(this Event entity)
+    {
+        return new EventDetailStatisticDto
+        {
+            Id = entity.Id,
+            Name = entity.Name,
+            LocationName = entity.LocationName,
+            City = entity.City,
+            District = entity.District,
+            Ward = entity.Ward,
+            StreetAddress = entity.StreetAddress,
+            Description = entity.Description,
+            Banner = entity.Banner,
+            StartDate = entity.StartDate,
+            EndDate = entity.EndDate,
+            Status = entity.Status,
+            CategoryName = entity.Category.Name,
+            Committee = new CommitteeInformation()
+            {
+                Logo = entity.Committee.Logo,
+                Name = entity.Committee.Name,
+                Description = entity.Committee.Description
+            },
+            EventDates = entity.EventDates.Select(ev => new EventDateDto()
+            {
+                Id = ev.Id,
+                StartDate = ev.StartDate,
+                EndDate = ev.EndDate,
+                Tickets = ev.Tickets.Select(ticket => new TicketDto()
+                {
+                    Id = ticket.Id,
+                    Name = ticket.Name,
+                    Currency = "USD",
+                    Description = ticket.Description,
+                    TotalTickets = ticket.TotalTickets,
+                    MinPerOrder = ticket.MinTicketsPerOrder,
+                    MaxPerOrder = ticket.MaxTicketsPerOrder,
+                    Price = ticket.Price,
+                    SaleStartTime = ticket.SaleStartTime,
+                    SaleEndTime = ticket.SaleEndTime,
+                    TicketImage = ticket.Image
+                })
+            }),
+            EventOwnerStripeId = entity.EventOwnerStripeId,
+            CommitteeMembers = entity.CommitteeMembers.Select(cm => new CommitteeMemberDto()
+            {
+                Id = cm.Id,
+                FullName = cm.User.FullName!,
+                Email = cm.User.Email!,
+                Role = cm.CommitteeRole.Name,
+            })
+        };
+    }
 }

@@ -3,7 +3,7 @@ using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.Events.Common;
 
-namespace Tickette.Application.Features.Events.Queries.GetEventById;
+namespace Tickette.Application.Features.Events.Queries.Admin.GetEventById;
 
 public record GetEventByIdRequest
 {

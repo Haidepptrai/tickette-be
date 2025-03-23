@@ -281,6 +281,11 @@ public class IdentityServices : IIdentityServices
         return roleIds;
     }
 
+    public async Task<User?> FindUserByEmailAsync(string email)
+    {
+        return await _userManager.FindByEmailAsync(email);
+    }
+
     private async Task AddOrUpdateRefreshTokenAsync(Guid userId, string token, DateTime expiryTime, CancellationToken cancellationToken)
     {
         // Remove expired tokens directly from the database

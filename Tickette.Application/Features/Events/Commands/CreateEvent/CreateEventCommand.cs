@@ -19,6 +19,7 @@ public record CreateEventCommand(
     string Description,
     DateTime StartDate,
     DateTime EndDate,
+    IFileUpload CommitteeLogo,
     string CommitteeName,
     string CommitteeDescription,
     EventDateInput[] EventDatesInformation,
@@ -51,7 +52,8 @@ public class CreateEventCommandHandler : ICommandHandler<CreateEventCommand, Gui
 
         var bannerUrl = await _fileUploadService.UploadFileAsync(command.BannerFile, "banners");
 
-        var committee = EventCommittee.CreateEventCommittee(command.CommitteeName, command.CommitteeDescription);
+        var committeeUrl = await _fileUploadService.UploadFileAsync(command.CommitteeLogo, "committees");
+        var committee = EventCommittee.CreateEventCommittee(committeeUrl, command.CommitteeName, command.CommitteeDescription);
         var newEventCreated = Event.CreateEvent(
             name: command.LocationName,
             locationName: command.LocationName,
