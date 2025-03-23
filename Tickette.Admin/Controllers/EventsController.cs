@@ -4,7 +4,10 @@ using Swashbuckle.AspNetCore.Annotations;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.Events.Commands.UpdateEventStatus;
 using Tickette.Application.Features.Events.Common;
-using Tickette.Application.Features.Events.Queries.GetAllEvents;
+using Tickette.Application.Features.Events.Common.Admin;
+using Tickette.Application.Features.Events.Queries.Admin.GetAllEvents;
+using Tickette.Application.Features.Events.Queries.Admin.GetEventsStatistic;
+using Tickette.Application.Features.Events.Queries.Admin.SearchEventsByName;
 using Tickette.Application.Features.Events.Queries.GetEventByCategory;
 using Tickette.Application.Features.Events.Queries.GetEventById;
 using Tickette.Application.Features.Events.Queries.GetEventByUserId;
@@ -48,45 +51,29 @@ public class EventsController : ControllerBase
         Summary = "Get All Events",
         Description = "Get all events with pagination"
     )]
-    public async Task<ResponseDto<IEnumerable<EventDetailDto>>> GetAllEvents(GetAllEventsQuery query, CancellationToken cancellationToken = default)
+    public async Task<ResponseDto<IEnumerable<AdminEventPreviewDto>>> GetAllEvents(AdminGetAllEventsQuery query, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var result = await _queryDispatcher.Dispatch<GetAllEventsQuery, PagedResult<EventDetailDto>>(query, cancellationToken);
+        var result = await _queryDispatcher.Dispatch<AdminGetAllEventsQuery, PagedResult<AdminEventPreviewDto>>(query, cancellationToken);
 
-            var paginationMeta = new PaginationMeta(
-                result.PageNumber,
-                result.PageSize,
-                result.TotalCount,
-                (int)Math.Ceiling((double)result.TotalCount / result.PageSize)
-            );
+        var paginationMeta = new PaginationMeta(
+            result.PageNumber,
+            result.PageSize,
+            result.TotalCount,
+            result.TotalPages
+        );
 
-            var response = ResponseHandler.PaginatedResponse(result.Items, paginationMeta, "Get all events successfully");
+        var response = ResponseHandler.PaginatedResponse(result.Items, paginationMeta, "Get all events successfully");
 
-            return response;
-        }
-        catch (Exception ex)
-        {
-            return ResponseHandler.ErrorResponse<IEnumerable<EventDetailDto>>(null, "Internal Server Error", 500);
-        }
+        return response;
     }
 
     // GET event by id
-    [HttpGet("{id:guid}")]
-    public async Task<ResponseDto<EventDetailDto>> GetEventById(Guid id, CancellationToken cancellationToken = default)
+    [HttpPost("id")]
+    public async Task<ResponseDto<EventDetailDto>> GetEventById(GetEventByIdRequest query, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var query = new GetEventByIdRequest(id);
-            var result = await _queryDispatcher.Dispatch<GetEventByIdRequest, EventDetailDto>(query, cancellationToken);
-            var response = ResponseHandler.SuccessResponse(result, "Get event by id successfully");
-            return response;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex);
-            return ResponseHandler.ErrorResponse<EventDetailDto>(null, "Internal Server Error", 500);
-        }
+        var result = await _queryDispatcher.Dispatch<GetEventByIdRequest, EventDetailDto>(query, cancellationToken);
+        var response = ResponseHandler.SuccessResponse(result, "Get event by id successfully");
+        return response;
     }
 
     // GET Event By User id
@@ -127,8 +114,22 @@ public class EventsController : ControllerBase
         }
     }
 
+    [HttpPost("search")]
+    [SwaggerOperation(
+        Summary = "Search Events",
+        Description = "Search events by title"
+    )]
+    public async Task<ResponseDto<IEnumerable<Application.Features.Events.Common.Admin.AdminEventPreviewDto>>> SearchEvents(SearchEventsByNameQuery query, CancellationToken cancellationToken = default)
+    {
+        var result = await _queryDispatcher.Dispatch<SearchEventsByNameQuery, PagedResult<Application.Features.Events.Common.Admin.AdminEventPreviewDto>>(query, cancellationToken);
+        var meta = new PaginationMeta(result.PageNumber, result.PageSize, result.TotalCount, result.TotalPages);
+
+        var response = ResponseHandler.PaginatedResponse(result.Items, meta, "Search events successfully");
+        return response;
+    }
+
     //Update Event Status
-    [HttpPatch("status")]
+    [HttpPost("status")]
     //[Authorize(Roles = Constant.APPLICATION_ROLE.Admin)]
     public async Task<ResponseDto<Guid>> UpdateEventStatus(UpdateEventStatusCommand command, CancellationToken token)
     {
@@ -143,4 +144,12 @@ public class EventsController : ControllerBase
         }
     }
 
+    [HttpPost("statistic")]
+    [SwaggerOperation(Summary = "Get all statistic counting of events", Description = "Get all counting of events for admin dashboard, include pending, approved, denied, upcoming (next 7 days). All event statistic within one month")]
+    public async Task<ResponseDto<EventsStatisticDto>> GetEventStatistic(CancellationToken token)
+    {
+        var query = new GetEventsStatisticQuery();
+        var result = await _queryDispatcher.Dispatch<GetEventsStatisticQuery, EventsStatisticDto>(query, token);
+        return ResponseHandler.SuccessResponse(result, "Get event statistic successfully");
+    }
 }

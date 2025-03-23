@@ -24,4 +24,6 @@ public interface IIdentityServices
     Task<AuthResult<TokenRetrieval>> SyncGoogleUserAsync(GoogleUserRequest request);
 
     Task<IEnumerable<RoleResponse>> GetRoleIds();
+
+    Task<User?> FindUserByEmailAsync(string email);
 }

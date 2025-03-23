@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Tickette.Infrastructure.Data;
@@ -11,9 +12,11 @@ using Tickette.Infrastructure.Data;
 namespace Tickette.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250323042553_Add_Committee_Logo_Column")]
+    partial class Add_Committee_Logo_Column
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -327,8 +330,7 @@ namespace Tickette.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
-                        .HasColumnName("discount_type")
-                        .HasComment("0 = Flat; 1 = Percentage");
+                        .HasColumnName("discount_type");
 
                     b.Property<long>("DiscountValue")
                         .HasColumnType("bigint")
@@ -345,10 +347,6 @@ namespace Tickette.Infrastructure.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
-
-                    b.Property<DateTime>("StartValidDate")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("start_valid_date");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")

@@ -7,7 +7,7 @@ public static class CouponMappers
 {
     public static CreateCouponResponse ToCreateCouponResponse(this Coupon coupon)
     {
-        return new CreateCouponResponse(coupon.Code, coupon.DiscountValue, coupon.DiscountType, coupon.ExpiryDate);
+        return new CreateCouponResponse(coupon.Code, coupon.DiscountValue, coupon.DiscountType, coupon.StartValidDate, coupon.ExpiryDate);
     }
 
 }

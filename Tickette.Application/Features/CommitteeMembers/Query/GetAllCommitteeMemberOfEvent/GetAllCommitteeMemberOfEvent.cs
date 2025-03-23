@@ -2,6 +2,7 @@
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.CommitteeMembers.Common;
+using Tickette.Application.Features.Events.Common.Client;
 
 namespace Tickette.Application.Features.CommitteeMembers.Query.GetAllCommitteeMemberOfEvent;
 

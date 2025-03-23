@@ -8,6 +8,8 @@ using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.Events.Commands.CreateEvent;
 using Tickette.Application.Features.Events.Commands.UpdateEventStatus;
 using Tickette.Application.Features.Events.Common;
+using Tickette.Application.Features.Events.Common.Client;
+using Tickette.Application.Features.Events.Queries.Client.GetEventDetailStatistic;
 using Tickette.Application.Features.Events.Queries.GetAllEvents;
 using Tickette.Application.Features.Events.Queries.GetEventByCategory;
 using Tickette.Application.Features.Events.Queries.GetEventById;
@@ -77,22 +79,13 @@ public class EventsController : ControllerBase
         }
     }
 
-    // GET event by id
-    [HttpGet("{id:guid}")]
-    public async Task<ResponseDto<EventDetailDto>> GetEventById(Guid id, CancellationToken cancellationToken = default)
+    [HttpPost("id")]
+    [SwaggerOperation("Get event detail by id")]
+    public async Task<ResponseDto<EventDetailDto>> GetEventById(GetEventByIdRequest query, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var query = new GetEventByIdRequest(id);
-            var result = await _queryDispatcher.Dispatch<GetEventByIdRequest, EventDetailDto>(query, cancellationToken);
-            var response = ResponseHandler.SuccessResponse(result, "Get event by id successfully");
-            return response;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex);
-            return ResponseHandler.ErrorResponse<EventDetailDto>(null, "Internal Server Error", 500);
-        }
+        var result = await _queryDispatcher.Dispatch<GetEventByIdRequest, EventDetailDto>(query, cancellationToken);
+        var response = ResponseHandler.SuccessResponse(result, "Get event by id successfully");
+        return response;
     }
 
     // GET event by slug
@@ -111,7 +104,6 @@ public class EventsController : ControllerBase
         }
     }
 
-    // POST api/<EventsController>
     [HttpPost]
     [Authorize]
     [SwaggerOperation(
@@ -132,6 +124,7 @@ public class EventsController : ControllerBase
 
 
             var bannerFile = new FormFileAdapter(commandDto.BannerFile);
+            var committeeLogo = new FormFileAdapter(commandDto.CommitteeLogo);
 
             var command = new CreateEventCommand(
                 UserId: Guid.Parse(userIdClaim.Value),
@@ -145,6 +138,7 @@ public class EventsController : ControllerBase
                 Description: commandDto.Description,
                 StartDate: commandDto.StartDate,
                 EndDate: commandDto.EndDate,
+                CommitteeLogo: committeeLogo,
                 CommitteeName: commandDto.CommitteeName,
                 CommitteeDescription: commandDto.CommitteeDescription,
                 EventDatesInformation: commandDto.EventDates,
@@ -174,37 +168,30 @@ public class EventsController : ControllerBase
         int perPage = 10
         )
     {
-
-        try
+        var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub);
+        if (userIdClaim == null || string.IsNullOrWhiteSpace(userIdClaim.Value))
         {
-            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub);
-            if (userIdClaim == null || string.IsNullOrWhiteSpace(userIdClaim.Value))
-            {
-                return ResponseHandler.ErrorResponse<IEnumerable<EventListDto>>(null, "User ID not found in token", 500);
-            }
-
-            var query = new GetEventByUserIdQuery(Guid.Parse(userIdClaim.Value));
-
-            var result = await _queryDispatcher.Dispatch<GetEventByUserIdQuery, IEnumerable<EventListDto>>(query, token);
-
-            var totalItems = result.Count();
-            var totalPages = (int)Math.Ceiling((double)totalItems / perPage);
-
-            var paginatedData = result
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToList();
-
-            var paginationMeta = new PaginationMeta(page, perPage, totalItems, totalPages);
-
-
-            var response = ResponseHandler.PaginatedResponse(paginatedData, paginationMeta, "Get events successfully");
-            return response;
+            return ResponseHandler.ErrorResponse<IEnumerable<EventListDto>>(null, "User ID not found in token", 500);
         }
-        catch (Exception ex)
-        {
-            return ResponseHandler.ErrorResponse<IEnumerable<EventListDto>>(null, "Internal Server Error", 500);
-        }
+
+        var query = new GetEventByUserIdQuery(Guid.Parse(userIdClaim.Value));
+
+        var result = await _queryDispatcher.Dispatch<GetEventByUserIdQuery, IEnumerable<EventListDto>>(query, token);
+
+        var totalItems = result.Count();
+        var totalPages = (int)Math.Ceiling((double)totalItems / perPage);
+
+        var paginatedData = result
+            .Skip((page - 1) * perPage)
+            .Take(perPage)
+            .ToList();
+
+        var paginationMeta = new PaginationMeta(page, perPage, totalItems, totalPages);
+
+
+        var response = ResponseHandler.PaginatedResponse(paginatedData, paginationMeta, "Get events successfully");
+        return response;
+
     }
 
     //Update Event Status
@@ -221,6 +208,15 @@ public class EventsController : ControllerBase
         {
             return ResponseHandler.ErrorResponse(Guid.Empty, ex.Message, 500);
         }
+    }
+
+    [HttpPost("detail-statistic")]
+    [SwaggerOperation("Get event detail statistic")]
+    public async Task<ResponseDto<EventDetailStatisticDto>> GetEventDetailStatistic(GetEventDetailStatisticQuery query, CancellationToken cancellationToken = default)
+    {
+        var result = await _queryDispatcher.Dispatch<GetEventDetailStatisticQuery, EventDetailStatisticDto>(query, cancellationToken);
+        var response = ResponseHandler.SuccessResponse(result, "Get event detail statistic successfully");
+        return response;
     }
 
 }
