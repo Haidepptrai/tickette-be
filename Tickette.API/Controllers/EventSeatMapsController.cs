@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.EventDates.Common;
 using Tickette.Application.Features.EventDates.Query;
@@ -40,10 +41,11 @@ namespace Tickette.API.Controllers
             return Ok(ResponseHandler.SuccessResponse(eventDates, "Data Retrieve Successfully"));
         }
 
-        [HttpPost("get-event-date/seat-map")]
+        [HttpPost("get-seat-map")]
+        [SwaggerOperation("Get seat map of an event date by event date ID")]
         public async Task<ActionResult<ResponseDto<EventDateForSeatMapDto>>> GetEventDateSeatMap([FromBody] GetEventDateSeatMapQuery query, CancellationToken cancellationToken)
         {
-            var eventDate = await _queryDispatcher.Dispatch<GetEventDateSeatMapQuery, EventSeatMap>(query, cancellationToken);
+            var eventDate = await _queryDispatcher.Dispatch<GetEventDateSeatMapQuery, EventSeatMap?>(query, cancellationToken);
             return Ok(ResponseHandler.SuccessResponse(eventDate, "Data Retrieve Successfully"));
         }
     }

@@ -1,13 +1,12 @@
-﻿using Tickette.Application.Features.Coupons.Command.CreateCoupon;
-using Tickette.Domain.Entities;
+﻿using Tickette.Domain.Entities;
 
 namespace Tickette.Application.Features.Coupons.Common;
 
 public static class CouponMappers
 {
-    public static CreateCouponResponse ToCreateCouponResponse(this Coupon coupon)
+    public static CouponResponse ToCreateCouponResponse(this Coupon coupon)
     {
-        return new CreateCouponResponse(coupon.Code, coupon.DiscountValue, coupon.DiscountType, coupon.StartValidDate, coupon.ExpiryDate);
+        return new CouponResponse(coupon.Code, coupon.DiscountValue, coupon.DiscountType, coupon.StartValidDate, coupon.ExpiryDate);
     }
 
 }

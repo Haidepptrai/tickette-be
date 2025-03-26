@@ -82,4 +82,26 @@ public sealed class Coupon : BaseEntity
     {
         IsActive = false;
     }
+
+    public void UpdateCouponInformation(string code, decimal discountValue, DiscountType discountType, DateTime startValidDate,
+        DateTime expiryDate)
+    {
+        if (!IsActive) throw new Exception("Coupon is currently deactivated");
+
+        if (DateTime.UtcNow > expiryDate)
+        {
+            throw new ArgumentException("Expiry date must be in the future.", nameof(expiryDate));
+        }
+
+        if (discountValue <= 0)
+        {
+            throw new ArgumentException("Discount value must be greater than zero.", nameof(discountValue));
+        }
+
+        Code = code;
+        DiscountValue = discountValue;
+        DiscountType = discountType;
+        StartValidDate = startValidDate;
+        ExpiryDate = expiryDate;
+    }
 }

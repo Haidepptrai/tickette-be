@@ -20,6 +20,7 @@ public class AgentAvailabilityService : IAgentAvailabilityService
 
     private string GetAgentKey(string agentId) => $"{_redisSettings.InstanceName}agent:{agentId}";
     private string GetAvailableAgentsKey() => $"{_redisSettings.InstanceName}{AVAILABILITY_KEY}";
+    private string GetAgentKeyPattern() => $"{_redisSettings.InstanceName}agent:*";
 
     public async Task SetAgentAvailableAsync(string agentId, string agentConnectionString, int currentTotalUserHandle = 0)
     {
@@ -35,9 +36,6 @@ public class AgentAvailabilityService : IAgentAvailabilityService
                 new HashEntry("current_total_user_handle", currentTotalUserHandle),
                 new HashEntry("last_updated", DateTime.UtcNow.Ticks)
             ]);
-
-            // Set expiration on agent details
-            await db.KeyExpireAsync(agentKey, TimeSpan.FromMinutes(30));
 
             // Add to available agents sorted set with score based on current chats
             await db.SortedSetAddAsync(availableAgentKey, agentId, currentTotalUserHandle);
@@ -120,4 +118,43 @@ public class AgentAvailabilityService : IAgentAvailabilityService
         }
     }
 
+    public async Task<bool> AddUserToQueue(string userConnectionString)
+    {
+        // Check if are there any available agents
+        bool isAny = CountAllCurrentAgents();
+
+        if (!isAny) return false;
+
+        await _redis.GetDatabase().ListRightPushAsync("user:queue", userConnectionString);
+        return true;
+    }
+
+    public async Task RemoveUserFromQueue(string userConnectionString)
+    {
+        await _redis.GetDatabase().ListRemoveAsync("user:queue", userConnectionString);
+    }
+
+    public async Task<string?> AssignAgentToUserFromQueue(string agentId)
+    {
+        var db = _redis.GetDatabase();
+        var userQueue = db.ListLeftPop("user:queue");
+        if (userQueue.IsNullOrEmpty) return string.Empty;
+
+        var userConnectionString = userQueue.ToString();
+        await db.HashSetAsync(GetAgentKey(agentId), "current_total_user_handle", 1);
+        await db.HashSetAsync(GetAgentKey(agentId), "status", "busy");
+        return userConnectionString;
+    }
+
+
+    private bool CountAllCurrentAgents()
+    {
+        var db = _redis.GetDatabase();
+        var server = _redis.GetServer(_redisSettings.Host, _redisSettings.Port);
+
+        // Use server.Keys, not db.KeysAsync directly
+        var allAgents = server.Keys(pattern: GetAgentKeyPattern());
+
+        return allAgents.ToList().Count > 0;
+    }
 }

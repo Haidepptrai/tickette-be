@@ -3,8 +3,8 @@ using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Models;
 using Tickette.Application.Features.Users.Common;
+using Tickette.Application.Features.Users.Query.Admin.AdminGetUserById;
 using Tickette.Application.Features.Users.Query.GetAllUsers;
-using Tickette.Application.Features.Users.Query.GetUserById;
 using Tickette.Application.Wrappers;
 using Tickette.Domain.Common;
 
@@ -50,17 +50,8 @@ namespace Tickette.Admin.Controllers
         [HttpPost("get-user-by-id")]
         public async Task<ActionResult> GetUserById([FromBody] GetUserByIdRequest body, CancellationToken cancellationToken)
         {
-            // Get roles from authenticated user
-            var userRoles = User.Claims
-                .Where(c => c.Type == "role")
-                .Select(c => c.Value)
-                .ToList();
-
-            // Check if the user is an Admin or Moderator
-            bool isAdmin = userRoles.Contains("Admin") || userRoles.Contains("Moderator");
-
-            var request = new GetUserByIdQuery(body.UserId, isAdmin);
-            var result = await _queryDispatcher.Dispatch<GetUserByIdQuery, GetUserByIdResponse>(request, cancellationToken);
+            var request = new AdminGetUserByIdQuery(body.UserId);
+            var result = await _queryDispatcher.Dispatch<AdminGetUserByIdQuery, GetUserByIdResponse>(request, cancellationToken);
 
             return Ok(ResponseHandler.SuccessResponse(result, "User retrieved successfully"));
         }

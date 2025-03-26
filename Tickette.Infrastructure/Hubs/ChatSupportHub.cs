@@ -57,6 +57,11 @@ public class ChatSupportHub : Hub
             await Clients.Group(room).SendAsync("UserDisconnected");
         }
 
+        if (userRole != "Agent")
+        {
+            UserLeaveQueue();
+        }
+
         await base.OnDisconnectedAsync(exception);
     }
 
@@ -77,11 +82,22 @@ public class ChatSupportHub : Hub
 
         if (getAvailableAgent is null)
         {
-            await Clients.Caller.SendAsync("NoAgentAvailable");
+            bool success = await _agentManagementService.AddUserToQueue(Context.ConnectionId);
+
+            if (success)
+            {
+                await Clients.Caller.SendAsync("UserInQueue");
+            }
+            else
+            {
+                await Clients.Caller.SendAsync("NoAgentAvailable");
+            }
+
+            return;
         }
 
         // Create a group for the agent and user to communicate
-        string groupId = $"{getAvailableAgent?.ConnectionString}_{Context.ConnectionId}";
+        string groupId = $"{getAvailableAgent.ConnectionString}_{Context.ConnectionId}";
 
         // Add both the agent and user to the group
         await Groups.AddToGroupAsync(getAvailableAgent.ConnectionString, groupId);
@@ -93,6 +109,38 @@ public class ChatSupportHub : Hub
 
         await Clients.Group(groupId).SendAsync("SupportRoomCreated", groupId, getAvailableAgent.AgentId);
         await Clients.Group(groupId).SendAsync("UserInformationToAgent", groupId, customerName, customerEmail);
+    }
 
+    public async Task AgentFinishAConversation()
+    {
+        var agentId = Context.User?.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? throw new AuthenticationException("Cannot find credential");
+
+        var assignedUser = await _agentManagementService.AssignAgentToUserFromQueue(agentId);
+
+        if (assignedUser is null)
+        {
+            await Clients.Caller.SendAsync("NoUserInQueue");
+            return;
+        }
+        // Create a group for the agent and user to communicate
+        string groupId = $"{Context.ConnectionId}_{assignedUser}";
+        // Add both the agent and user to the group
+        await Groups.AddToGroupAsync(agentId, groupId);
+        await Groups.AddToGroupAsync(assignedUser, groupId);
+        var chatRoomInfo = new ChatRoom(groupId, assignedUser, agentId);
+        await _chatRoomManagementService.CreateChatRoomAsync(chatRoomInfo);
+        await Clients.Group(groupId).SendAsync("SupportRoomCreated", groupId, agentId);
+
+    }
+
+    public void UserLeaveQueue()
+    {
+        var success = _agentManagementService.RemoveUserFromQueue(Context.ConnectionId);
+    }
+
+    // Set agent is busy, invoke in front-end when group chat > 3
+    public async Task AgentIsBusy()
+    {
+        await _agentManagementService.SetAgentUnavailableAsync(Context.ConnectionId);
     }
 }

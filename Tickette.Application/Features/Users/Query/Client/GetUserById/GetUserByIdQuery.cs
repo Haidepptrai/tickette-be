@@ -1,14 +1,16 @@
 ﻿using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
+using Tickette.Application.Exceptions;
 using Tickette.Application.Features.Users.Common;
 
-namespace Tickette.Application.Features.Users.Query.GetUserById;
+namespace Tickette.Application.Features.Users.Query.Client.GetUserById;
 
-public record GetUserByIdQuery(Guid UserId, bool IsAdmin);
+public record GetUserByIdQuery(Guid UserId);
 
 public class GetUserByIdQueryHandler : IQueryHandler<GetUserByIdQuery, GetUserByIdResponse>
 {
     private readonly IIdentityServices _identityServices;
+
     public GetUserByIdQueryHandler(IIdentityServices identityServices)
     {
         _identityServices = identityServices;
@@ -19,11 +21,10 @@ public class GetUserByIdQueryHandler : IQueryHandler<GetUserByIdQuery, GetUserBy
 
         if (!result.Succeeded)
         {
-            throw new Exception("Not found user");
+            throw new NotFoundException("User", query.UserId);
         }
 
-        var data = query.IsAdmin ? result.Data.user.MapToGetUserByIdResponseForAdmin(result.Data.roles) :
-            result.Data.user.MapToGetUserByIdResponseForUser();
+        var data = result.Data.user.MapToGetUserByIdResponseForUser();
 
         return data;
     }

@@ -23,7 +23,9 @@ public interface IIdentityServices
 
     Task<AuthResult<TokenRetrieval>> SyncGoogleUserAsync(GoogleUserRequest request);
 
-    Task<IEnumerable<RoleResponse>> GetRoleIds();
+    Task<IEnumerable<RoleResponse>> GetRoleAllRoles();
 
     Task<User?> FindUserByEmailAsync(string email);
+
+    Task<AuthResult<bool>> ChangeUserImageAsync(Guid userId, string image);
 }

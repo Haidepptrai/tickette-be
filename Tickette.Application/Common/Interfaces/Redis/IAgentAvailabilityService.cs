@@ -8,4 +8,7 @@ public interface IAgentAvailabilityService
     Task<AgentInformation?> GetNextAvailableAgentAsync();
     Task SetAgentUnavailableAsync(string agentId);
     Task RemoveAgentFromPool(string agentId);
+    Task<bool> AddUserToQueue(string userConnectionString);
+    Task<string?> AssignAgentToUserFromQueue(string agentId);
+    Task RemoveUserFromQueue(string userConnectionString);
 }

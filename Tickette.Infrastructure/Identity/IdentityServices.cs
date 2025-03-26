@@ -268,9 +268,9 @@ public class IdentityServices : IIdentityServices
         });
     }
 
-    public async Task<IEnumerable<RoleResponse>> GetRoleIds()
+    public async Task<IEnumerable<RoleResponse>> GetRoleAllRoles()
     {
-        var roleIds = await _roleManager.Roles
+        var roles = await _roleManager.Roles
             .Select(r => new RoleResponse()
             {
                 Id = r.Id,
@@ -278,7 +278,7 @@ public class IdentityServices : IIdentityServices
             })
             .ToListAsync();
 
-        return roleIds;
+        return roles;
     }
 
     public async Task<User?> FindUserByEmailAsync(string email)
@@ -299,6 +299,18 @@ public class IdentityServices : IIdentityServices
 
         // Save changes with cancellation support
         await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<AuthResult<bool>> ChangeUserImageAsync(Guid userId, string image)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user == null)
+        {
+            return AuthResult<bool>.Failure(["User not found."]);
+        }
+        user.ProfilePicture = image;
+        var result = await _userManager.UpdateAsync(user);
+        return result.ToApplicationResult(true);
     }
 }
 
