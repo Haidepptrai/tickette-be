@@ -83,7 +83,8 @@ public static class EventMapper
                 SaleStartTime = ticket.SaleStartTime,
                 SaleEndTime = ticket.SaleEndTime,
                 TicketImage = ticket.Image
-            })
+            }),
+            SeatMap = ev.SeatMap
         })
     };
 

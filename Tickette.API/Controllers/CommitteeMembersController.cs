@@ -26,9 +26,9 @@ namespace Tickette.API.Controllers
 
         // GET: api/committeeMembers
         [HttpPost("members")]
-        public async Task<ResponseDto<IEnumerable<CommitteeMemberDto>>> GetCommitteeMembersByEvent(GetAllCommitteeMemberOfEventQuery query, CancellationToken cancellation)
+        public async Task<ResponseDto<GetAllCommitteeMemberOfEventResponse>> GetCommitteeMembersByEvent(GetAllCommitteeMemberOfEventQuery query, CancellationToken cancellation)
         {
-            var result = await _queryDispatcher.Dispatch<GetAllCommitteeMemberOfEventQuery, IEnumerable<CommitteeMemberDto>>(query, cancellation);
+            var result = await _queryDispatcher.Dispatch<GetAllCommitteeMemberOfEventQuery, GetAllCommitteeMemberOfEventResponse>(query, cancellation);
 
             return ResponseHandler.SuccessResponse(result, "Get all committee members successfully");
         }

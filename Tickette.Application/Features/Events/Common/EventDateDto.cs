@@ -1,4 +1,6 @@
-﻿namespace Tickette.Application.Features.Events.Common;
+﻿using Tickette.Domain.Entities;
+
+namespace Tickette.Application.Features.Events.Common;
 
 public record EventDateDto
 {
@@ -9,4 +11,6 @@ public record EventDateDto
     public DateTime EndDate { get; init; }
 
     public IEnumerable<TicketDto> Tickets { get; init; }
+
+    public EventSeatMap? SeatMap { get; init; }
 }

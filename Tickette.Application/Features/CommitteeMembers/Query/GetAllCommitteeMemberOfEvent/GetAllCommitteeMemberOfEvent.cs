@@ -11,16 +11,18 @@ public record GetAllCommitteeMemberOfEventQuery
     public Guid EventId { get; init; }
 }
 
-public class GetAllCommitteeMemberOfEventHandler : IQueryHandler<GetAllCommitteeMemberOfEventQuery, IEnumerable<CommitteeMemberDto>>
+public class GetAllCommitteeMemberOfEventHandler : IQueryHandler<GetAllCommitteeMemberOfEventQuery, GetAllCommitteeMemberOfEventResponse>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IIdentityServices _identityServices;
 
-    public GetAllCommitteeMemberOfEventHandler(IApplicationDbContext context)
+    public GetAllCommitteeMemberOfEventHandler(IApplicationDbContext context, IIdentityServices identityServices)
     {
         _context = context;
+        _identityServices = identityServices;
     }
 
-    public async Task<IEnumerable<CommitteeMemberDto>> Handle(GetAllCommitteeMemberOfEventQuery request, CancellationToken cancellationToken)
+    public async Task<GetAllCommitteeMemberOfEventResponse> Handle(GetAllCommitteeMemberOfEventQuery request, CancellationToken cancellationToken)
     {
         var entities = await _context.CommitteeMembers
             .Where(x => x.EventId == request.EventId)
@@ -28,7 +30,9 @@ public class GetAllCommitteeMemberOfEventHandler : IQueryHandler<GetAllCommittee
             .Include(x => x.CommitteeRole)
             .ToListAsync(cancellationToken);
 
-        var result = entities.Select(c => c.ToCommitteeMemberDto()).ToList();
+        var roles = await _identityServices.GetRoleAllRoles();
+
+        var result = entities.ToCommitteeMemberResponse(roles);
 
         return result;
     }

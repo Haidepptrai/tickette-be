@@ -5,10 +5,10 @@ namespace Tickette.Domain.Entities;
 public sealed class EventSeat
 {
     [JsonPropertyName("height")]
-    public string Height { get; private set; }
+    public int Height { get; private set; }
 
     [JsonPropertyName("width")]
-    public string Width { get; private set; }
+    public int Width { get; private set; }
 
     [JsonPropertyName("x")]
     public double X { get; private set; }
@@ -22,14 +22,17 @@ public sealed class EventSeat
     [JsonPropertyName("rowName")]
     public string RowName { get; private set; }
 
-    [JsonPropertyName("fill")]
-    public string Fill { get; private set; }
-
     [JsonPropertyName("isOrdered")]
     public bool IsOrdered { get; private set; }
 
+    [JsonPropertyName("ticketId")]
+    public Guid TicketId { get; private set; }
+
+    [JsonPropertyName("groupId")]
+    public string GroupId { get; private set; } // It is used to group seats in the same row, for UI view only
+
     [JsonConstructor]
-    public EventSeat(double x, double y, string width, string height, string number, string rowName, string fill)
+    public EventSeat(double x, double y, int width, int height, string number, string rowName, Guid ticketId, string groupId)
     {
         X = x;
         Y = y;
@@ -37,13 +40,14 @@ public sealed class EventSeat
         Height = height;
         Number = number;
         RowName = rowName;
-        Fill = fill;
         IsOrdered = false;
+        TicketId = ticketId;
+        GroupId = groupId;
     }
 
-    public static EventSeat CreateEventSeat(double x, double y, string width, string height, string number, string rowName, string fill)
+    public static EventSeat CreateEventSeat(double x, double y, int width, int height, string number, string rowName, Guid ticketId, string groupId)
     {
-        return new EventSeat(x, y, width, height, number, rowName, fill);
+        return new EventSeat(x, y, width, height, number, rowName, ticketId, groupId);
     }
 
     public void SetIsOrdered()

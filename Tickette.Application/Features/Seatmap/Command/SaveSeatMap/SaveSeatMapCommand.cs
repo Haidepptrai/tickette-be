@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Tickette.Application.Common.CQRS;
+using Tickette.Application.Exceptions;
 using Tickette.Domain.Common;
 
 namespace Tickette.Application.Features.Seatmap.Command.SaveSeatMap;
@@ -33,7 +34,7 @@ public class SaveSeatMapCommandHandler : ICommandHandler<SaveSeatMapCommand, Uni
 
         if (eventDate is null)
         {
-            throw new ApplicationException(nameof(EventDate));
+            throw new NotFoundException("Event Date", request.EventDateId);
         }
 
         eventDate.AddSeatMap(seatMap);

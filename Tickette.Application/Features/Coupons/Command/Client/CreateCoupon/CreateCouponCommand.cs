@@ -6,11 +6,11 @@ using Tickette.Application.Wrappers;
 using Tickette.Domain.Entities;
 using Tickette.Domain.Enums;
 
-namespace Tickette.Application.Features.Coupons.Command.CreateCoupon;
+namespace Tickette.Application.Features.Coupons.Command.Client.CreateCoupon;
 
 public record CreateCouponCommand(Guid EventId, string Code, decimal DiscountValue, DiscountType DiscountType, DateTime StartValidDate, DateTime ExpiryDate);
 
-public class CreateCouponCommandHandler : ICommandHandler<CreateCouponCommand, ResponseDto<CreateCouponResponse>>
+public class CreateCouponCommandHandler : ICommandHandler<CreateCouponCommand, ResponseDto<CouponResponse>>
 {
     private readonly IApplicationDbContext _context;
 
@@ -19,7 +19,7 @@ public class CreateCouponCommandHandler : ICommandHandler<CreateCouponCommand, R
         _context = context;
     }
 
-    public async Task<ResponseDto<CreateCouponResponse>> Handle(CreateCouponCommand command, CancellationToken cancellation)
+    public async Task<ResponseDto<CouponResponse>> Handle(CreateCouponCommand command, CancellationToken cancellation)
     {
         // Check if the coupon code already exists in the database
         var existingCoupon = await _context.Coupons
@@ -28,7 +28,7 @@ public class CreateCouponCommandHandler : ICommandHandler<CreateCouponCommand, R
         if (existingCoupon)
         {
             // Return an error response if the coupon code already exists
-            return ResponseHandler.ErrorResponse<CreateCouponResponse>(null, "Coupon code already exists for this event.");
+            return ResponseHandler.ErrorResponse<CouponResponse>(null, "Coupon code already exists for this event.");
         }
 
         var coupon = Coupon.CreateCoupon(command.EventId, command.Code, command.DiscountValue, command.DiscountType, command.StartValidDate, command.ExpiryDate);

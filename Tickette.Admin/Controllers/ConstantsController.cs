@@ -27,7 +27,7 @@ public class ConstantsController : ControllerBase
     [HttpPost("role-id")]
     public async Task<ActionResult<ResponseDto<RoleResponse[]>>> GetRoleIds()
     {
-        var roleIds = await _identityServices.GetRoleIds();
+        var roleIds = await _identityServices.GetRoleAllRoles();
 
         return Ok(ResponseHandler.SuccessResponse(roleIds, "Retrieve Role Id Constant Successfully"));
     }
