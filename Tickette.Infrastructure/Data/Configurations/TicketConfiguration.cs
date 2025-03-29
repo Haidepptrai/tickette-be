@@ -12,9 +12,16 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
             .IsRequired()
             .HasMaxLength(250);
 
-        builder.Property(t => t.Price)
-            .IsRequired()
-            .HasColumnType("decimal(18,2)");
+        builder.OwnsOne(ticket => ticket.Price, price =>
+        {
+            price.Property(p => p.Amount)
+                .HasColumnType("decimal(18, 4)")
+                .IsRequired();
+
+            price.Property(p => p.Currency)
+                .HasColumnName("currency")
+                .IsRequired();
+        });
 
         builder.Property(t => t.TotalTickets)
             .IsRequired();

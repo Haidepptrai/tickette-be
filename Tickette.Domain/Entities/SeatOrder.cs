@@ -13,6 +13,4 @@ public class SeatOrder
         RowName = rowName;
         SeatNumber = seatNumber;
     }
-
-
 }

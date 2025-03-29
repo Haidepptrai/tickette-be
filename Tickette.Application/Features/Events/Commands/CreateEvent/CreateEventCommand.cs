@@ -79,7 +79,8 @@ public class CreateEventCommandHandler : ICommandHandler<CreateEventCommand, Gui
             var tickets = await Task.WhenAll(eventDate.Tickets.Select(ticket => TicketFactory.CreateTicketAsync(
                 eventDate: eventDateEntity,
                 name: ticket.Name,
-                price: ticket.Price,
+                amount: ticket.Amount,
+                currency: ticket.Currency,
                 totalTickets: ticket.TotalTickets,
                 minTicketsPerOrder: ticket.MinPerOrder,
                 maxTicketsPerOrder: ticket.MaxPerOrder,

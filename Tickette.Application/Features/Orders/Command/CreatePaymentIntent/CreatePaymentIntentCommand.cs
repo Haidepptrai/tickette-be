@@ -6,6 +6,7 @@ using Tickette.Application.Common.Interfaces.Stripe;
 using Tickette.Application.Exceptions;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Entities;
+using Tickette.Domain.ValueObjects;
 
 namespace Tickette.Application.Features.Orders.Command.CreatePaymentIntent;
 
@@ -29,7 +30,7 @@ public class CreatePaymentIntentCommandHandler : ICommandHandler<CreatePaymentIn
 
     public async Task<PaymentIntentResult> Handle(CreatePaymentIntentCommand command, CancellationToken cancellation)
     {
-        decimal totalPrice = 0;
+        Price totalPrice = new Price(0, command.Tickets.First().Currency);
 
         // Validate Tickets and Calculate Total Price
         foreach (var ticket in command.Tickets)
@@ -37,6 +38,7 @@ public class CreatePaymentIntentCommandHandler : ICommandHandler<CreatePaymentIn
             var ticketInfo = await _context.Tickets
                 .Where(t => t.Id == ticket.Id)
                 .Select(t => new { t.Price, t.RemainingTickets })
+                .AsNoTracking()
                 .SingleOrDefaultAsync(cancellation);
 
             if (ticketInfo == null)
@@ -49,10 +51,10 @@ public class CreatePaymentIntentCommandHandler : ICommandHandler<CreatePaymentIn
                 throw new InvalidQuantityException();
             }
 
-            totalPrice += ticketInfo.Price * ticket.Quantity;
+            totalPrice += totalPrice + (ticketInfo.Price * ticket.Quantity);
         }
 
-        if (totalPrice <= 0)
+        if (totalPrice.Amount <= 0)
         {
             throw new InvalidOperationException("An error occurred while calculate pricing.");
         }

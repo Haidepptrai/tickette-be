@@ -9,6 +9,8 @@ public record TicketReservation
 
     public int Quantity { get; init; }
 
+    public string Currency { get; init; }
+
     public string? SectionName { get; init; }
 
     public IEnumerable<SeatOrder>? SeatsChosen { get; init; }

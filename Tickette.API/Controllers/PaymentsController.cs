@@ -25,19 +25,9 @@ namespace Tickette.API.Controllers
         public async Task<IActionResult> CreatePaymentIntent([FromBody] CreatePaymentIntentCommand command,
             CancellationToken cancellationToken)
         {
-            try
-            {
-                var result =
-                    await _commandDispatcher.Dispatch<CreatePaymentIntentCommand, PaymentIntentResult>(command,
-                        cancellationToken);
+            var result = await _commandDispatcher.Dispatch<CreatePaymentIntentCommand, PaymentIntentResult>(command, cancellationToken);
 
-                return Ok(ResponseHandler.SuccessResponse(result, "Payment Intent Created Successfully"));
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-                return BadRequest(ResponseHandler.ErrorResponse<PaymentIntentResult>(null, "Internal Server Error"));
-            }
+            return Ok(ResponseHandler.SuccessResponse(result, "Payment Intent Created Successfully"));
         }
 
         [HttpPost("update-payment-intent")]

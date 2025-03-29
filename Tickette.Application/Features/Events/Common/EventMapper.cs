@@ -74,12 +74,12 @@ public static class EventMapper
             {
                 Id = ticket.Id,
                 Name = ticket.Name,
-                Currency = "USD",
                 Description = ticket.Description,
                 TotalTickets = ticket.TotalTickets,
                 MinPerOrder = ticket.MinTicketsPerOrder,
                 MaxPerOrder = ticket.MaxTicketsPerOrder,
-                Price = ticket.Price,
+                Amount = ticket.Price.Amount,
+                Currency = ticket.Price.Currency,
                 SaleStartTime = ticket.SaleStartTime,
                 SaleEndTime = ticket.SaleEndTime,
                 TicketImage = ticket.Image
@@ -120,12 +120,12 @@ public static class EventMapper
                 {
                     Id = ticket.Id,
                     Name = ticket.Name,
-                    Currency = "USD",
                     Description = ticket.Description,
                     TotalTickets = ticket.TotalTickets,
                     MinPerOrder = ticket.MinTicketsPerOrder,
                     MaxPerOrder = ticket.MaxTicketsPerOrder,
-                    Price = ticket.Price,
+                    Amount = ticket.Price.Amount,
+                    Currency = ticket.Price.Currency,
                     SaleStartTime = ticket.SaleStartTime,
                     SaleEndTime = ticket.SaleEndTime,
                     TicketImage = ticket.Image

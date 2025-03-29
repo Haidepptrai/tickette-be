@@ -13,9 +13,15 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
         builder.Property(e => e.Quantity)
             .IsRequired();
 
-        builder.Property(e => e.Price)
-            .IsRequired()
-            .HasColumnType("decimal(18,2)");
+        builder.OwnsOne(oi => oi.Price, price =>
+        {
+            price.Property(p => p.Amount)
+                .HasColumnType("decimal(18, 4)")
+                .IsRequired();
+
+            price.Property(p => p.Currency)
+                .IsRequired();
+        });
 
         builder.Property(e => e.IsScanned)
             .IsRequired();

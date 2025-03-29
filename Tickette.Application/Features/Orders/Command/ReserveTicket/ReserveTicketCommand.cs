@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Messaging;
@@ -13,8 +14,9 @@ namespace Tickette.Application.Features.Orders.Command.ReserveTicket;
 
 public record ReserveTicketCommand
 {
-    public required Guid UserId { get; init; }
-    public required ICollection<TicketReservation> Tickets { get; set; }
+    [JsonIgnore]
+    public Guid UserId { get; set; }
+    public required ICollection<TicketReservation> Tickets { get; init; }
 }
 
 public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand, Unit>

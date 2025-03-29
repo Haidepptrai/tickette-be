@@ -7,12 +7,9 @@ public class Price : ValueObject
     public decimal Amount { get; private set; }
     public string Currency { get; private set; }
 
-    private static readonly HashSet<string> SupportedCurrencies = new()
-    {
-        "USD", "VND"
-    };
+    private static readonly HashSet<string> SupportedCurrencies = ["USD", "VND"];
 
-    private Price() { }
+    public Price() { }
 
     public Price(decimal amount, string currency = "USD")
     {
@@ -34,7 +31,7 @@ public class Price : ValueObject
     }
 
     // Override ToString for display
-    public override string ToString() => $"{Currency} {Amount:0.00}";
+    public string Format() => $"{Currency} {Amount:0.00}";
 
     // Operator overloading
     public static Price operator +(Price p1, Price p2)

@@ -11,6 +11,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using RedLockNet;
+using RedLockNet.SERedis;
+using RedLockNet.SERedis.Configuration;
 using StackExchange.Redis;
 using System.Configuration;
 using System.Security.Claims;
@@ -326,10 +329,22 @@ public static class DependencyInjection
             options.ConfigurationOptions = configOptions;
         });
 
+        // Register RedLock Factory
+        builder.Services.AddSingleton<IDistributedLockFactory>(provider =>
+        {
+            var multiplexer = provider.GetRequiredService<IConnectionMultiplexer>();
+            return RedLockFactory.Create(new List<RedLockMultiplexer> { new(multiplexer) });
+        });
+
+        builder.Services.AddScoped<LockManager>();
+
         builder.Services.AddSingleton<IRedisService, RedisService>();
-        builder.Services.AddSingleton<IReservationService, ReservationService>();
+        builder.Services.AddScoped<IReservationService, ReservationService>();
         builder.Services.AddSingleton<IAgentAvailabilityService, AgentAvailabilityService>();
         builder.Services.AddSingleton<IChatRoomManagementService, ChatRoomManagementService>();
+
+        // Register the expired reservation cleanup service
+        builder.Services.AddHostedService<ExpiredReservationCleanupService>();
     }
 
     public static void AddStripeSettings(this IHostApplicationBuilder builder)

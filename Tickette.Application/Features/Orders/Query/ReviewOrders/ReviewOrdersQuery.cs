@@ -68,7 +68,8 @@ public class ReviewOrdersQueryHandler : IQueryHandler<ReviewOrdersQuery, Respons
                                 Image = orderItem.Ticket.Image,
                                 Description = orderItem.Ticket.Description,
                                 Quantity = orderItem.Quantity,
-                                TotalPrice = orderItem.Quantity * orderItem.Ticket.Price,
+                                TotalPrice = orderItem.Quantity * orderItem.Ticket.Price.Amount,
+                                Currency = orderItem.Ticket.Price.Currency,
                                 QrCode = GenerateQrCode(orderItem, order.UserOrderedId)
                             }
                         })

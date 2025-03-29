@@ -16,7 +16,8 @@ public static class EventDateMappers
                 Id = t.Id,
                 Name = t.Name,
                 Quantity = t.RemainingTickets,
-                Price = t.Price
+                Price = t.Price.Amount,
+                Currency = t.Price.Currency,
             })
         };
     }

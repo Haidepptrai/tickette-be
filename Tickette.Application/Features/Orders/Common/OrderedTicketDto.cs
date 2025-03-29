@@ -14,5 +14,7 @@ public record OrderedTicketDto
 
     public decimal TotalPrice { get; set; }
 
+    public string Currency { get; set; }
+
     public string QrCode { get; set; }
 }

@@ -110,6 +110,9 @@ public class OrdersController : BaseController
     [Authorize]
     public async Task<ActionResult<ResponseDto<Unit>>> ReserveTickets([FromBody] ReserveTicketCommand command, CancellationToken cancellation)
     {
+        var userId = GetUserId();
+        command.UserId = Guid.Parse(userId);
+
         var response = await _commandDispatcher.Dispatch<ReserveTicketCommand, Unit>(command, cancellation);
         return Ok(ResponseHandler.SuccessResponse(response, "Tickets reserved successfully"));
     }
@@ -120,6 +123,9 @@ public class OrdersController : BaseController
     public async Task<ActionResult<ResponseDto<Unit>>>
         RemoveReserve([FromBody] RemoveReserveTicketCommand command, CancellationToken cancellation)
     {
+        var userId = GetUserId();
+        command.UserId = Guid.Parse(userId);
+
         var response = await _commandDispatcher.Dispatch<RemoveReserveTicketCommand, Unit>(command, cancellation);
         return Ok(ResponseHandler.SuccessResponse(response, "Reservation removed successfully"));
     }

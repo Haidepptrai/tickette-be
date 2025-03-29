@@ -30,7 +30,7 @@ public abstract class ValueObject
         return a.Equals(b);
     }
 
-    public static bool operator !=(ValueObject a, ValueObject b)
+    public static bool operator !=(ValueObject a, ValueObject? b)
     {
         return !(a == b);
     }
