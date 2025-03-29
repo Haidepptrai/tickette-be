@@ -1,5 +1,6 @@
 ﻿using Tickette.Application.Exceptions;
 using Tickette.Domain.Common;
+using Tickette.Domain.ValueObjects;
 
 namespace Tickette.Domain.Entities;
 
@@ -9,7 +10,7 @@ public sealed class Ticket : BaseEntity
 
     public string Name { get; private set; }
 
-    public decimal Price { get; private set; }
+    public Price Price { get; private set; }
 
     public int TotalTickets { get; private set; }
 
@@ -34,7 +35,7 @@ public sealed class Ticket : BaseEntity
     private Ticket(
     EventDate eventDate,
     string name,
-    decimal price,
+    Price price,
     int totalTickets,
     int minTicketsPerOrder,
     int maxTicketsPerOrder,
@@ -59,7 +60,7 @@ public sealed class Ticket : BaseEntity
     public static Ticket Create(
         EventDate eventDate,
         string name,
-        decimal price,
+        Price price,
         int totalTickets,
         int minTicketsPerOrder,
         int maxTicketsPerOrder,
@@ -72,9 +73,6 @@ public sealed class Ticket : BaseEntity
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name cannot be empty.");
 
-        if (price < 0)
-            throw new ArgumentException("Price must be a positive value.");
-
         if (totalTickets <= 0)
             throw new ArgumentException("Total tickets must be greater than zero.");
 
@@ -82,7 +80,7 @@ public sealed class Ticket : BaseEntity
             throw new ArgumentException("Invalid ticket order limits.");
 
         if (saleStartTime >= saleEndTime)
-            throw new ArgumentException("Sale start time must be before sale end time.");
+            throw new ArgumentException($"Ticket {name} Error: Sale start time must be before sale end time.");
 
         // Create and return a valid Ticket object
         return new Ticket(

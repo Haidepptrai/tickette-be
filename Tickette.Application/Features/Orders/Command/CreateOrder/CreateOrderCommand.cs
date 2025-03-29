@@ -7,6 +7,7 @@ using Tickette.Application.Common.Models;
 using Tickette.Application.Exceptions;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Entities;
+using Tickette.Domain.ValueObjects;
 
 namespace Tickette.Application.Features.Orders.Command.CreateOrder;
 
@@ -50,8 +51,8 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
 
             if (ticketInfo is not null)
             {
-                decimal totalPrice = ticketInfo.Price * ticket.Quantity;
-                ticketDetailsHtml += $"<tr><td>{ticketInfo.Name}</td><td>{ticket.Quantity}</td><td>${totalPrice:F2}</td></tr>";
+                Price totalPrice = ticketInfo.Price * ticket.Quantity;
+                ticketDetailsHtml += $"<tr><td>{ticketInfo.Name}</td><td>{ticket.Quantity}</td><td>{totalPrice.Format()}</td></tr>";
 
                 var orderItem = OrderItem.Create(ticket.Id, ticketInfo.Price, ticket.Quantity, ticket.SectionName, ticket.SeatsChosen?.ToList());
                 order.AddOrderItem(orderItem);
@@ -85,7 +86,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
 
             if (!exist)
             {
-                await _reservationService.ReleaseReservationAsync(ticket.Id, query.UserId);
+                await _reservationService.ReleaseReservationAsync(query.UserId, ticket);
                 throw new NotFoundTicketReservationException();
             }
         }

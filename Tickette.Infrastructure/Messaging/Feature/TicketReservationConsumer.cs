@@ -8,6 +8,7 @@ using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Features.Orders.Command.ReserveTicket;
 using Tickette.Domain.Common;
+using Tickette.Infrastructure.Helpers;
 
 namespace Tickette.Infrastructure.Messaging.Feature;
 
@@ -72,7 +73,7 @@ public class TicketReservationConsumer : BackgroundService
         {
             foreach (var ticket in ticketReservation.Tickets)
             {
-                string reservationKey = $"reservation:{ticket.Id}:{ticketReservation.UserId}";
+                string reservationKey = RedisKeys.GetReservationKey(ticket.Id, ticketReservation.UserId);
 
                 // Verify reservation still exists in Redis
                 bool exists = await _redisService.KeyExistsAsync(reservationKey);

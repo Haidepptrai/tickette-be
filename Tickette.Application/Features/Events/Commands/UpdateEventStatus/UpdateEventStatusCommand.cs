@@ -36,37 +36,33 @@ public class UpdateEventStatusHandler : ICommandHandler<UpdateEventStatusCommand
             if (eventToUpdate == null)
                 throw new KeyNotFoundException($"Event with ID {command.EventId} was not found.");
 
-            if (eventToUpdate.Status == ApprovalStatus.Approved)
-                throw new InvalidOperationException("Event status cannot be updated once it is approved.");
+            //if (eventToUpdate.Status == ApprovalStatus.Approved)
+            //    throw new InvalidOperationException("Event status cannot be updated once it is approved.");
 
             // Update the event status
             eventToUpdate.Status = command.Status;
 
-            // If the event is approved, initialize Redis with ticket quantities for each event date
-            if (command.Status == ApprovalStatus.Approved)
+
+            var redisData = new Dictionary<string, string>();
+
+            foreach (var eventDate in eventToUpdate.EventDates)
             {
-                var redisData = new Dictionary<string, string>();
-
-                foreach (var eventDate in eventToUpdate.EventDates)
+                foreach (var ticket in eventDate.Tickets)
                 {
-                    foreach (var ticket in eventDate.Tickets)
-                    {
-                        string inventoryKey = RedisKeys.GetTicketQuantityKey(ticket.Id);
+                    string inventoryKey = RedisKeys.GetTicketQuantityKey(ticket.Id);
 
-                        // Only add if it doesn't already exist in Redis
-                        var existingValue = await _redisService.GetAsync(inventoryKey);
-                        if (existingValue == null || existingValue == "0")
-                        {
-                            redisData[inventoryKey] = ticket.RemainingTickets.ToString();
-                        }
+                    // Only add if it doesn't already exist in Redis
+                    var existingValue = await _redisService.GetAsync(inventoryKey);
+                    if (existingValue == null || existingValue == "0")
+                    {
+                        redisData[inventoryKey] = ticket.RemainingTickets.ToString();
                     }
                 }
+            }
 
-
-                if (redisData.Count > 0)
-                {
-                    await _redisService.SetBatchAsync(redisData);
-                }
+            if (redisData.Count > 0)
+            {
+                await _redisService.SetBatchAsync(redisData);
             }
 
             await _context.SaveChangesAsync(cancellationToken);

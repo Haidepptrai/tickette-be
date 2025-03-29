@@ -1,4 +1,5 @@
 ﻿using Tickette.Domain.Common;
+using Tickette.Domain.ValueObjects;
 
 namespace Tickette.Domain.Entities;
 
@@ -10,7 +11,7 @@ public sealed class OrderItem : BaseEntity
 
     public int Quantity { get; private set; }
 
-    public decimal Price { get; private set; } // Price of each ticket at the time of the order
+    public Price Price { get; private set; } // Price of each ticket at the time of the order
 
     public bool IsScanned { get; private set; }
 
@@ -26,7 +27,7 @@ public sealed class OrderItem : BaseEntity
 
     private OrderItem() { }
 
-    public OrderItem(Guid ticketId, decimal price, int quantity, string? ticketSection, ICollection<SeatOrder>? seatsOrdered)
+    public OrderItem(Guid ticketId, Price price, int quantity, string? ticketSection, ICollection<SeatOrder>? seatsOrdered)
     {
         if (quantity <= 0)
         {
@@ -41,7 +42,7 @@ public sealed class OrderItem : BaseEntity
         SeatsOrdered = seatsOrdered;
     }
 
-    public static OrderItem Create(Guid ticketId, decimal price, int quantity, string? ticketSection, ICollection<SeatOrder>? seatsOrdered)
+    public static OrderItem Create(Guid ticketId, Price price, int quantity, string? ticketSection, ICollection<SeatOrder>? seatsOrdered)
     {
         return new OrderItem(ticketId, price, quantity, ticketSection, seatsOrdered);
     }
@@ -64,6 +65,6 @@ public sealed class OrderItem : BaseEntity
 
     public decimal CalculateTotalPrice()
     {
-        return Price * Quantity;
+        return Price.Amount * Quantity;
     }
 }

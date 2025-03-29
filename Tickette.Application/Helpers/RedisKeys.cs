@@ -1,4 +1,6 @@
-﻿namespace Tickette.Infrastructure.Helpers;
+﻿using Tickette.Domain.Entities;
+
+namespace Tickette.Infrastructure.Helpers;
 
 public static class RedisKeys
 {
@@ -10,7 +12,11 @@ public static class RedisKeys
     public static string GetReservationKey(Guid ticketId, Guid userId) =>
         $"{Prefix}:reservation:{ticketId}:{userId}";
 
-    public static string GetSeatsKey(Guid ticketId) =>
-        $"{Prefix}:seats:{ticketId}";
+    public static string GetReservedSeatKey(Guid ticketId, string rowName, string seatNumber) =>
+        $"{Prefix}:reserved_ticket:{ticketId}:seat:{rowName}:{seatNumber}";
+
+    public static string GetLockSeat(Guid ticketId, SeatOrder seat) =>
+        $"lock:reserve:{ticketId}:{seat.RowName}{seat.SeatNumber}";
+
 
 }

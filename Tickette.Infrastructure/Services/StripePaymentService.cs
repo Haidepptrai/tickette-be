@@ -8,12 +8,10 @@ namespace Tickette.Infrastructure.Services;
 
 public class StripePaymentService : IPaymentService
 {
-    private readonly string _secretKey;
-
     public StripePaymentService(IConfiguration configuration)
     {
-        _secretKey = configuration["Stripe:SecretKey"] ?? throw new ArgumentNullException("Stripe API Key is missing.");
-        StripeConfiguration.ApiKey = _secretKey;
+        var secretKey = configuration["Stripe:SecretKey"] ?? throw new ArgumentNullException("Stripe API Key is missing.");
+        StripeConfiguration.ApiKey = secretKey;
     }
 
     public async Task<PaymentIntentResult> CreatePaymentIntentAsync(Payment payment)

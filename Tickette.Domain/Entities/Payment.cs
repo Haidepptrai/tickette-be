@@ -1,4 +1,6 @@
-﻿namespace Tickette.Domain.Entities;
+﻿using Tickette.Domain.ValueObjects;
+
+namespace Tickette.Domain.Entities;
 
 public sealed class Payment
 {
@@ -15,8 +17,8 @@ public sealed class Payment
         EventOwnerStripeId = eventOwnerStripeId;
     }
 
-    public static Payment Create(decimal amount, string eventOwnerStripeId, string currency = "usd")
+    public static Payment Create(Price price, string eventOwnerStripeId)
     {
-        return new Payment(amount, currency, eventOwnerStripeId);
+        return new Payment(price.Amount, price.Currency, eventOwnerStripeId);
     }
 }

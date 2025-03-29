@@ -6,5 +6,5 @@ public interface IReservationService
 {
     Task<bool> ReserveTicketsAsync(Guid userId, TicketReservation reservation);
     Task<bool> ValidateReservationAsync(Guid ticketId, Guid userId);
-    Task<bool> ReleaseReservationAsync(Guid ticketId, Guid userId);
+    Task<bool> ReleaseReservationAsync(Guid userId, TicketReservation ticketId);
 }
