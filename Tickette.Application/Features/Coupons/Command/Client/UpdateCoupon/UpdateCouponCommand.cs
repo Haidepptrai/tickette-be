@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Exceptions;
@@ -21,10 +22,12 @@ public record UpdateCouponCommand
 public class UpdateCouponCommandHandler : ICommandHandler<UpdateCouponCommand, CouponResponse>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICacheService _cacheService;
 
-    public UpdateCouponCommandHandler(IApplicationDbContext context)
+    public UpdateCouponCommandHandler(IApplicationDbContext context, ICacheService cacheService)
     {
         _context = context;
+        _cacheService = cacheService;
     }
 
     public async Task<CouponResponse> Handle(UpdateCouponCommand command, CancellationToken cancellation)
@@ -36,9 +39,11 @@ public class UpdateCouponCommandHandler : ICommandHandler<UpdateCouponCommand, C
             throw new NotFoundException("Coupon", command.Code);
         }
 
-        coupon.UpdateCouponInformation(command.Code, command.DiscountValue, coupon.DiscountType, coupon.StartValidDate, coupon.ExpiryDate);
+        coupon.UpdateCouponInformation(command.Code, command.DiscountValue, command.DiscountType, command.StartValidDate, command.ExpiryDate);
 
         await _context.SaveChangesAsync(cancellation);
+
+        _cacheService.RemoveCacheValue(InMemoryCacheKey.CouponList(command.EventId));
 
         return new CouponResponse(coupon.Code, coupon.DiscountValue, coupon.DiscountType, coupon.StartValidDate, coupon.ExpiryDate);
     }

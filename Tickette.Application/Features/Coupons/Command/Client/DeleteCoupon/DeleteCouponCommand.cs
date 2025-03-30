@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Exceptions;
@@ -15,10 +16,12 @@ public record DeleteCouponCommand
 public class DeleteCouponCommandHandler : ICommandHandler<DeleteCouponCommand, bool>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICacheService _cacheService;
 
-    public DeleteCouponCommandHandler(IApplicationDbContext context)
+    public DeleteCouponCommandHandler(IApplicationDbContext context, ICacheService cacheService)
     {
         _context = context;
+        _cacheService = cacheService;
     }
 
     public async Task<bool> Handle(DeleteCouponCommand command, CancellationToken cancellation)
@@ -33,6 +36,8 @@ public class DeleteCouponCommandHandler : ICommandHandler<DeleteCouponCommand, b
         coupon.SoftDeleteEntity();
 
         await _context.SaveChangesAsync(cancellation);
+
+        _cacheService.RemoveCacheValue(InMemoryCacheKey.CouponList(command.EventId));
         return true;
     }
 }

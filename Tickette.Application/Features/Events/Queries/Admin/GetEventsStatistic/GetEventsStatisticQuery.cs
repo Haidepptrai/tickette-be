@@ -24,23 +24,15 @@ public class GetEventsStatisticQueryHandler : IQueryHandler<GetEventsStatisticQu
         var firstDayOfNextMonth = firstDayOfMonth.AddMonths(1);
 
         var pendingEvents = await _context.Events
-            .CountAsync(e => e.Status == ApprovalStatus.Pending &&
-                             e.StartDate >= firstDayOfMonth &&
-                             e.StartDate < firstDayOfNextMonth, cancellation);
+            .CountAsync(e => e.Status == ApprovalStatus.Pending, cancellation);
 
         var approvedEvents = await _context.Events
-            .CountAsync(e => e.Status == ApprovalStatus.Approved &&
-                             e.StartDate >= firstDayOfMonth &&
-                             e.StartDate < firstDayOfNextMonth, cancellation);
+            .CountAsync(e => e.Status == ApprovalStatus.Approved, cancellation);
 
         var rejectedEvents = await _context.Events
-            .CountAsync(e => e.Status == ApprovalStatus.Rejected &&
-                             e.StartDate >= firstDayOfMonth &&
-                             e.StartDate < firstDayOfNextMonth, cancellation);
+            .CountAsync(e => e.Status == ApprovalStatus.Rejected, cancellation);
 
-        var upcomingEvents = await _context.Events
-            .CountAsync(e => e.StartDate >= firstDayOfMonth &&
-                             e.StartDate < firstDayOfNextMonth, cancellation);
+        var upcomingEvents = 1;
 
         return new EventsStatisticDto
         {

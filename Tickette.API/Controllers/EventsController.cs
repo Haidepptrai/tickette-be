@@ -9,12 +9,12 @@ using Tickette.Application.Features.Events.Commands.CreateEvent;
 using Tickette.Application.Features.Events.Commands.UpdateEventStatus;
 using Tickette.Application.Features.Events.Common;
 using Tickette.Application.Features.Events.Common.Client;
+using Tickette.Application.Features.Events.Queries.Client.GetEventByUserId;
 using Tickette.Application.Features.Events.Queries.Client.GetEventDetailStatistic;
 using Tickette.Application.Features.Events.Queries.GetAllEvents;
 using Tickette.Application.Features.Events.Queries.GetEventByCategory;
 using Tickette.Application.Features.Events.Queries.GetEventById;
 using Tickette.Application.Features.Events.Queries.GetEventBySlug;
-using Tickette.Application.Features.Events.Queries.GetEventByUserId;
 using Tickette.Application.Wrappers;
 using Tickette.Domain.Common;
 
@@ -22,7 +22,7 @@ namespace Tickette.API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class EventsController : ControllerBase
+public class EventsController : BaseController
 {
     private readonly IQueryDispatcher _queryDispatcher;
     private readonly ICommandDispatcher _commandDispatcher;
@@ -136,8 +136,6 @@ public class EventsController : ControllerBase
                 StreetAddress: commandDto.StreetAddress,
                 CategoryId: commandDto.CategoryId,
                 Description: commandDto.Description,
-                StartDate: commandDto.StartDate,
-                EndDate: commandDto.EndDate,
                 CommitteeLogo: committeeLogo,
                 CommitteeName: commandDto.CommitteeName,
                 CommitteeDescription: commandDto.CommitteeDescription,
@@ -162,36 +160,20 @@ public class EventsController : ControllerBase
         Summary = "Get Events By User Id",
         Description = "Get all events created by the user, userId provided in JWT"
     )]
-    public async Task<ResponseDto<IEnumerable<EventListDto>>> GetEventsByUserId(
+    public async Task<ActionResult<ResponseDto<IEnumerable<UserEventListResponse>>>> GetEventsByUserId(
         CancellationToken token,
-        int page = 1,
-        int perPage = 10
-        )
+        GetEventByUserIdQuery query)
     {
-        var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub);
-        if (userIdClaim == null || string.IsNullOrWhiteSpace(userIdClaim.Value))
-        {
-            return ResponseHandler.ErrorResponse<IEnumerable<EventListDto>>(null, "User ID not found in token", 500);
-        }
+        var userId = GetUserId();
 
-        var query = new GetEventByUserIdQuery(Guid.Parse(userIdClaim.Value));
+        query.UserId = Guid.Parse(userId);
 
-        var result = await _queryDispatcher.Dispatch<GetEventByUserIdQuery, IEnumerable<EventListDto>>(query, token);
+        var result = await _queryDispatcher.Dispatch<GetEventByUserIdQuery, PagedResult<UserEventListResponse>>(query, token);
 
-        var totalItems = result.Count();
-        var totalPages = (int)Math.Ceiling((double)totalItems / perPage);
+        var paginationMeta = new PaginationMeta(result.PageNumber, result.PageSize, result.TotalCount, result.TotalPages);
 
-        var paginatedData = result
-            .Skip((page - 1) * perPage)
-            .Take(perPage)
-            .ToList();
-
-        var paginationMeta = new PaginationMeta(page, perPage, totalItems, totalPages);
-
-
-        var response = ResponseHandler.PaginatedResponse(paginatedData, paginationMeta, "Get events successfully");
-        return response;
-
+        var response = ResponseHandler.PaginatedResponse(result.Items, paginationMeta, "Get events successfully");
+        return Ok(response);
     }
 
     //Update Event Status

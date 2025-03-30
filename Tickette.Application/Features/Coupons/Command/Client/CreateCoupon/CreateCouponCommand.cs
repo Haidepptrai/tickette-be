@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.Coupons.Common;
@@ -13,10 +14,12 @@ public record CreateCouponCommand(Guid EventId, string Code, decimal DiscountVal
 public class CreateCouponCommandHandler : ICommandHandler<CreateCouponCommand, ResponseDto<CouponResponse>>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICacheService _cacheService;
 
-    public CreateCouponCommandHandler(IApplicationDbContext context)
+    public CreateCouponCommandHandler(IApplicationDbContext context, ICacheService cacheService)
     {
         _context = context;
+        _cacheService = cacheService;
     }
 
     public async Task<ResponseDto<CouponResponse>> Handle(CreateCouponCommand command, CancellationToken cancellation)
@@ -35,6 +38,8 @@ public class CreateCouponCommandHandler : ICommandHandler<CreateCouponCommand, R
         _context.Coupons.Add(coupon);
 
         await _context.SaveChangesAsync(cancellation);
+
+        _cacheService.RemoveCacheValue(InMemoryCacheKey.CouponList(command.EventId));
 
         var couponResponse = coupon.ToCreateCouponResponse();
 

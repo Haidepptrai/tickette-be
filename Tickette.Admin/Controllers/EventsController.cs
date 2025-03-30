@@ -8,9 +8,9 @@ using Tickette.Application.Features.Events.Common.Admin;
 using Tickette.Application.Features.Events.Queries.Admin.GetAllEvents;
 using Tickette.Application.Features.Events.Queries.Admin.GetEventsStatistic;
 using Tickette.Application.Features.Events.Queries.Admin.SearchEventsByName;
+using Tickette.Application.Features.Events.Queries.Client.GetEventByUserId;
 using Tickette.Application.Features.Events.Queries.GetEventByCategory;
 using Tickette.Application.Features.Events.Queries.GetEventById;
-using Tickette.Application.Features.Events.Queries.GetEventByUserId;
 using Tickette.Application.Wrappers;
 
 namespace Tickette.Admin.Controllers;

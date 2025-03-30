@@ -17,7 +17,6 @@ public class ReservationService : IReservationService
         _redis = redis;
         _lockManager = lockManager;
         _redisSettings = redisSettings.Value;
-
     }
 
     /// <summary>

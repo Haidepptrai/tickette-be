@@ -38,6 +38,7 @@ namespace Tickette.API
             builder.AddInfrastructure();
             builder.AddRabbitMQSettings();
             builder.AddRedisSettings();
+            builder.AddInMemoryCacheService();
             builder.AddStripeSettings();
             builder.AddS3Service();
             builder.AddMachineLearningModel();

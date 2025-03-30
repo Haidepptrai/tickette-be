@@ -25,10 +25,6 @@ public sealed class Event : BaseEntity
 
     public string Banner { get; set; }
 
-    public DateTime StartDate { get; set; }
-
-    public DateTime EndDate { get; set; }
-
     public string EventSlug { get; private set; }
 
     public ApprovalStatus Status { get; set; }
@@ -60,8 +56,6 @@ public sealed class Event : BaseEntity
         string banner,
         string eventOwnerStripeId,
         Guid categoryId,
-        DateTime startDate,
-        DateTime endDate,
         User userCreated,
         EventCommittee committee
         )
@@ -76,8 +70,6 @@ public sealed class Event : BaseEntity
         Description = description;
         Banner = banner;
         EventOwnerStripeId = eventOwnerStripeId;
-        StartDate = startDate;
-        EndDate = endDate;
         User = userCreated;
         Committee = committee;
         CommitteeMembers = new List<CommitteeMember>();
@@ -96,8 +88,6 @@ public sealed class Event : BaseEntity
         string banner,
         string eventOwnerStripeId,
         Guid categoryId,
-        DateTime startDate,
-        DateTime endDate,
         User userCreated,
         EventCommittee committee
         )
@@ -120,9 +110,6 @@ public sealed class Event : BaseEntity
         if (string.IsNullOrWhiteSpace(streetAddress))
             throw new ArgumentException("Street address cannot be empty.", nameof(streetAddress));
 
-        if (startDate >= endDate)
-            throw new ArgumentException("Start date must be earlier than end date.", nameof(startDate));
-
         var committeeCreation = EventCommittee.CreateEventCommittee(committee.Logo, committee.Name, committee.Description);
 
         return new Event(
@@ -136,8 +123,6 @@ public sealed class Event : BaseEntity
             banner,
             eventOwnerStripeId,
             categoryId,
-            startDate,
-            endDate,
             userCreated,
             committeeCreation
             );

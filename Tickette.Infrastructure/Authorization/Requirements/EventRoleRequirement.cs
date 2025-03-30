@@ -8,7 +8,7 @@ public class EventRoleRequirement : IAuthorizationRequirement
 
     public EventRoleRequirement(string primaryRole, params string[] elevatedRoles)
     {
-        RequiredRoles = new HashSet<string> { primaryRole };
+        RequiredRoles = [primaryRole];
         RequiredRoles.UnionWith(elevatedRoles); // Include Admin and EventOwner
     }
 }
