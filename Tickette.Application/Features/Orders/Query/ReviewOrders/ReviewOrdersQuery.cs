@@ -42,8 +42,6 @@ public class ReviewOrdersQueryHandler : IQueryHandler<ReviewOrdersQuery, Respons
                     Id = order.Id,
                     EventName = order.Event.Name,
                     EventBanner = order.Event.Banner,
-                    StartDate = order.Event.StartDate,
-                    EndDate = order.Event.EndDate,
                     Address = string.Join(" at ", new[]
                     {
                         order.Event.LocationName, // Place name first

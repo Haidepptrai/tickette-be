@@ -15,8 +15,6 @@ public static class EventMapper
         StreetAddress = entity.StreetAddress,
         Description = entity.Description,
         Banner = entity.Banner,
-        StartDate = entity.StartDate,
-        EndDate = entity.EndDate,
         CategoryName = entity.Category.Name,
         Slug = entity.EventSlug,
         Status = entity.Status,

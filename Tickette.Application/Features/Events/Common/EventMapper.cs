@@ -9,8 +9,6 @@ public static class EventMapper
     {
         Name = entity.Name,
         Description = entity.Description,
-        StartDate = entity.StartDate,
-        EndDate = entity.EndDate,
         LocationName = entity.LocationName,
         City = entity.City,
         District = entity.District,
@@ -26,6 +24,17 @@ public static class EventMapper
         }
     };
 
+    public static UserEventListResponse ToUserEventListResponse(this Event entity) => new()
+    {
+        Id = entity.Id,
+        Name = entity.Name,
+        Status = entity.Status.ToString(),
+        StartDate = entity.EventDates.Min(ed => ed.StartDate),
+        EndDate = entity.EventDates.Max(ed => ed.EndDate),
+        Slug = entity.EventSlug,
+        Banner = entity.Banner
+    };
+
     public static EventPreviewDto ToEventPreviewDto(this Event entity) => new()
     {
         Id = entity.Id,
@@ -37,8 +46,6 @@ public static class EventMapper
         StreetAddress = entity.StreetAddress,
         Description = entity.Description,
         Banner = entity.Banner,
-        StartDate = entity.StartDate,
-        EndDate = entity.EndDate,
         CategoryName = entity.Category.Name,
         Slug = entity.EventSlug
     };
@@ -54,8 +61,6 @@ public static class EventMapper
         StreetAddress = entity.StreetAddress,
         Description = entity.Description,
         Banner = entity.Banner,
-        StartDate = entity.StartDate,
-        EndDate = entity.EndDate,
         Status = entity.Status,
         CategoryName = entity.Category.Name,
         EventOwnerStripeId = entity.EventOwnerStripeId,
@@ -101,8 +106,6 @@ public static class EventMapper
             StreetAddress = entity.StreetAddress,
             Description = entity.Description,
             Banner = entity.Banner,
-            StartDate = entity.StartDate,
-            EndDate = entity.EndDate,
             Status = entity.Status,
             CategoryName = entity.Category.Name,
             Committee = new CommitteeInformation()

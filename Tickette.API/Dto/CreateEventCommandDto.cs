@@ -20,10 +20,6 @@ public class CreateEventCommandDto
 
     public required string Description { get; set; }
 
-    public DateTime StartDate { get; set; }
-
-    public DateTime EndDate { get; set; }
-
     public IFormFile CommitteeLogo { get; set; }
 
     public required string CommitteeName { get; set; }

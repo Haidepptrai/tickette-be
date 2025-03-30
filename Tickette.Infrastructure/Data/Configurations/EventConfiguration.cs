@@ -40,12 +40,6 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
         builder.Property(e => e.Banner)
             .IsRequired();
 
-        builder.Property(e => e.StartDate)
-            .IsRequired();
-
-        builder.Property(e => e.EndDate)
-            .IsRequired();
-
         builder.Property(e => e.Status)
             .IsRequired()
             .HasComment("Approval Status: 0 = Pending, 1 = Approved, 2 = Rejected");

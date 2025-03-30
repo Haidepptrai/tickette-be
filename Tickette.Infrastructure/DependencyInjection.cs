@@ -204,21 +204,6 @@ public static class DependencyInjection
             options.AddPolicy("ManagerAccess", policy =>
                 policy.Requirements.Add(new EventRoleRequirement(
                     COMMITTEE_MEMBER_ROLES.Manager, elevatedRoles)));
-
-            // General dynamic policies for each specific role
-            foreach (var role in new[]
-                     {
-                         COMMITTEE_MEMBER_ROLES.EventOwner,
-                         COMMITTEE_MEMBER_ROLES.Admin,
-                         COMMITTEE_MEMBER_ROLES.Manager,
-                         COMMITTEE_MEMBER_ROLES.CheckInStaff,
-                         COMMITTEE_MEMBER_ROLES.CheckOutStaff,
-                         COMMITTEE_MEMBER_ROLES.RedeemStaff
-                     })
-            {
-                options.AddPolicy(role, policy =>
-                    policy.Requirements.Add(new EventRoleRequirement(role)));
-            }
         });
 
         builder.Services.AddSingleton<IAuthorizationHandler, EventRoleHandler>();
@@ -345,6 +330,16 @@ public static class DependencyInjection
 
         // Register the expired reservation cleanup service
         builder.Services.AddHostedService<ExpiredReservationCleanupService>();
+    }
+
+    public static void AddInMemoryCacheService(this IHostApplicationBuilder builder)
+    {
+        builder.Services.AddMemoryCache(options =>
+        {
+            options.ExpirationScanFrequency = TimeSpan.FromMinutes(5); // Frequency to scan for expired items
+        });
+
+        builder.Services.AddScoped<ICacheService, CacheService>();
     }
 
     public static void AddStripeSettings(this IHostApplicationBuilder builder)
