@@ -15,13 +15,11 @@ public record GetAllCommitteeMemberOfEventQuery
 public class GetAllCommitteeMemberOfEventHandler : IQueryHandler<GetAllCommitteeMemberOfEventQuery, GetAllCommitteeMemberOfEventResponse>
 {
     private readonly IApplicationDbContext _context;
-    private readonly IIdentityServices _identityServices;
     private readonly ICacheService _cacheService;
 
     public GetAllCommitteeMemberOfEventHandler(IApplicationDbContext context, IIdentityServices identityServices, ICacheService cacheService)
     {
         _context = context;
-        _identityServices = identityServices;
         _cacheService = cacheService;
     }
 
@@ -41,7 +39,7 @@ public class GetAllCommitteeMemberOfEventHandler : IQueryHandler<GetAllCommittee
             .Include(x => x.CommitteeRole)
             .ToListAsync(cancellationToken);
 
-        var roles = await _identityServices.GetRoleAllRoles();
+        var roles = await _context.CommitteeRoles.ToListAsync(cancellationToken);
 
         var result = entities.ToCommitteeMemberResponse(roles);
 

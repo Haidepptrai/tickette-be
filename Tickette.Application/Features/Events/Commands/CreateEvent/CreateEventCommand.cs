@@ -20,6 +20,7 @@ public record CreateEventCommand(
     IFileUpload CommitteeLogo,
     string CommitteeName,
     string CommitteeDescription,
+    bool IsOffline,
     EventDateInput[] EventDatesInformation,
     IFileUpload BannerFile,
     string EventOwnerStripeId
@@ -53,7 +54,7 @@ public class CreateEventCommandHandler : ICommandHandler<CreateEventCommand, Gui
         var committeeUrl = await _fileUploadService.UploadFileAsync(command.CommitteeLogo, "committees");
         var committee = EventCommittee.CreateEventCommittee(committeeUrl, command.CommitteeName, command.CommitteeDescription);
         var newEventCreated = Event.CreateEvent(
-            name: command.LocationName,
+            name: command.Name,
             locationName: command.LocationName,
             city: command.City,
             district: command.District,
@@ -64,7 +65,8 @@ public class CreateEventCommandHandler : ICommandHandler<CreateEventCommand, Gui
             userCreated: userCreatedResult.Data.user,
             banner: bannerUrl,
             committee: committee,
-            eventOwnerStripeId: command.EventOwnerStripeId);
+            eventOwnerStripeId: command.EventOwnerStripeId,
+            isOffline: command.IsOffline);
 
         // Add ticket information
         foreach (var eventDate in command.EventDatesInformation)

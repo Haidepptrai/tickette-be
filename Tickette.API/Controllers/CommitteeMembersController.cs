@@ -6,6 +6,7 @@ using Tickette.Application.Features.CommitteeMembers.Command.RemoveCommitteeMemb
 using Tickette.Application.Features.CommitteeMembers.Query.GetAllCommitteeMemberOfEvent;
 using Tickette.Application.Features.Events.Common.Client;
 using Tickette.Application.Wrappers;
+using Tickette.Domain.Common;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -36,9 +37,9 @@ namespace Tickette.API.Controllers
 
         // POST: api/committeeMembers
         [HttpPost("add-member")]
-        public async Task<ResponseDto<object>> AddNewMemberToEvent([FromBody] AddCommitteeMemberCommand command, CancellationToken cancellation)
+        public async Task<ResponseDto<string>> AddNewMemberToEvent([FromBody] AddCommitteeMemberCommand command, CancellationToken cancellation)
         {
-            var result = await _commandDispatcher.Dispatch<AddCommitteeMemberCommand, object>(command, cancellation);
+            var result = await _commandDispatcher.Dispatch<AddCommitteeMemberCommand, string>(command, cancellation);
 
             return ResponseHandler.SuccessResponse(result, "Add member to event successfully");
         }
@@ -46,9 +47,9 @@ namespace Tickette.API.Controllers
         // PUT: api/committeeMembers/5
         // Update member role
         [HttpPost("update-role")]
-        public async Task<ResponseDto<object>> ChangeMemberRole([FromBody] ChangeCommitteeMemberRoleCommand command, CancellationToken cancellation)
+        public async Task<ResponseDto<Unit>> ChangeMemberRole([FromBody] ChangeCommitteeMemberRoleCommand command, CancellationToken cancellation)
         {
-            var result = await _commandDispatcher.Dispatch<ChangeCommitteeMemberRoleCommand, object>(command, cancellation);
+            var result = await _commandDispatcher.Dispatch<ChangeCommitteeMemberRoleCommand, Unit>(command, cancellation);
 
             return ResponseHandler.SuccessResponse(result, "Update member role successfully");
         }

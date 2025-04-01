@@ -13,7 +13,7 @@ namespace Tickette.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class UsersController : ControllerBase
+    public class UsersController : BaseController
     {
         private readonly ICommandDispatcher _commandDispatcher;
         private readonly IQueryDispatcher _queryDispatcher;
@@ -43,18 +43,14 @@ namespace Tickette.API.Controllers
 
         [HttpPost("change-image")]
         [SwaggerOperation(Summary = "Change user image")]
-        public async Task<ActionResult<ResponseDto<Unit>>> ChangeUserImage(IFormFile image, CancellationToken cancellationToken)
+        public async Task<ActionResult<ResponseDto<string>>> ChangeUserImage(IFormFile image, CancellationToken cancellationToken)
         {
-            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || string.IsNullOrWhiteSpace(userIdClaim.Value))
-            {
-                return BadRequest(ResponseHandler.ErrorResponse(Unit.Value, "User ID not found in token."));
-            }
+            var userId = GetUserId();
 
             var imageTransferred = new FormFileAdapter(image);
 
-            var query = new ChangeUserImageCommand(Guid.Parse(userIdClaim.Value), imageTransferred);
-            var result = await _commandDispatcher.Dispatch<ChangeUserImageCommand, Unit>(query, cancellationToken);
+            var query = new ChangeUserImageCommand(Guid.Parse(userId), imageTransferred);
+            var result = await _commandDispatcher.Dispatch<ChangeUserImageCommand, string>(query, cancellationToken);
             return ResponseHandler.SuccessResponse(result, "Change user image successfully");
         }
     }

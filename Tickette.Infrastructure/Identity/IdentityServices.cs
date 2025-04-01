@@ -114,12 +114,12 @@ public class IdentityServices : IIdentityServices
         });
     }
 
-    public async Task<AuthResult<object?>> AssignToRoleAsync(Guid userId, IEnumerable<Guid>? roleIds)
+    public async Task<bool> AssignToRoleAsync(Guid userId, IEnumerable<Guid>? roleIds)
     {
         var user = await _userManager.FindByIdAsync(userId.ToString());
         if (user == null)
         {
-            return AuthResult<object?>.Failure(["User not found."]);
+            throw new Exception("User not found.");
         }
 
         // If `roleIds == null` OR Empty => Remove All Roles (User is now a standard "User")
@@ -130,10 +130,10 @@ public class IdentityServices : IIdentityServices
 
             if (!removeResult.Succeeded)
             {
-                return removeResult.ToApplicationResult<object?>(removeResult);
+                throw new Exception("Failed to remove roles from user.");
             }
 
-            return AuthResult<object?>.Success(); // Successfully removed all roles (User is now a default "User")
+            return true; // Successfully removed all roles (User is now a default "User")
         }
 
         // Validate All Role IDs Exist Before Assigning
@@ -146,7 +146,8 @@ public class IdentityServices : IIdentityServices
 
         if (roles.Count != roleIds.Count())
         {
-            return AuthResult<object?>.Failure(["One or more roles not found."]);
+            // Throw exception if any role ID is invalid
+            throw new Exception("One or more role IDs are invalid. Please make sure all role IDs are correct.");
         }
 
         // Remove Roles That Are No Longer Assigned
@@ -157,7 +158,8 @@ public class IdentityServices : IIdentityServices
             var removeOldRolesResult = await _userManager.RemoveFromRolesAsync(user, rolesToRemove);
             if (!removeOldRolesResult.Succeeded)
             {
-                return removeOldRolesResult.ToApplicationResult<object?>(removeOldRolesResult);
+                // Throw exception if failed to remove roles
+                throw new Exception("Failed to remove roles from user. Please make sure all role IDs are correct.");
             }
         }
 
@@ -168,11 +170,12 @@ public class IdentityServices : IIdentityServices
             var addNewRolesResult = await _userManager.AddToRolesAsync(user, rolesToAdd);
             if (!addNewRolesResult.Succeeded)
             {
-                return addNewRolesResult.ToApplicationResult<object?>(addNewRolesResult);
+                // Throw exception if failed to add roles
+                throw new Exception("Failed to add roles to user. Please make sure all role IDs are correct.");
             }
         }
 
-        return AuthResult<object?>.Success(null); // Successfully updated roles
+        return true; // Successfully updated roles
     }
 
 

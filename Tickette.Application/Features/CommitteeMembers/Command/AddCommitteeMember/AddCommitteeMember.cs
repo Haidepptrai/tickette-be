@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Exceptions;
@@ -13,18 +14,20 @@ public record AddCommitteeMemberCommand
     public Guid EventId { get; init; }
 }
 
-public class AddCommitteeMemberCommandHandler : ICommandHandler<AddCommitteeMemberCommand, object>
+public class AddCommitteeMemberCommandHandler : ICommandHandler<AddCommitteeMemberCommand, string>
 {
     private readonly IApplicationDbContext _context;
     private readonly IIdentityServices _identityServices;
+    private readonly ICacheService _cacheService;
 
-    public AddCommitteeMemberCommandHandler(IApplicationDbContext context, IIdentityServices identityServices)
+    public AddCommitteeMemberCommandHandler(IApplicationDbContext context, IIdentityServices identityServices, ICacheService cacheService)
     {
         _context = context;
         _identityServices = identityServices;
+        _cacheService = cacheService;
     }
 
-    public async Task<object> Handle(AddCommitteeMemberCommand request, CancellationToken cancellationToken)
+    public async Task<string> Handle(AddCommitteeMemberCommand request, CancellationToken cancellationToken)
     {
         var user = await _identityServices.FindUserByEmailAsync(request.MemberEmail);
 
@@ -46,6 +49,8 @@ public class AddCommitteeMemberCommandHandler : ICommandHandler<AddCommitteeMemb
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        return null!;
+        _cacheService.RemoveCacheValue(InMemoryCacheKey.CommitteeMemberOfEvent(request.EventId));
+
+        return user.FullName!;
     }
 }

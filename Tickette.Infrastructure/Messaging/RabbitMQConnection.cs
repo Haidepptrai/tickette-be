@@ -3,7 +3,7 @@ using Tickette.Application.Common.Interfaces.Messaging;
 
 namespace Tickette.Infrastructure.Messaging;
 
-public class RabbitMQConnection : IRabbitMQConnection, IAsyncDisposable
+public class RabbitMQConnection : IRabbitMQConnection
 {
     private IConnection? _connection; // Nullable since the connection is created asynchronously
     private readonly ConnectionFactory _connectionFactory;

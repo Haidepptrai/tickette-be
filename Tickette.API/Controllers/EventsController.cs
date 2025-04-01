@@ -139,6 +139,7 @@ public class EventsController : BaseController
                 CommitteeLogo: committeeLogo,
                 CommitteeName: commandDto.CommitteeName,
                 CommitteeDescription: commandDto.CommitteeDescription,
+                IsOffline: commandDto.IsOffline,
                 EventDatesInformation: commandDto.EventDates,
                 bannerFile,
                 EventOwnerStripeId: commandDto.EventOwnerStripeId

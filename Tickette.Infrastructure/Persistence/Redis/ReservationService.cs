@@ -137,4 +137,26 @@ public class ReservationService : IReservationService
 
         return true;
     }
+
+    public async Task<bool> RemoveReservationKeyAsync(Guid userId, TicketReservation ticketReservationInfo)
+    {
+        var db = _redis.GetDatabase(_redisSettings.DefaultDatabase);
+        var reservationKey = RedisKeys.GetReservationKey(ticketReservationInfo.Id, userId);
+
+        if (ticketReservationInfo.SeatsChosen != null)
+        {
+            foreach (var seat in ticketReservationInfo.SeatsChosen)
+            {
+                var reservedSeatKey = RedisKeys.GetReservedSeatKey(ticketReservationInfo.Id, seat.RowName, seat.SeatNumber);
+                await db.KeyDeleteAsync(reservedSeatKey);
+            }
+        }
+        else
+        {
+            // Delete reservation
+            await db.KeyDeleteAsync(reservationKey);
+        }
+
+        return true;
+    }
 }

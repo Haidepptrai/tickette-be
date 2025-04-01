@@ -28,6 +28,8 @@ public class CreateEventCommandDto
 
     public required string EventOwnerStripeId { get; set; }
 
+    public required bool IsOffline { get; set; }
+
     public required IFormFile BannerFile { get; set; }
 
     public required EventDateInput[] EventDates { get; set; }

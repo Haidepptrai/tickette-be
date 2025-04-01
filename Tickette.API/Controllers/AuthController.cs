@@ -79,11 +79,12 @@ namespace Tickette.API.Controllers
         public async Task<IActionResult> AssignRole([FromBody] AssignRoleRequest request)
         {
             var result = await _identityServices.AssignToRoleAsync(request.UserId, request.RoleId);
-            if (result.Succeeded)
+            if (result)
             {
                 return Ok("Role assigned successfully.");
             }
-            return BadRequest(result.Errors);
+
+            return BadRequest(result);
         }
 
         public class AssignRoleRequest

@@ -13,7 +13,7 @@ public interface IIdentityServices
 
     Task<AuthResult<TokenRetrieval>> RefreshTokenAsync(string refreshToken);
 
-    Task<AuthResult<object?>> AssignToRoleAsync(Guid userId, IEnumerable<Guid>? roleId);
+    Task<bool> AssignToRoleAsync(Guid userId, IEnumerable<Guid>? roleId);
 
     Task<AuthResult<object?>> DeleteUserAsync(Guid userId);
 

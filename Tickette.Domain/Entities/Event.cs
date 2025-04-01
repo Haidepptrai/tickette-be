@@ -31,6 +31,8 @@ public sealed class Event : BaseEntity
 
     public string EventOwnerStripeId { get; init; }
 
+    public bool IsOffline { get; private set; }
+
     public Category Category { get; set; }
 
     public EventCommittee Committee { get; set; }
@@ -55,6 +57,7 @@ public sealed class Event : BaseEntity
         string description,
         string banner,
         string eventOwnerStripeId,
+        bool isOffline,
         Guid categoryId,
         User userCreated,
         EventCommittee committee
@@ -75,6 +78,7 @@ public sealed class Event : BaseEntity
         CommitteeMembers = new List<CommitteeMember>();
         EventSlug = GenerateSlug(name);
         Status = ApprovalStatus.Pending;
+        IsOffline = isOffline;
     }
 
     public static Event CreateEvent(
@@ -87,6 +91,7 @@ public sealed class Event : BaseEntity
         string description,
         string banner,
         string eventOwnerStripeId,
+        bool isOffline,
         Guid categoryId,
         User userCreated,
         EventCommittee committee
@@ -122,6 +127,7 @@ public sealed class Event : BaseEntity
             description,
             banner,
             eventOwnerStripeId,
+            isOffline,
             categoryId,
             userCreated,
             committeeCreation

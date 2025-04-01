@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
+using Tickette.Application.Exceptions;
 using Tickette.Application.Features.Events.Common;
 
 namespace Tickette.Application.Features.Events.Queries.GetEventById;
@@ -33,7 +34,7 @@ public class GetEventByIdHandler : IQueryHandler<GetEventByIdRequest, EventDetai
                 .SingleOrDefaultAsync(ev => ev.Id == query.Id, cancellation);
 
             if (result == null)
-                throw new KeyNotFoundException($"Event with ID {query.Id} was not found.");
+                throw new NotFoundException("Event", query.Id);
 
             var resultDto = result.ToEventDetailDto();
 

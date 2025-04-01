@@ -255,6 +255,7 @@ public static class DependencyInjection
         builder.Services.AddSingleton<IMessageConsumer, RabbitMQConsumer>();
 
         builder.Services.AddHostedService<TicketReservationConsumer>();
+        builder.Services.AddHostedService<TicketCancelReservationConsumer>();
     }
 
     public static void AddRedisSettings(this IHostApplicationBuilder builder)
