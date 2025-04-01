@@ -3,7 +3,7 @@ using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Email;
 using Tickette.Application.Common.Interfaces.Redis;
-using Tickette.Application.Common.Models;
+using Tickette.Application.Common.Models.Email;
 using Tickette.Application.Exceptions;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Entities;

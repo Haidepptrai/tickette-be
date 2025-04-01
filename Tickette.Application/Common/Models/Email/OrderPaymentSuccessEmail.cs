@@ -1,4 +1,4 @@
-﻿namespace Tickette.Application.Common.Models;
+﻿namespace Tickette.Application.Common.Models.Email;
 
 public class OrderPaymentSuccessEmail : EmailTemplateModel
 {

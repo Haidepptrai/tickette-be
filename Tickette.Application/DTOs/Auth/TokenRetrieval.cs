@@ -2,6 +2,8 @@
 
 public record TokenRetrieval
 {
-    public required string AccessToken { get; set; }
-    public required string RefreshToken { get; set; }
+    public required Guid UserId { get; init; }
+    public required string AccessToken { get; init; }
+    public required string RefreshToken { get; init; }
+    public bool IsEmailConfirmed { get; init; }
 }

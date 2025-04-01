@@ -206,8 +206,7 @@ public static class DependencyInjection
                     COMMITTEE_MEMBER_ROLES.Manager, elevatedRoles)));
         });
 
-        builder.Services.AddSingleton<IAuthorizationHandler, EventRoleHandler>();
-        builder.Services.AddHttpContextAccessor(); // For extracting event id
+        builder.Services.AddHostedService<ConfirmEmailServiceConsumer>();
 
         builder.Services.TryAddScoped<IQueryDispatcher, QueryDispatcher>();
         builder.Services.TryAddScoped<ICommandDispatcher, CommandDispatcher>();

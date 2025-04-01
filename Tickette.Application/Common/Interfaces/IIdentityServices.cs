@@ -1,5 +1,6 @@
 ﻿using Tickette.Application.Common.Models;
 using Tickette.Application.DTOs.Auth;
+using Tickette.Application.Features.Auth.Command;
 using Tickette.Application.Features.Users.Common;
 using Tickette.Domain.Entities;
 
@@ -7,9 +8,9 @@ namespace Tickette.Application.Common.Interfaces;
 
 public interface IIdentityServices
 {
-    Task<AuthResult<TokenRetrieval>> LoginAsync(string userEmail, string password, CancellationToken cancellation);
+    Task<TokenRetrieval> LoginAsync(string userEmail, string password, CancellationToken cancellation);
 
-    Task<AuthResult<Guid>> CreateUserAsync(string userEmail, string password);
+    Task<Guid> CreateUserAsync(string fullName, string userEmail, string password);
 
     Task<AuthResult<TokenRetrieval>> RefreshTokenAsync(string refreshToken);
 
@@ -21,11 +22,15 @@ public interface IIdentityServices
 
     Task<AuthResult<IEnumerable<PreviewUserResponse>>> GetAllUsers(int pageNumber, int pageSize, CancellationToken cancellationToken);
 
-    Task<AuthResult<TokenRetrieval>> SyncGoogleUserAsync(GoogleUserRequest request);
+    Task<TokenRetrieval> SyncGoogleUserAsync(LoginWithGoogleCommand request);
 
     Task<IEnumerable<RoleResponse>> GetRoleAllRoles();
 
     Task<User?> FindUserByEmailAsync(string email);
 
     Task<AuthResult<bool>> ChangeUserImageAsync(Guid userId, string image);
+
+    Task<string> GenerateEmailConfirmationTokenAsync(Guid userId);
+
+    Task<bool> ConfirmEmailAsync(string token, string userEmail);
 }

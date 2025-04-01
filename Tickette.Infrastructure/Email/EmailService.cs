@@ -3,11 +3,13 @@ using MailKit.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using MimeKit;
+using System.Net;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using Tickette.Application.Common.Interfaces.Email;
 using Tickette.Application.Common.Models;
+using Tickette.Application.Common.Models.Email;
 using Tickette.Domain.Entities;
 using Tickette.Infrastructure.Data;
 
@@ -17,13 +19,11 @@ public class EmailService : IEmailService
 {
     private readonly EmailSettings _emailSettings;
     private readonly ApplicationDbContext _dbContext;
-    private readonly string _secretKey;
 
     public EmailService(IOptions<EmailSettings> emailSettings, ApplicationDbContext dbContext)
     {
         _dbContext = dbContext;
         _emailSettings = emailSettings.Value;
-        _secretKey = emailSettings.Value.UnsubscribeSecretKey;
     }
 
     public async Task<bool> SendEmailAsync<T>(string to, string subject, string templateName, T model) where T : EmailTemplateModel
@@ -58,6 +58,32 @@ public class EmailService : IEmailService
             Console.WriteLine($"Email sending failed: {ex.Message}");
             return false;
         }
+    }
+
+    public async Task<bool> SendConfirmEmail(ConfirmEmailModel model)
+    {
+        var email = new MimeMessage();
+        email.From.Add(new MailboxAddress(_emailSettings.SenderName, _emailSettings.SenderEmail));
+        email.To.Add(MailboxAddress.Parse(model.UserEmail));
+        email.Subject = "Confirm Your Email";
+
+        var encodedToken = WebUtility.UrlEncode(model.Token);
+
+        model.VerificationLink = $"http://localhost:3000/profile/email-confirmation?email={model.UserEmail}&token={encodedToken}";
+
+        // Load email template
+        string emailBody = LoadEmailTemplate("confirm_email", model);
+
+        var bodyBuilder = new BodyBuilder { HtmlBody = emailBody };
+        email.Body = bodyBuilder.ToMessageBody();
+
+        using var smtp = new SmtpClient();
+        await smtp.ConnectAsync(_emailSettings.SmtpServer, _emailSettings.SmtpPort, SecureSocketOptions.StartTls);
+        await smtp.AuthenticateAsync(_emailSettings.SenderEmail, _emailSettings.SenderPassword);
+        await smtp.SendAsync(email);
+        await smtp.DisconnectAsync(true);
+
+        return true;
     }
 
     public async Task<bool> UnsubscribeEmailAsync(string email)
