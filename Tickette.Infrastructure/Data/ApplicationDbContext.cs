@@ -24,6 +24,9 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<EmailUnsubscription> EmailUnsubscriptions { get; set; }
     public DbSet<EventDate> EventDates { get; set; }
+    public DbSet<Reservation> Reservations { get; set; }
+    public DbSet<ReservationItem> ReservationItems { get; set; }
+    public DbSet<SeatAssignment> SeatAssignments { get; set; }
     public DbSet<Category> Categories { get; set; }
     public DbSet<CommitteeMember> CommitteeMembers { get; set; }
     public DbSet<CommitteeRole> CommitteeRoles { get; set; }

@@ -1,9 +1,8 @@
 ﻿using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces.Redis;
-using Tickette.Application.Exceptions;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Common;
-using Tickette.Infrastructure.Helpers;
+using Tickette.Domain.Common.Exceptions;
 
 namespace Tickette.Application.Features.Orders.Query.ValidateReservation;
 
@@ -16,28 +15,23 @@ public record ValidateReservationQuery
 
 public class ValidateReservationQueryHandler : IQueryHandler<ValidateReservationQuery, Unit>
 {
-    private readonly IRedisService _redisService;
 
-    public ValidateReservationQueryHandler(IRedisService redisService)
+    private readonly IReservationService _reservationService;
+
+    public ValidateReservationQueryHandler(IReservationService reservationService)
     {
-        _redisService = redisService;
+        _reservationService = reservationService;
     }
 
     public async Task<Unit> Handle(ValidateReservationQuery query, CancellationToken cancellation)
     {
         foreach (var ticket in query.Tickets)
         {
-            string reservationKey = RedisKeys.GetReservationKey(ticket.Id, query.UserId);
-            var exists = await _redisService.KeyExistsAsync(reservationKey);
+            var valid = await _reservationService.ValidateReservationAsync(query.UserId, ticket);
 
-            // No reservation found
-            if (!exists)
+            if (!valid)
             {
-                // Increase the tickets quantity back
-                string inventoryKey = RedisKeys.GetTicketQuantityKey(ticket.Id);
-                await _redisService.IncrementAsync(inventoryKey, ticket.Quantity);
-
-                throw new NotFoundTicketReservationException();
+                throw new InvalidReservationException();
             }
         }
 

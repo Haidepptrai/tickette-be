@@ -18,5 +18,6 @@ public static class RedisKeys
     public static string GetLockSeat(Guid ticketId, SeatOrder seat) =>
         $"lock:reserve:{ticketId}:{seat.RowName}{seat.SeatNumber}";
 
-
+    public static string GetBookedSeatKey(Guid ticketId, string row, string seat) =>
+        $"booked:{ticketId}:seat:{row}-{seat}";
 }

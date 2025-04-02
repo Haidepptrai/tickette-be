@@ -82,7 +82,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
 
         foreach (var ticket in query.Tickets)
         {
-            var exist = await _reservationService.ValidateReservationAsync(ticket.Id, query.UserId);
+            var exist = await _reservationService.ValidateReservationAsync(query.UserId, ticket);
 
             if (!exist)
             {
@@ -132,6 +132,11 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
 
         await _emailService.SendEmailAsync(query.BuyerEmail, "Order Process Successfully", "ticket_order_confirmation", emailModel);
 
+
+        foreach (var ticket in query.Tickets)
+        {
+            await _reservationService.FinalizeSeatReservationAsync(query.UserId, ticket);
+        }
 
         return response;
     }

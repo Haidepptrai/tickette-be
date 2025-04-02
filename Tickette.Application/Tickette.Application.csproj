@@ -26,6 +26,7 @@
     <Folder Include="Features\CommitteeMembers\Query\GetAllCommitteeMemberOfEvent\" />
     <Folder Include="Features\EventDates\Command\" />
     <Folder Include="Features\Events\Queries\Client\GetEventByUserId\" />
+    <Folder Include="Features\Events\Queries\Client\GetSeatsOrderedInfo\" />
     <Folder Include="Features\Orders\Command\CreateOrder\" />
     <Folder Include="Features\Orders\Command\CreatePaymentIntent\" />
     <Folder Include="Features\Orders\Query\ValidateReservation\" />

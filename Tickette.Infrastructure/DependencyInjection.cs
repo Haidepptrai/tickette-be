@@ -255,6 +255,9 @@ public static class DependencyInjection
 
         builder.Services.AddHostedService<TicketReservationConsumer>();
         builder.Services.AddHostedService<TicketCancelReservationConsumer>();
+        builder.Services.AddHostedService<ReservationSyncService>();
+        builder.Services.AddScoped<ReservationPersistenceService>();
+        builder.Services.AddScoped<ReservationDbSyncHandler>();
     }
 
     public static void AddRedisSettings(this IHostApplicationBuilder builder)

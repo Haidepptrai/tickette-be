@@ -5,6 +5,9 @@ using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Features.Orders.Command.ReserveTicket;
+using Tickette.Application.Features.Orders.Common;
+using Tickette.Domain.Common.Exceptions;
+using Tickette.Infrastructure.Services;
 
 namespace Tickette.Infrastructure.Messaging.Feature;
 
@@ -19,7 +22,6 @@ public class TicketReservationConsumer : BackgroundService
         _messageConsumer = messageConsumer;
     }
 
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await _messageConsumer.ConsumeAsync(RabbitMqRoutingKeys.TicketReservationCreated, async (message) =>
@@ -32,13 +34,61 @@ public class TicketReservationConsumer : BackgroundService
             }
 
             using var scope = _serviceProvider.CreateScope();
-            var handler = scope.ServiceProvider.GetRequiredService<IReservationService>();
+
+            var redisHandler = scope.ServiceProvider.GetRequiredService<IReservationService>();
+            var persistenceService = scope.ServiceProvider.GetRequiredService<ReservationPersistenceService>();
+            bool allSucceeded = true;
+            var successfulTickets = new List<TicketReservation>();
 
             foreach (var ticket in reservation.Tickets)
             {
-                await handler.ReserveTicketsAsync(reservation.UserId, ticket);
+                try
+                {
+                    var redisSuccess = await redisHandler.ReserveTicketsAsync(reservation.UserId, ticket);
+
+                    if (!redisSuccess)
+                    {
+                        throw new TicketReservationException($"Failed to reserved for ticket {ticket.Id}");
+                    }
+
+                    successfulTickets.Add(ticket);
+                }
+                catch (Exception ex)
+                {
+                    throw new TicketReservationException($"Failed to reserved for ticket {ticket.Id}");
+                }
             }
 
+            if (allSucceeded)
+            {
+                foreach (var ticket in successfulTickets)
+                {
+                    try
+                    {
+                        await persistenceService.PersistReservationAsync(reservation.UserId, ticket);
+                    }
+                    catch (Exception ex)
+                    {
+                        await redisHandler.ReleaseReservationAsync(reservation.UserId, ticket);
+                        throw new TicketReservationException($"Failed to reserved for ticket {ticket.Id}, please try again");
+                    }
+                }
+            }
+            else
+            {
+                // Optional: release Redis reservations already made
+                foreach (var ticket in successfulTickets)
+                {
+                    try
+                    {
+                        await redisHandler.ReleaseReservationAsync(reservation.UserId, ticket);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[Rollback Error] Failed to release Redis for ticket {ticket.Id}: {ex.Message}");
+                    }
+                }
+            }
         }, stoppingToken);
     }
 }

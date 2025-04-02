@@ -29,5 +29,11 @@ public interface IApplicationDbContext
 
     DbSet<EventDate> EventDates { get; set; }
 
-    Task<int> SaveChangesAsync(CancellationToken cancellationToken);
+    DbSet<Reservation> Reservations { get; set; }
+
+    DbSet<ReservationItem> ReservationItems { get; set; }
+
+    DbSet<SeatAssignment> SeatAssignments { get; set; }
+
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

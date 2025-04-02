@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Tickette.Infrastructure.Data;
@@ -11,9 +12,11 @@ using Tickette.Infrastructure.Data;
 namespace Tickette.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250402165135_Add_Reservation_Tracking")]
+    partial class Add_Reservation_Tracking
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1269,7 +1272,7 @@ namespace Tickette.Infrastructure.Migrations
 
                             b1.HasKey("OrderItemId");
 
-                            b1.ToTable("order_items", (string)null);
+                            b1.ToTable("order_items");
 
                             b1.WithOwner()
                                 .HasForeignKey("OrderItemId")
@@ -1342,7 +1345,7 @@ namespace Tickette.Infrastructure.Migrations
 
                             b1.HasKey("TicketId");
 
-                            b1.ToTable("tickets", (string)null);
+                            b1.ToTable("tickets");
 
                             b1.WithOwner()
                                 .HasForeignKey("TicketId")
