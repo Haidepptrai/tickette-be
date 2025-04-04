@@ -50,7 +50,7 @@ public static class EventMapper
         Slug = entity.EventSlug
     };
 
-    public static EventDetailDto ToEventDetailDto(this Event entity) => new()
+    public static EventDetailDto ToEventDetailDto(this Event entity, IEnumerable<Category>? category) => new()
     {
         Id = entity.Id,
         Name = entity.Name,
@@ -89,6 +89,11 @@ public static class EventMapper
                 IsFree = ticket.Price.Amount == 0
             }),
             SeatMap = ev.SeatMap
+        }),
+        Categories = category?.Select(c => new CategoryDto()
+        {
+            Id = c.Id,
+            Name = c.Name
         })
     };
 

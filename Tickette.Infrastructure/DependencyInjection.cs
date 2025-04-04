@@ -256,6 +256,8 @@ public static class DependencyInjection
         builder.Services.AddHostedService<TicketReservationConsumer>();
         builder.Services.AddHostedService<TicketCancelReservationConsumer>();
         builder.Services.AddHostedService<ReservationSyncService>();
+        builder.Services.AddHostedService<TicketConfirmationReservationConsumer>();
+        builder.Services.AddHostedService<ConfirmCreateOrderEmailService>();
         builder.Services.AddScoped<ReservationPersistenceService>();
         builder.Services.AddScoped<ReservationDbSyncHandler>();
     }

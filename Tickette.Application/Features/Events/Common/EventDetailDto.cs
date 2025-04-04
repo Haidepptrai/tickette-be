@@ -43,4 +43,6 @@ public class EventDetailDto
     public IEnumerable<EventDateDto> EventDates { get; init; }
 
     public string EventOwnerStripeId { get; init; }
+
+    public IEnumerable<CategoryDto>? Categories { get; init; }
 }

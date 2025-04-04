@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
-using Tickette.Application.Exceptions;
+using System.Security.Authentication;
 
 namespace Tickette.API.Controllers
 {
@@ -13,7 +13,7 @@ namespace Tickette.API.Controllers
             var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub);
             if (userIdClaim == null || string.IsNullOrWhiteSpace(userIdClaim.Value))
             {
-                throw new UserNotFoundException();
+                throw new AuthenticationException("Invalid credentials, please re-login");
             }
 
             return userIdClaim.Value;

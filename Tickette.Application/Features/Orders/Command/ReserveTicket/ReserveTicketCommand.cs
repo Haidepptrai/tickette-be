@@ -47,6 +47,8 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
             }
 
             ticketEntity.ValidateTicket(ticket.Quantity);
+
+            await _reservationService.ReserveTicketsAsync(request.UserId, ticket);
         }
 
         var message = JsonSerializer.Serialize(request);

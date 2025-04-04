@@ -29,7 +29,6 @@
     <Folder Include="Features\Events\Queries\Client\GetSeatsOrderedInfo\" />
     <Folder Include="Features\Orders\Command\CreateOrder\" />
     <Folder Include="Features\Orders\Command\CreatePaymentIntent\" />
-    <Folder Include="Features\Orders\Query\ValidateReservation\" />
     <Folder Include="Features\QRCode\Commands\" />
     <Folder Include="Features\Seatmap\Common\" />
     <Folder Include="Features\Tickets\Command\" />

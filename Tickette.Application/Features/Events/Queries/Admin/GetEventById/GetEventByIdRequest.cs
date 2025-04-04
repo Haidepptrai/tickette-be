@@ -35,7 +35,11 @@ public class GetEventByIdHandler : IQueryHandler<GetEventByIdRequest, EventDetai
             if (result == null)
                 throw new KeyNotFoundException($"Event with ID {query.Id} was not found.");
 
-            var resultDto = result.ToEventDetailDto();
+            var category = await _context.Categories
+                .AsNoTracking()
+                .ToListAsync(cancellation);
+
+            var resultDto = result.ToEventDetailDto(category);
 
             return resultDto;
         }

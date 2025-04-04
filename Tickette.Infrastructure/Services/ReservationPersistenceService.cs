@@ -2,9 +2,15 @@
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Entities;
+using Tickette.Domain.Enums;
 
 namespace Tickette.Infrastructure.Services;
 
+/// <summary>
+/// This class is responsible for persisting reservations to the database.
+/// Since Redis could potentially crash
+/// We need to ensure that the reservation is saved in the database to recover it later.
+/// </summary>
 public class ReservationPersistenceService
 {
     private readonly IApplicationDbContext _dbContext;
@@ -78,6 +84,33 @@ public class ReservationPersistenceService
 
         await _dbContext.SaveChangesAsync();
 
+        return true;
+    }
+
+    public async Task<bool> ConfirmReservationInDatabaseAsync(Guid userId, Guid ticketId)
+    {
+        var reservation = await _dbContext.Reservations
+            .Where(r => r.UserId == userId)
+            .Include(r => r.Items)
+            .ThenInclude(i => i.SeatAssignments)
+            .FirstOrDefaultAsync(r => r.Items.Any(i => i.TicketId == ticketId && r.Status == ReservationStatus.Temporary));
+
+        if (reservation == null)
+            return false;
+
+        reservation.MarkConfirmed();
+
+        // Reduce ticket inventory
+        foreach (var item in reservation.Items.Where(i => i.TicketId == ticketId))
+        {
+            var eventEntity = await _dbContext.Tickets.FindAsync(item.TicketId);
+            if (eventEntity != null)
+            {
+                eventEntity.ReduceTickets(item.Quantity);
+            }
+        }
+
+        await _dbContext.SaveChangesAsync();
         return true;
     }
 }

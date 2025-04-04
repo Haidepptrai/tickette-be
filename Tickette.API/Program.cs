@@ -86,13 +86,12 @@ namespace Tickette.API
                 options.EnableAnnotations();
             });
 
-
             var app = builder.Build();
+
+            app.UseMiddleware<ExceptionHandlingMiddleware>();
 
             app.UseAuthentication();
             app.UseAuthorization();
-
-            app.UseMiddleware<ExceptionHandlingMiddleware>();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())

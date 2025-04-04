@@ -1,7 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Email;
+using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Common.Models.Email;
 using Tickette.Application.Exceptions;
@@ -13,7 +16,7 @@ namespace Tickette.Application.Features.Orders.Command.CreateOrder;
 
 public record CreateOrderCommand
 {
-    public required Guid UserId { get; init; }
+    public Guid UserId { get; set; }
     public required Guid EventId { get; init; }
     public required ICollection<TicketReservation> Tickets { get; set; }
 
@@ -28,12 +31,14 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
     private readonly IApplicationDbContext _context;
     private readonly IReservationService _reservationService;
     private readonly IEmailService _emailService;
+    private readonly IMessageProducer _messageProducer;
 
-    public CreateOrderCommandHandler(IApplicationDbContext context, IEmailService emailService, IReservationService reservationService)
+    public CreateOrderCommandHandler(IApplicationDbContext context, IEmailService emailService, IReservationService reservationService, IMessageProducer messageProducer)
     {
         _context = context;
         _emailService = emailService;
         _reservationService = reservationService;
+        _messageProducer = messageProducer;
     }
 
     public async Task<CreateOrderResponse> Handle(CreateOrderCommand query, CancellationToken cancellation)
@@ -77,7 +82,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
 
         var response = new CreateOrderResponse
         {
-            OrderId = order.Id,
+            OrderId = order.Id
         };
 
         foreach (var ticket in query.Tickets)
@@ -85,10 +90,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
             var exist = await _reservationService.ValidateReservationAsync(query.UserId, ticket);
 
             if (!exist)
-            {
-                await _reservationService.ReleaseReservationAsync(query.UserId, ticket);
                 throw new NotFoundTicketReservationException();
-            }
         }
 
         // Send email
@@ -118,7 +120,8 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
         // Format Location
         string fullLocation = $"{firstTicket.LocationName}, {firstTicket.StreetAddress}, {firstTicket.Ward}, {firstTicket.District}, {firstTicket.City}";
 
-        var emailModel = new OrderPaymentSuccessEmail(
+
+        var emailMessage = new OrderPaymentSuccessEmail(
             query.BuyerName,
             query.BuyerEmail,
             query.BuyerPhone,
@@ -130,13 +133,12 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
             $"/tickets/download/{order.Id}"
         );
 
-        await _emailService.SendEmailAsync(query.BuyerEmail, "Order Process Successfully", "ticket_order_confirmation", emailModel);
+        var emailMessageJson = JsonSerializer.Serialize(emailMessage);
+        await _messageProducer.PublishAsync(EmailServiceKeys.EmailConfirmCreateOrder, emailMessageJson);
 
-
-        foreach (var ticket in query.Tickets)
-        {
-            await _reservationService.FinalizeSeatReservationAsync(query.UserId, ticket);
-        }
+        // Publish message to RabbitMQ to set reservation to confirm
+        var message = JsonSerializer.Serialize(query);
+        await _messageProducer.PublishAsync(RabbitMqRoutingKeys.TicketReservationConfirmed, message);
 
         return response;
     }

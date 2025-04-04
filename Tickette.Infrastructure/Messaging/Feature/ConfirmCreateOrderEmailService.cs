@@ -8,39 +8,42 @@ using Tickette.Application.Common.Models.Email;
 
 namespace Tickette.Infrastructure.Messaging.Feature;
 
-public class ConfirmEmailServiceConsumer : BackgroundService
+public class ConfirmCreateOrderEmailService : BackgroundService
 {
-    private readonly IMessageConsumer _messageConsumer;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IMessageConsumer _messageConsumer;
 
-    public ConfirmEmailServiceConsumer(IMessageConsumer messageConsumer, IServiceProvider serviceProvider)
+    public ConfirmCreateOrderEmailService(IServiceProvider serviceProvider, IMessageConsumer messageConsumer)
     {
-        _messageConsumer = messageConsumer;
         _serviceProvider = serviceProvider;
+        _messageConsumer = messageConsumer;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await _messageConsumer.ConsumeAsync(EmailServiceKeys.EmailConfirm, async (message) =>
+        await _messageConsumer.ConsumeAsync(EmailServiceKeys.EmailConfirmCreateOrder, async (message) =>
         {
             try
             {
                 using var scope = _serviceProvider.CreateScope();
                 var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
-                var email = JsonSerializer.Deserialize<ConfirmEmailModel>(message);
 
-                if (email == null)
+                var emailPayload = JsonSerializer.Deserialize<OrderPaymentSuccessEmail>(message);
+
+                if (emailPayload is null)
                 {
+                    Console.WriteLine("error while sending email");
                     return;
                 }
 
-                await emailService.SendConfirmEmail(email);
+                await emailService.SendEmailAsync(emailPayload.BuyerEmail, "Order Process Successfully",
+                    "ticket_order_confirmation", emailPayload);
             }
             catch (Exception ex)
             {
-                // Log the exception
                 Console.WriteLine($"Error while sending email: {ex.Message}");
             }
         }, stoppingToken);
+
     }
 }

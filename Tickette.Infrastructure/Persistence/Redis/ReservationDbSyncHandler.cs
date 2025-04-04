@@ -29,7 +29,6 @@ public class ReservationDbSyncHandler
         // Restore ticket inventory
         foreach (var item in reservation.Items.Where(i => i.TicketId == ticketId))
         {
-            // Assume you have a related event or ticket entity to update inventory
             var eventEntity = await _dbContext.Tickets.FindAsync(item.TicketId);
             if (eventEntity != null)
             {

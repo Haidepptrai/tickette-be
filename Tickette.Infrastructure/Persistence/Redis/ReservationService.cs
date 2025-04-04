@@ -2,6 +2,7 @@
 using StackExchange.Redis;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Features.Orders.Common;
+using Tickette.Domain.Common.Exceptions;
 using Tickette.Infrastructure.Helpers;
 
 namespace Tickette.Infrastructure.Persistence.Redis;
@@ -29,6 +30,8 @@ public class ReservationService : IReservationService
     {
         var db = _redis.GetDatabase(_redisSettings.DefaultDatabase);
         var transaction = db.CreateTransaction();
+        string inventoryKey = RedisKeys.GetTicketQuantityKey(ticketReservationInfo.Id);
+
 
         if (ticketReservationInfo.SeatsChosen != null)
         {
@@ -42,13 +45,13 @@ public class ReservationService : IReservationService
                 // Check for permanent booking
                 if (await db.KeyExistsAsync(bookedSeatKey))
                 {
-                    throw new InvalidOperationException($"Seat {seat.RowName}{seat.SeatNumber} is already booked.");
+                    throw new SeatOrderedException($"Seat {seat.RowName}{seat.SeatNumber} is already booked.");
                 }
 
                 // Check for temporary reservation
                 if (await db.KeyExistsAsync(reservedSeatKey))
                 {
-                    throw new InvalidOperationException($"Seat {seat.RowName}{seat.SeatNumber} is already reserved");
+                    throw new SeatOrderedException($"Seat {seat.RowName}{seat.SeatNumber} is already reserved");
                 }
 
                 await db.HashSetAsync(reservedSeatKey, [
@@ -58,10 +61,12 @@ public class ReservationService : IReservationService
 
                 await db.KeyExpireAsync(reservedSeatKey, TimeSpan.FromMinutes(15));
             }
+
+            // Decrease inventory
+            await db.StringDecrementAsync(inventoryKey, ticketReservationInfo.Quantity);
         }
         else
         {
-            string inventoryKey = RedisKeys.GetTicketQuantityKey(ticketReservationInfo.Id);
             string reservationKey = RedisKeys.GetReservationKey(ticketReservationInfo.Id, userId);
 
             // Check if reservation already exists
