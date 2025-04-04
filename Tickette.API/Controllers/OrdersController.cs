@@ -7,7 +7,6 @@ using Tickette.Application.Features.Orders.Command.RemoveReserveTicket;
 using Tickette.Application.Features.Orders.Command.ReserveTicket;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Application.Features.Orders.Query.ReviewOrders;
-using Tickette.Application.Features.Orders.Query.ValidateReservation;
 using Tickette.Application.Features.QRCode.Common;
 using Tickette.Application.Features.QRCode.Queries.ValidateQrCode;
 using Tickette.Application.Wrappers;
@@ -92,17 +91,11 @@ public class OrdersController : BaseController
     [Authorize]
     public async Task<ResponseDto<CreateOrderResponse>> CreateOrder([FromBody] CreateOrderCommand command, CancellationToken cancellation)
     {
+        var userId = GetUserId();
+        command.UserId = Guid.Parse(userId);
+
         var response = await _commandDispatcher.Dispatch<CreateOrderCommand, CreateOrderResponse>(command, cancellation);
         return ResponseHandler.SuccessResponse(response, "Order created successfully");
-    }
-
-    [HttpPost("validate-reservation")]
-    [SwaggerOperation(summary: "Validate the reservation before creating the order")]
-    [Authorize]
-    public async Task<ActionResult<ResponseDto<Unit>>> ValidateReservation([FromBody] ValidateReservationQuery query, CancellationToken cancellation)
-    {
-        var response = await _queryDispatcher.Dispatch<ValidateReservationQuery, Unit>(query, cancellation);
-        return Ok(ResponseHandler.SuccessResponse(response, "Tickets is still in reserved"));
     }
 
     [HttpPost("reserve-tickets")]
@@ -111,7 +104,7 @@ public class OrdersController : BaseController
     public async Task<ActionResult<ResponseDto<Unit>>> ReserveTickets([FromBody] ReserveTicketCommand command, CancellationToken cancellation)
     {
         var userId = GetUserId();
-        command.UserId = Guid.Parse(userId);
+        command.UpdateUserId(Guid.Parse(userId));
 
         var response = await _commandDispatcher.Dispatch<ReserveTicketCommand, Unit>(command, cancellation);
         return Ok(ResponseHandler.SuccessResponse(response, "Tickets reserved successfully"));
@@ -124,7 +117,7 @@ public class OrdersController : BaseController
         RemoveReserve([FromBody] RemoveReserveTicketCommand command, CancellationToken cancellation)
     {
         var userId = GetUserId();
-        command.UserId = Guid.Parse(userId);
+        command.UpdateUserId(Guid.Parse(userId));
 
         var response = await _commandDispatcher.Dispatch<RemoveReserveTicketCommand, Unit>(command, cancellation);
         return Ok(ResponseHandler.SuccessResponse(response, "Reservation removed successfully"));

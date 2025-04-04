@@ -2,25 +2,27 @@
 
 public class TicketDto
 {
-    public Guid Id { get; set; }
+    public Guid Id { get; init; }
 
-    public string Name { get; set; }
+    public string Name { get; init; }
 
-    public decimal Amount { get; set; }
+    public decimal Amount { get; init; }
 
-    public string Currency { get; set; }
+    public string Currency { get; init; }
 
-    public int TotalTickets { get; set; }
+    public int TotalTickets { get; init; }
 
-    public int MinPerOrder { get; set; }
+    public int MinPerOrder { get; init; }
 
-    public int MaxPerOrder { get; set; }
+    public int MaxPerOrder { get; init; }
 
-    public DateTime SaleStartTime { get; set; }
+    public DateTime SaleStartTime { get; init; }
 
-    public DateTime SaleEndTime { get; set; }
+    public DateTime SaleEndTime { get; init; }
 
-    public string Description { get; set; }
+    public string Description { get; init; }
 
-    public string? TicketImage { get; set; }
+    public string? TicketImage { get; init; }
+
+    public bool IsFree { get; init; }
 }

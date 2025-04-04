@@ -61,7 +61,7 @@ namespace Tickette.Admin.Controllers
         {
             var result = await _identityServices.AssignToRoleAsync(request.UserId, request.RoleId);
 
-            if (result.Succeeded)
+            if (result)
             {
                 return Ok(ResponseHandler.SuccessResponse(Unit.Value, "Role assigned successfully"));
             }

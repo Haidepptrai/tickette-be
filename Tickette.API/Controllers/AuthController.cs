@@ -1,13 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
-using Tickette.Application.Common.Models;
 using Tickette.Application.DTOs.Auth;
+using Tickette.Application.Features.Auth.Command;
+using Tickette.Application.Features.Auth.Command.ConfirmEmail;
 using Tickette.Application.Features.Auth.Command.Login;
 using Tickette.Application.Wrappers;
+using Tickette.Domain.Common;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -27,29 +27,19 @@ namespace Tickette.API.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+        public async Task<ActionResult<ResponseDto<Guid>>> Register([FromBody] UserRegisterCommand request, CancellationToken cancellationToken)
         {
-            var result = await _identityServices.CreateUserAsync(request.Email, request.Password);
+            var result = await _commandDispatcher.Dispatch<UserRegisterCommand, Guid>(request, cancellationToken);
 
-            if (result.Succeeded)
-            {
-                return Ok(ResponseHandler.SuccessResponse<object>(null, "User Created Successfully"));
-            }
-
-            return BadRequest(result.Errors);
+            return Ok(ResponseHandler.SuccessResponse(result, "User Created Successfully"));
         }
 
         [HttpPost("login")]
-        public async Task<ResponseDto<object>> Login([FromBody] LoginCommand command, CancellationToken token = default)
+        public async Task<ActionResult<ResponseDto<TokenRetrieval>>> Login([FromBody] LoginCommand command, CancellationToken token = default)
         {
-            var result = await _commandDispatcher.Dispatch<LoginCommand, AuthResult<TokenRetrieval>>(command, token);
+            var result = await _commandDispatcher.Dispatch<LoginCommand, TokenRetrieval>(command, token);
 
-            if (!result.Succeeded)
-            {
-                return ResponseHandler.ErrorResponse<object>(result);
-            }
-
-            return ResponseHandler.SuccessResponse<object>(result.Data, "Login Successfully");
+            return Ok(ResponseHandler.SuccessResponse<object>(result, "Login Successfully"));
         }
 
         [HttpPost("refresh-token")]
@@ -66,57 +56,26 @@ namespace Tickette.API.Controllers
             return ResponseHandler.SuccessResponse<object>(result.Data, "Token refreshed successfully.");
         }
 
-        public class RegisterRequest
-        {
-            [EmailAddress]
-            public string Email { get; set; }
-
-            [PasswordPropertyText]
-            public string Password { get; set; }
-        }
-
-        [HttpPost("assign-role")]
-        public async Task<IActionResult> AssignRole([FromBody] AssignRoleRequest request)
-        {
-            var result = await _identityServices.AssignToRoleAsync(request.UserId, request.RoleId);
-            if (result.Succeeded)
-            {
-                return Ok("Role assigned successfully.");
-            }
-            return BadRequest(result.Errors);
-        }
-
-        public class AssignRoleRequest
-        {
-            public Guid UserId { get; set; }
-            public required IEnumerable<Guid>? RoleId { get; set; }
-        }
-
-        [HttpDelete("{userId:guid}")]
-        public async Task<IActionResult> DeleteUser(Guid userId)
-        {
-            var result = await _identityServices.DeleteUserAsync(userId);
-
-            if (result.Succeeded)
-            {
-                return Ok("User deleted successfully.");
-            }
-
-            return BadRequest(result.Errors);
-        }
-
         // POST api/auth/login-google
         [HttpPost("sync-google-user")]
-        public async Task<IActionResult> SyncGoogleUser([FromBody] GoogleUserRequest request)
+        public async Task<ActionResult<ResponseDto<TokenRetrieval>>> SyncGoogleUser([FromBody] LoginWithGoogleCommand request)
         {
-            var result = await _identityServices.SyncGoogleUserAsync(request);
+            var result = await _commandDispatcher.Dispatch<LoginWithGoogleCommand, TokenRetrieval>(request, CancellationToken.None);
 
-            if (!result.Succeeded)
+            return Ok(ResponseHandler.SuccessResponse(result, "Google user synced successfully."));
+        }
+
+        [HttpPost("email-confirmation")]
+        public async Task<ActionResult<ResponseDto<Unit>>> ConfirmEmail(ConfirmEmailCommand query)
+        {
+            var result = await _commandDispatcher.Dispatch<ConfirmEmailCommand, bool>(query, CancellationToken.None);
+
+            if (!result)
             {
-                return BadRequest(ResponseHandler.ErrorResponse("Google user sync failed."));
+                return BadRequest(ResponseHandler.ErrorResponse(Unit.Value, "Email confirmation failed."));
             }
 
-            return Ok(ResponseHandler.SuccessResponse(result.Data, "Google user synced successfully."));
+            return Ok(ResponseHandler.SuccessResponse(result, "Email confirmed successfully."));
         }
     }
 }

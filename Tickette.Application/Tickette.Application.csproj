@@ -26,14 +26,15 @@
     <Folder Include="Features\CommitteeMembers\Query\GetAllCommitteeMemberOfEvent\" />
     <Folder Include="Features\EventDates\Command\" />
     <Folder Include="Features\Events\Queries\Client\GetEventByUserId\" />
+    <Folder Include="Features\Events\Queries\Client\GetSeatsOrderedInfo\" />
     <Folder Include="Features\Orders\Command\CreateOrder\" />
     <Folder Include="Features\Orders\Command\CreatePaymentIntent\" />
-    <Folder Include="Features\Orders\Query\ValidateReservation\" />
     <Folder Include="Features\QRCode\Commands\" />
     <Folder Include="Features\Seatmap\Common\" />
     <Folder Include="Features\Tickets\Command\" />
     <Folder Include="Features\Tickets\Query\" />
     <Folder Include="Factories\" />
+    <Folder Include="Features\Users\Command\Admin\" />
   </ItemGroup>
 
 </Project>

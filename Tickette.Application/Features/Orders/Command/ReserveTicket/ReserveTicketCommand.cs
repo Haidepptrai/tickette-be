@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Messaging;
@@ -8,15 +8,18 @@ using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Exceptions;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Common;
-using Tickette.Domain.Common.Exceptions;
 
 namespace Tickette.Application.Features.Orders.Command.ReserveTicket;
 
 public record ReserveTicketCommand
 {
-    [JsonIgnore]
     public Guid UserId { get; set; }
     public required ICollection<TicketReservation> Tickets { get; init; }
+
+    public void UpdateUserId(Guid userId)
+    {
+        UserId = userId;
+    }
 }
 
 public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand, Unit>
@@ -25,11 +28,11 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
     private readonly IApplicationDbContext _context;
     private readonly IReservationService _reservationService;
 
-    public ReserveTicketCommandHandler(IMessageProducer messageProducer, IApplicationDbContext context, IReservationService reservationService)
+    public ReserveTicketCommandHandler(IApplicationDbContext context, IReservationService reservationService, IMessageProducer messageProducer)
     {
-        _messageProducer = messageProducer;
         _context = context;
         _reservationService = reservationService;
+        _messageProducer = messageProducer;
     }
 
     public async Task<Unit> Handle(ReserveTicketCommand request, CancellationToken cancellationToken)
@@ -37,24 +40,24 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
         foreach (var ticket in request.Tickets)
         {
             // Is the ticket valid?
-            var ticketEntity = await _context.Tickets.FirstOrDefaultAsync(t => t.Id == ticket.Id, cancellationToken);
+            var ticketEntity = await _context.Tickets.SingleOrDefaultAsync(t => t.Id == ticket.Id, cancellationToken);
             if (ticketEntity == null)
             {
                 throw new NotFoundException("Ticket", ticket.Id);
             }
 
             ticketEntity.ValidateTicket(ticket.Quantity);
-            var reservedTicket = await _reservationService.ReserveTicketsAsync(request.UserId, ticket);
 
-            if (!reservedTicket)
-            {
-                throw new TicketReservationException("Ticket reservation failed");
-            }
+            await _reservationService.ReserveTicketsAsync(request.UserId, ticket);
         }
 
-        // Publish to RabbitMQ for PostgreSQL update
         var message = JsonSerializer.Serialize(request);
-        _messageProducer.Publish(Constant.TICKET_RESERVATION_QUEUE, message);
+        var successSending = await _messageProducer.PublishAsync(RabbitMqRoutingKeys.TicketReservationCreated, message);
+
+        if (!successSending)
+        {
+            throw new Exception("Failed to send message to the queue");
+        }
 
         return Unit.Value;
     }

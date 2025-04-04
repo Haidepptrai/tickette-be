@@ -50,10 +50,11 @@ public static class EventMapper
         Slug = entity.EventSlug
     };
 
-    public static EventDetailDto ToEventDetailDto(this Event entity) => new()
+    public static EventDetailDto ToEventDetailDto(this Event entity, IEnumerable<Category>? category) => new()
     {
         Id = entity.Id,
         Name = entity.Name,
+        IsOffline = entity.IsOffline,
         LocationName = entity.LocationName,
         City = entity.City,
         District = entity.District,
@@ -62,14 +63,11 @@ public static class EventMapper
         Description = entity.Description,
         Banner = entity.Banner,
         Status = entity.Status,
-        CategoryName = entity.Category.Name,
+        CategoryId = entity.Category.Id,
         EventOwnerStripeId = entity.EventOwnerStripeId,
-        Committee = new CommitteeInformation()
-        {
-            Logo = entity.Committee.Logo,
-            Name = entity.Committee.Name,
-            Description = entity.Committee.Description
-        },
+        CommitteeName = entity.Committee.Name,
+        CommitteeDescription = entity.Committee.Description,
+        CommitteeLogo = entity.Committee.Logo,
         EventDates = entity.EventDates.Select(ev => new EventDateDto()
         {
             Id = ev.Id,
@@ -87,9 +85,15 @@ public static class EventMapper
                 Currency = ticket.Price.Currency,
                 SaleStartTime = ticket.SaleStartTime,
                 SaleEndTime = ticket.SaleEndTime,
-                TicketImage = ticket.Image
+                TicketImage = ticket.Image,
+                IsFree = ticket.Price.Amount == 0
             }),
             SeatMap = ev.SeatMap
+        }),
+        Categories = category?.Select(c => new CategoryDto()
+        {
+            Id = c.Id,
+            Name = c.Name
         })
     };
 

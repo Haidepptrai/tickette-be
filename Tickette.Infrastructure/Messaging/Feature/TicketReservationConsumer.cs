@@ -1,103 +1,55 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using System.Text.Json;
-using Tickette.Application.Common.Interfaces;
+using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Features.Orders.Command.ReserveTicket;
-using Tickette.Domain.Common;
-using Tickette.Infrastructure.Helpers;
+using Tickette.Domain.Common.Exceptions;
+using Tickette.Infrastructure.Services;
 
 namespace Tickette.Infrastructure.Messaging.Feature;
 
 public class TicketReservationConsumer : BackgroundService
 {
-    private readonly IMessageConsumer _messageConsumer;
-    private readonly IRedisService _redisService;
     private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<TicketReservationConsumer> _logger;
+    private readonly IMessageConsumer _messageConsumer;
 
-    public TicketReservationConsumer(
-        IMessageConsumer messageConsumer,
-        IRedisService redisService,
-        IServiceProvider serviceProvider,
-        ILogger<TicketReservationConsumer> logger)
+    public TicketReservationConsumer(IServiceProvider serviceProvider, IMessageConsumer messageConsumer)
     {
-        _messageConsumer = messageConsumer;
-        _redisService = redisService;
         _serviceProvider = serviceProvider;
-        _logger = logger;
+        _messageConsumer = messageConsumer;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Ticket Reservation Consumer is starting.");
-
-        while (!stoppingToken.IsCancellationRequested)
+        await _messageConsumer.ConsumeAsync(RabbitMqRoutingKeys.TicketReservationCreated, async (message) =>
         {
-            try
+            var reservation = JsonSerializer.Deserialize<ReserveTicketCommand>(message);
+
+            if (reservation == null)
             {
-                await _messageConsumer.ConsumeAsync(Constant.TICKET_RESERVATION_QUEUE, async (message) =>
-                {
-                    // Create a scope to resolve scoped services
-                    using (var scope = _serviceProvider.CreateScope())
-                    {
-                        var context = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
-                        await HandleTicketReservation(message, context, stoppingToken);
-                    }
-                }, stoppingToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error occurred while consuming messages.");
+                throw new InvalidOperationException("Failed to deserialize ReserveTicketCommand");
             }
 
-            await Task.Delay(1000, stoppingToken); // Add a delay to avoid tight looping
-        }
+            using var scope = _serviceProvider.CreateScope();
 
-        _logger.LogInformation("Ticket Reservation Consumer is stopping.");
-    }
+            var redisHandler = scope.ServiceProvider.GetRequiredService<IReservationService>();
+            var persistenceService = scope.ServiceProvider.GetRequiredService<ReservationPersistenceService>();
 
-    private async Task HandleTicketReservation(string message, IApplicationDbContext context, CancellationToken cancellationToken)
-    {
-        var ticketReservation = JsonSerializer.Deserialize<ReserveTicketCommand>(message);
-        if (ticketReservation == null)
-        {
-            _logger.LogError("Failed to deserialize reservation request.");
-            throw new Exception("Failed to deserialize reservation request");
-        }
-
-        try
-        {
-            foreach (var ticket in ticketReservation.Tickets)
+            foreach (var ticket in reservation.Tickets)
             {
-                string reservationKey = RedisKeys.GetReservationKey(ticket.Id, ticketReservation.UserId);
-
-                // Verify reservation still exists in Redis
-                bool exists = await _redisService.KeyExistsAsync(reservationKey);
-                if (!exists) return;
-
-                // Update PostgreSQL inventory per ticket
-                var ticketRecord = await context.Tickets
-                    .Where(t => t.Id == ticket.Id)
-                    .FirstOrDefaultAsync(cancellationToken);
-
-                if (ticketRecord == null || ticketRecord.RemainingTickets < ticket.Quantity)
+                try
                 {
-                    _logger.LogWarning($"Not enough tickets available for Ticket {ticket.Id}");
-                    throw new Exception($"Not enough tickets available for Ticket {ticket.Id}");
+                    await persistenceService.PersistReservationAsync(reservation.UserId, ticket);
                 }
-
-                ticketRecord.ReduceTickets(ticket.Quantity);
-                await context.SaveChangesAsync(cancellationToken);
+                catch (Exception ex)
+                {
+                    await redisHandler.ReleaseReservationAsync(reservation.UserId, ticket);
+                    Console.WriteLine($"[Rollback Error] Failed to release Redis for ticket {ticket.Id}: {ex.Message}");
+                    throw new TicketReservationException($"Failed to reserved for ticket {ticket.Id}, please try again");
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, $"Error processing ticket reservation: {ex.Message}");
-            throw;
-        }
+        }, stoppingToken);
     }
 }

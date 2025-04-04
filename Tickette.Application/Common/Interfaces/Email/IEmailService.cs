@@ -1,4 +1,5 @@
 ﻿using Tickette.Application.Common.Models;
+using Tickette.Application.Common.Models.Email;
 
 namespace Tickette.Application.Common.Interfaces.Email;
 
@@ -13,4 +14,6 @@ public interface IEmailService
     string GenerateUnsubscribeToken(string email);
 
     bool ValidateUnsubscribeToken(string email, string token);
+
+    Task<bool> SendConfirmEmail(ConfirmEmailModel model);
 }

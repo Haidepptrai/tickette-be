@@ -1,9 +1,13 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using MailKit.Security;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Models;
 using Tickette.Application.DTOs.Auth;
+using Tickette.Application.Exceptions;
+using Tickette.Application.Features.Auth.Command;
 using Tickette.Application.Features.Users.Common;
+using Tickette.Domain.Common.Exceptions;
 using Tickette.Domain.Entities;
 
 namespace Tickette.Infrastructure.Identity;
@@ -29,34 +33,49 @@ public class IdentityServices : IIdentityServices
         _context = context;
     }
 
-    public async Task<AuthResult<Guid>> CreateUserAsync(string userEmail, string password)
+    public async Task<Guid> CreateUserAsync(string fullName, string userEmail, string password)
     {
+        // Check if the user already exists
+        var existingUser = await _userManager.FindByEmailAsync(userEmail);
+
+        if (existingUser != null)
+            throw new UserAlreadyExistException("User already exists.");
+
         var user = new User
         {
             UserName = userEmail,
             Email = userEmail,
-            Id = Guid.NewGuid()
+            Id = Guid.NewGuid(),
+            FullName = fullName,
+            EmailConfirmed = false
         };
 
-        var result = await _userManager.CreateAsync(user, password);
+        await _userManager.CreateAsync(user, password);
 
-        return result.ToApplicationResult(user.Id);
+        return user.Id;
     }
 
-    public async Task<AuthResult<TokenRetrieval>> LoginAsync(string userEmail, string password, CancellationToken cancellation)
+    public async Task<TokenRetrieval> LoginAsync(string userEmail, string password, CancellationToken cancellation)
     {
         // Validate user credentials
-        var user = await _userManager
-            .FindByEmailAsync(userEmail);
+        var user = await _userManager.FindByEmailAsync(userEmail);
+
         if (user == null)
         {
-            return AuthResult<TokenRetrieval>.Failure(["Invalid credentials."]);
+            throw new AuthenticationException("Invalid credentials.");
+        }
+
+        if (!user.EmailConfirmed)
+        {
+            // Delete the user if the email is not confirmed
+            await _userManager.DeleteAsync(user);
+            throw new AuthenticationException("User not exist in system confirmed.");
         }
 
         var result = await _signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: false);
         if (!result.Succeeded)
         {
-            return AuthResult<TokenRetrieval>.Failure(["Invalid credentials."]);
+            throw new AuthenticationException("Invalid credentials.");
         }
 
         // Generate tokens
@@ -67,11 +86,15 @@ public class IdentityServices : IIdentityServices
         // Save refresh token with cancellation support
         await AddOrUpdateRefreshTokenAsync(user.Id, refreshToken, refreshTokenExpiryTime, cancellation);
 
-        return AuthResult<TokenRetrieval>.Success(new TokenRetrieval
+        var resultReturn = new TokenRetrieval
         {
+            UserId = user.Id,
             AccessToken = accessToken,
-            RefreshToken = refreshToken
-        });
+            RefreshToken = refreshToken,
+            IsEmailConfirmed = user.EmailConfirmed
+        };
+
+        return resultReturn;
     }
 
     public async Task<AuthResult<TokenRetrieval>> RefreshTokenAsync(string refreshToken)
@@ -109,17 +132,18 @@ public class IdentityServices : IIdentityServices
 
         return AuthResult<TokenRetrieval>.Success(new TokenRetrieval
         {
+            UserId = user.Id,
             AccessToken = newAccessToken,
             RefreshToken = newRefreshToken
         });
     }
 
-    public async Task<AuthResult<object?>> AssignToRoleAsync(Guid userId, IEnumerable<Guid>? roleIds)
+    public async Task<bool> AssignToRoleAsync(Guid userId, IEnumerable<Guid>? roleIds)
     {
         var user = await _userManager.FindByIdAsync(userId.ToString());
         if (user == null)
         {
-            return AuthResult<object?>.Failure(["User not found."]);
+            throw new Exception("User not found.");
         }
 
         // If `roleIds == null` OR Empty => Remove All Roles (User is now a standard "User")
@@ -130,10 +154,10 @@ public class IdentityServices : IIdentityServices
 
             if (!removeResult.Succeeded)
             {
-                return removeResult.ToApplicationResult<object?>(removeResult);
+                throw new Exception("Failed to remove roles from user.");
             }
 
-            return AuthResult<object?>.Success(); // Successfully removed all roles (User is now a default "User")
+            return true; // Successfully removed all roles (User is now a default "User")
         }
 
         // Validate All Role IDs Exist Before Assigning
@@ -146,7 +170,8 @@ public class IdentityServices : IIdentityServices
 
         if (roles.Count != roleIds.Count())
         {
-            return AuthResult<object?>.Failure(["One or more roles not found."]);
+            // Throw exception if any role ID is invalid
+            throw new Exception("One or more role IDs are invalid. Please make sure all role IDs are correct.");
         }
 
         // Remove Roles That Are No Longer Assigned
@@ -157,7 +182,8 @@ public class IdentityServices : IIdentityServices
             var removeOldRolesResult = await _userManager.RemoveFromRolesAsync(user, rolesToRemove);
             if (!removeOldRolesResult.Succeeded)
             {
-                return removeOldRolesResult.ToApplicationResult<object?>(removeOldRolesResult);
+                // Throw exception if failed to remove roles
+                throw new Exception("Failed to remove roles from user. Please make sure all role IDs are correct.");
             }
         }
 
@@ -168,11 +194,12 @@ public class IdentityServices : IIdentityServices
             var addNewRolesResult = await _userManager.AddToRolesAsync(user, rolesToAdd);
             if (!addNewRolesResult.Succeeded)
             {
-                return addNewRolesResult.ToApplicationResult<object?>(addNewRolesResult);
+                // Throw exception if failed to add roles
+                throw new Exception("Failed to add roles to user. Please make sure all role IDs are correct.");
             }
         }
 
-        return AuthResult<object?>.Success(null); // Successfully updated roles
+        return true; // Successfully updated roles
     }
 
 
@@ -230,7 +257,7 @@ public class IdentityServices : IIdentityServices
         return AuthResult<IEnumerable<PreviewUserResponse>>.Success(userResponses);
     }
 
-    public async Task<AuthResult<TokenRetrieval>> SyncGoogleUserAsync(GoogleUserRequest request)
+    public async Task<TokenRetrieval> SyncGoogleUserAsync(LoginWithGoogleCommand request)
     {
         // Check if the user exists in the database
         var user = await _userManager.FindByEmailAsync(request.Email);
@@ -247,9 +274,10 @@ public class IdentityServices : IIdentityServices
             };
 
             var createResult = await _userManager.CreateAsync(user);
+
             if (!createResult.Succeeded)
             {
-                return AuthResult<TokenRetrieval>.Failure(createResult.Errors.Select(e => e.Description).ToArray());
+                throw new Exception("Failed to create user.");
             }
         }
 
@@ -261,11 +289,15 @@ public class IdentityServices : IIdentityServices
         // Save the refresh token to the database
         await AddOrUpdateRefreshTokenAsync(user.Id, refreshToken, refreshTokenExpiryTime, CancellationToken.None);
 
-        return AuthResult<TokenRetrieval>.Success(new TokenRetrieval
+        var result = new TokenRetrieval
         {
+            UserId = user.Id,
             AccessToken = accessToken,
-            RefreshToken = refreshToken
-        });
+            RefreshToken = refreshToken,
+            IsEmailConfirmed = true
+        };
+
+        return result;
     }
 
     public async Task<IEnumerable<RoleResponse>> GetRoleAllRoles()
@@ -311,6 +343,43 @@ public class IdentityServices : IIdentityServices
         user.ProfilePicture = image;
         var result = await _userManager.UpdateAsync(user);
         return result.ToApplicationResult(true);
+    }
+
+    public async Task<string> GenerateEmailConfirmationTokenAsync(Guid userId)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+
+        if (user == null)
+        {
+            throw new UserNotFoundException();
+        }
+
+        var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+
+        return token;
+    }
+
+    public async Task<bool> ConfirmEmailAsync(string token, string userEmail)
+    {
+        var user = await _userManager.FindByEmailAsync(userEmail);
+
+        if (user == null)
+        {
+            throw new UserNotFoundException();
+        }
+
+        if (user.EmailConfirmed)
+            throw new AuthenticationException("User is already confirmed.");
+
+        var result = await _userManager.ConfirmEmailAsync(user, token);
+
+        foreach (var r in result.Errors)
+        {
+            Console.WriteLine(r.Description);
+        }
+
+
+        return result.Succeeded;
     }
 }
 

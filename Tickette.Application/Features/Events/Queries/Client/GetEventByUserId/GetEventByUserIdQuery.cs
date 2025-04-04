@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.Events.Common;
@@ -9,6 +10,7 @@ namespace Tickette.Application.Features.Events.Queries.Client.GetEventByUserId;
 
 public record GetEventByUserIdQuery
 {
+    [JsonIgnore]
     public Guid UserId { get; set; }
 
     public int PageNumber { get; init; } = 1;
@@ -16,7 +18,6 @@ public record GetEventByUserIdQuery
     public int PageSize { get; init; } = 10;
 
     public ApprovalStatus? Status { get; init; }
-
 }
 
 public class GetEventByUserIdQueryHandler : IQueryHandler<GetEventByUserIdQuery, PagedResult<UserEventListResponse>>
@@ -30,13 +31,14 @@ public class GetEventByUserIdQueryHandler : IQueryHandler<GetEventByUserIdQuery,
 
     public async Task<PagedResult<UserEventListResponse>> Handle(GetEventByUserIdQuery query, CancellationToken cancellationToken)
     {
-        var preparedQuery = _context.Events
+        var preparedQuery = _context.CommitteeMembers
             .IgnoreQueryFilters()
-            .Where(e => e.User.Id == query.UserId)
-            .Where(e => !query.Status.HasValue || e.Status == query.Status.Value)
-            .Include(e => e.Category)
-            .Include(e => e.Committee)
-            .Include(e => e.EventDates);
+            .Where(cm => cm.UserId == query.UserId)
+            .Include(cm => cm.Event).ThenInclude(e => e.Category)
+            .Include(cm => cm.Event).ThenInclude(e => e.Committee)
+            .Include(cm => cm.Event).ThenInclude(e => e.EventDates)
+            .Where(cm => !query.Status.HasValue || cm.Event.Status == query.Status.Value)
+            .Select(cm => cm.Event);
 
         var events = await preparedQuery
             .Skip((query.PageNumber - 1) * query.PageSize)

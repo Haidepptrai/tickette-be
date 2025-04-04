@@ -11,6 +11,7 @@ using Tickette.Application.Features.Events.Common;
 using Tickette.Application.Features.Events.Common.Client;
 using Tickette.Application.Features.Events.Queries.Client.GetEventByUserId;
 using Tickette.Application.Features.Events.Queries.Client.GetEventDetailStatistic;
+using Tickette.Application.Features.Events.Queries.Client.GetSeatsOrderedInfo;
 using Tickette.Application.Features.Events.Queries.GetAllEvents;
 using Tickette.Application.Features.Events.Queries.GetEventByCategory;
 using Tickette.Application.Features.Events.Queries.GetEventById;
@@ -139,6 +140,7 @@ public class EventsController : BaseController
                 CommitteeLogo: committeeLogo,
                 CommitteeName: commandDto.CommitteeName,
                 CommitteeDescription: commandDto.CommitteeDescription,
+                IsOffline: commandDto.IsOffline,
                 EventDatesInformation: commandDto.EventDates,
                 bannerFile,
                 EventOwnerStripeId: commandDto.EventOwnerStripeId
@@ -201,4 +203,12 @@ public class EventsController : BaseController
         return response;
     }
 
+    [HttpPost("get-seats-ordered-info")]
+    [SwaggerOperation("Get seats ordered info for marking it in seat map")]
+    public async Task<ActionResult<ResponseDto<IEnumerable<SeatsOrderedInfoDto>>>> GetSeatsOrderedInfo(GetSeatsOrderedInfoQuery query, CancellationToken cancellationToken = default)
+    {
+        var result = await _queryDispatcher.Dispatch<GetSeatsOrderedInfoQuery, IEnumerable<SeatsOrderedInfoDto>>(query, cancellationToken);
+        var response = ResponseHandler.SuccessResponse(result, "Get seats ordered info successfully");
+        return response;
+    }
 }

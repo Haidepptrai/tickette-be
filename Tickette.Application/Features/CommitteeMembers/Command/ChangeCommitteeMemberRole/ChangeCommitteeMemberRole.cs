@@ -1,7 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Exceptions;
+using Tickette.Domain.Common;
 
 namespace Tickette.Application.Features.CommitteeMembers.Command.ChangeCommitteeMemberRole;
 
@@ -12,18 +14,22 @@ public record ChangeCommitteeMemberRoleCommand
     public Guid EventId { get; init; }
 }
 
-public class ChangeCommitteeMemberRoleCommandHandler : ICommandHandler<ChangeCommitteeMemberRoleCommand, object>
+public class ChangeCommitteeMemberRoleCommandHandler : ICommandHandler<ChangeCommitteeMemberRoleCommand, Unit>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICacheService _cacheService;
 
-    public ChangeCommitteeMemberRoleCommandHandler(IApplicationDbContext context)
+    public ChangeCommitteeMemberRoleCommandHandler(IApplicationDbContext context, ICacheService cacheService)
     {
         _context = context;
+        _cacheService = cacheService;
     }
 
-    public async Task<object> Handle(ChangeCommitteeMemberRoleCommand request, CancellationToken cancellationToken)
+    public async Task<Unit> Handle(ChangeCommitteeMemberRoleCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _context.CommitteeMembers.FirstOrDefaultAsync(cm => cm.UserId == request.MemberId && cm.EventId == request.RoleId, cancellationToken);
+        // cm.Id == request.MemberId is a stupid move
+        // I should change it to composite key
+        var entity = await _context.CommitteeMembers.FirstOrDefaultAsync(cm => cm.Id == request.MemberId && cm.EventId == request.EventId, cancellationToken);
 
         if (entity == null)
         {
@@ -34,6 +40,8 @@ public class ChangeCommitteeMemberRoleCommandHandler : ICommandHandler<ChangeCom
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        return null!;
+        _cacheService.RemoveCacheValue(InMemoryCacheKey.CommitteeMemberOfEvent(request.EventId));
+
+        return Unit.Value;
     }
 }

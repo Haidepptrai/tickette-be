@@ -13,7 +13,7 @@ public class RabbitMQProducer : IMessageProducer
         _rabbitMQConnection = rabbitMQConnection;
     }
 
-    public async void Publish(string queueName, string message)
+    public async Task<bool> PublishAsync(string queueName, string message)
     {
         try
         {
@@ -31,10 +31,14 @@ public class RabbitMQProducer : IMessageProducer
                 exchange: string.Empty,
                 routingKey: queueName,
                 body: body);
+
+            return true;
+
         }
-        catch (Exception e)
+        catch
         {
-            throw new Exception($"An error occurred while publishing the message: {e.Message}");
+            return false;
+            // Retry logic can be added here
         }
     }
 

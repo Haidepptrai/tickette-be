@@ -5,6 +5,7 @@ namespace Tickette.Application.Common.Interfaces.Redis;
 public interface IReservationService
 {
     Task<bool> ReserveTicketsAsync(Guid userId, TicketReservation reservation);
-    Task<bool> ValidateReservationAsync(Guid ticketId, Guid userId);
+    Task<bool> ValidateReservationAsync(Guid userId, TicketReservation ticketReservationInfo);
     Task<bool> ReleaseReservationAsync(Guid userId, TicketReservation ticketId);
+    Task<bool> FinalizeSeatReservationAsync(Guid userId, TicketReservation ticketReservationInfo);
 }

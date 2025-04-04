@@ -449,6 +449,10 @@ namespace Tickette.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("event_slug");
 
+                    b.Property<bool>("IsOffline")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_offline");
+
                     b.Property<string>("LocationName")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -764,6 +768,101 @@ namespace Tickette.Infrastructure.Migrations
                         .HasDatabaseName("ix_refresh_tokens_user_id");
 
                     b.ToTable("refresh_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.Reservation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_reservations");
+
+                    b.ToTable("reservations", (string)null);
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.ReservationItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("HasAssignedSeats")
+                        .HasColumnType("boolean")
+                        .HasColumnName("has_assigned_seats");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantity");
+
+                    b.Property<Guid>("ReservationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reservation_id");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ticket_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_reservation_items");
+
+                    b.HasIndex("ReservationId")
+                        .HasDatabaseName("ix_reservation_items_reservation_id");
+
+                    b.ToTable("reservation_items", (string)null);
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.SeatAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
+
+                    b.Property<string>("RowName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("row_name");
+
+                    b.Property<string>("SeatNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("seat_number");
+
+                    b.HasKey("Id")
+                        .HasName("pk_seat_assignments");
+
+                    b.HasIndex("ItemId", "RowName", "SeatNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_seat_assignments_item_id_row_name_seat_number");
+
+                    b.ToTable("seat_assignments", (string)null);
                 });
 
             modelBuilder.Entity("Tickette.Domain.Entities.Ticket", b =>
@@ -1170,7 +1269,7 @@ namespace Tickette.Infrastructure.Migrations
 
                             b1.HasKey("OrderItemId");
 
-                            b1.ToTable("order_items");
+                            b1.ToTable("order_items", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("OrderItemId")
@@ -1195,6 +1294,26 @@ namespace Tickette.Infrastructure.Migrations
                         .HasConstraintName("fk_refresh_tokens_users_user_id");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.ReservationItem", b =>
+                {
+                    b.HasOne("Tickette.Domain.Entities.Reservation", null)
+                        .WithMany("Items")
+                        .HasForeignKey("ReservationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_reservation_items_reservations_reservation_id");
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.SeatAssignment", b =>
+                {
+                    b.HasOne("Tickette.Domain.Entities.ReservationItem", null)
+                        .WithMany("SeatAssignments")
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_seat_assignments_reservation_items_item_id");
                 });
 
             modelBuilder.Entity("Tickette.Domain.Entities.Ticket", b =>
@@ -1223,7 +1342,7 @@ namespace Tickette.Infrastructure.Migrations
 
                             b1.HasKey("TicketId");
 
-                            b1.ToTable("tickets");
+                            b1.ToTable("tickets", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("TicketId")
@@ -1266,6 +1385,16 @@ namespace Tickette.Infrastructure.Migrations
             modelBuilder.Entity("Tickette.Domain.Entities.Order", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.Reservation", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.ReservationItem", b =>
+                {
+                    b.Navigation("SeatAssignments");
                 });
 
             modelBuilder.Entity("Tickette.Domain.Entities.User", b =>

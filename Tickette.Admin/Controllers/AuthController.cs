@@ -4,8 +4,8 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
-using Tickette.Application.Common.Models;
 using Tickette.Application.DTOs.Auth;
+using Tickette.Application.Features.Auth.Command;
 using Tickette.Application.Features.Auth.Command.Login;
 using Tickette.Application.Wrappers;
 
@@ -26,30 +26,12 @@ namespace Tickette.Admin.Controllers
             _commandDispatcher = commandDispatcher;
         }
 
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
-        {
-            var result = await _identityServices.CreateUserAsync(request.Email, request.Password);
-
-            if (result.Succeeded)
-            {
-                return Ok(ResponseHandler.SuccessResponse<object>(null, "User Created Successfully"));
-            }
-
-            return BadRequest(result.Errors);
-        }
-
         [HttpPost("login")]
-        public async Task<ResponseDto<object>> Login([FromBody] LoginCommand command, CancellationToken token = default)
+        public async Task<ActionResult<ResponseDto<TokenRetrieval>>> Login([FromBody] LoginCommand command, CancellationToken token = default)
         {
-            var result = await _commandDispatcher.Dispatch<LoginCommand, AuthResult<TokenRetrieval>>(command, token);
+            var result = await _commandDispatcher.Dispatch<LoginCommand, TokenRetrieval>(command, token);
 
-            if (!result.Succeeded)
-            {
-                return ResponseHandler.ErrorResponse<object>(result);
-            }
-
-            return ResponseHandler.SuccessResponse<object>(result.Data, "Login Successfully");
+            return Ok(ResponseHandler.SuccessResponse<object>(result, "Login Successfully"));
         }
 
         [HttpPost("refresh-token")]
@@ -90,16 +72,11 @@ namespace Tickette.Admin.Controllers
 
         // POST api/auth/login-google
         [HttpPost("sync-google-user")]
-        public async Task<IActionResult> SyncGoogleUser([FromBody] GoogleUserRequest request)
+        public async Task<ActionResult<ResponseDto<TokenRetrieval>>> SyncGoogleUser([FromBody] LoginWithGoogleCommand request)
         {
-            var result = await _identityServices.SyncGoogleUserAsync(request);
+            var result = await _commandDispatcher.Dispatch<LoginWithGoogleCommand, TokenRetrieval>(request, CancellationToken.None);
 
-            if (!result.Succeeded)
-            {
-                return BadRequest(ResponseHandler.ErrorResponse("Google user sync failed."));
-            }
-
-            return Ok(ResponseHandler.SuccessResponse(result.Data, "Google user synced successfully."));
+            return Ok(ResponseHandler.SuccessResponse(result, "Google user synced successfully."));
         }
     }
 }
