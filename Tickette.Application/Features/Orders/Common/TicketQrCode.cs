@@ -1,8 +1,8 @@
 ﻿using Tickette.Domain.Entities;
 
-namespace Tickette.Application.Features.QRCode.Common;
+namespace Tickette.Application.Features.Orders.Common;
 
-public record OrderItemQrCodeDto
+public record TicketQrCode
 {
     public string BuyerEmail { get; init; }
 
@@ -15,4 +15,6 @@ public record OrderItemQrCodeDto
     public Guid OrderItemId { get; init; }
 
     public ICollection<SeatOrder>? SeatsOrdered { get; init; }
+
+    public string Signature { get; init; }
 }

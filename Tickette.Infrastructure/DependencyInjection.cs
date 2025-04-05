@@ -255,10 +255,10 @@ public static class DependencyInjection
 
         builder.Services.AddHostedService<TicketReservationConsumer>();
         builder.Services.AddHostedService<TicketCancelReservationConsumer>();
-        builder.Services.AddHostedService<ReservationSyncService>();
+        builder.Services.AddHostedService<ReservationMinuteSyncService>();
         builder.Services.AddHostedService<TicketConfirmationReservationConsumer>();
         builder.Services.AddHostedService<ConfirmCreateOrderEmailService>();
-        builder.Services.AddScoped<ReservationPersistenceService>();
+        builder.Services.AddScoped<ReservationStateSyncService>();
         builder.Services.AddScoped<ReservationDbSyncHandler>();
     }
 

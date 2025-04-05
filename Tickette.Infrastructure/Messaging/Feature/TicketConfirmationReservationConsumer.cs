@@ -36,7 +36,7 @@ public class TicketConfirmationReservationConsumer : BackgroundService
 
                 using var scope = _serviceProvider.CreateScope();
                 var redisHandler = scope.ServiceProvider.GetRequiredService<IReservationService>();
-                var dbHandler = scope.ServiceProvider.GetRequiredService<ReservationPersistenceService>();
+                var dbHandler = scope.ServiceProvider.GetRequiredService<ReservationStateSyncService>();
 
                 foreach (var ticket in command.Tickets)
                 {

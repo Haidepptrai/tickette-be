@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using Tickette.Application.Features.Events.Common.Client;
 using Tickette.Domain.Enums;
 
 namespace Tickette.Application.Features.Events.Common;
@@ -45,4 +46,6 @@ public class EventDetailDto
     public string EventOwnerStripeId { get; init; }
 
     public IEnumerable<CategoryDto>? Categories { get; init; }
+
+    public CommitteeMemberDto? UserInEventInfo { get; init; }
 }

@@ -32,7 +32,6 @@ public class ReservationService : IReservationService
         var transaction = db.CreateTransaction();
         string inventoryKey = RedisKeys.GetTicketQuantityKey(ticketReservationInfo.Id);
 
-
         if (ticketReservationInfo.SeatsChosen != null)
         {
             await _lockManager.AcquireSeatLocksAsync(ticketReservationInfo.Id, ticketReservationInfo.SeatsChosen);
@@ -138,12 +137,12 @@ public class ReservationService : IReservationService
             if (!await db.KeyExistsAsync(reservationKey))
                 return false;
 
-            // 2. Optional: check that it has the required fields
+            // 2. Check that it has the required fields
             var quantity = await db.HashGetAsync(reservationKey, "quantity");
             if (quantity.IsNull || long.Parse(quantity) <= 0)
                 return false;
 
-            // 3. Optional: TTL check
+            // 3. TTL check
             var ttl = await db.KeyTimeToLiveAsync(reservationKey);
             if (ttl.HasValue && ttl.Value.TotalSeconds <= 5)
                 return false;

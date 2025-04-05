@@ -39,7 +39,10 @@ public class GetEventByIdHandler : IQueryHandler<GetEventByIdRequest, EventDetai
                 .AsNoTracking()
                 .ToListAsync(cancellation);
 
-            var resultDto = result.ToEventDetailDto(category);
+            if (category == null)
+                throw new Exception("An error has occurred while retrieving categories.");
+
+            var resultDto = result.ToEventDetailDto(category, null);
 
             return resultDto;
         }

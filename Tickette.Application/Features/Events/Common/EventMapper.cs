@@ -50,7 +50,7 @@ public static class EventMapper
         Slug = entity.EventSlug
     };
 
-    public static EventDetailDto ToEventDetailDto(this Event entity, IEnumerable<Category>? category) => new()
+    public static EventDetailDto ToEventDetailDto(this Event entity, IEnumerable<Category>? category, CommitteeMember? currentUser) => new()
     {
         Id = entity.Id,
         Name = entity.Name,
@@ -94,7 +94,14 @@ public static class EventMapper
         {
             Id = c.Id,
             Name = c.Name
-        })
+        }),
+        UserInEventInfo = currentUser is null ? null : new CommitteeMemberDto()
+        {
+            Id = currentUser.Id,
+            FullName = currentUser.User.FullName!,
+            Email = currentUser.User.Email!,
+            Role = currentUser.CommitteeRole.Name,
+        }
     };
 
     public static EventDetailStatisticDto ToEventDetailStatisticDto(this Event entity)

@@ -59,6 +59,9 @@ public class ReviewOrdersQueryHandler : IQueryHandler<ReviewOrdersQuery, Respons
                             Id = orderItem.Id,
                             StartDate = orderItem.Ticket.EventDate.StartDate, // Assign event date from ticket
                             EndDate = orderItem.Ticket.EventDate.EndDate,
+                            BuyerName = order.BuyerName,
+                            BuyerEmail = order.BuyerEmail,
+                            BuyerPhone = order.BuyerPhone,
                             Tickets = new OrderedTicketDto()
                             {
                                 Id = orderItem.Ticket.Id,
@@ -84,7 +87,7 @@ public class ReviewOrdersQueryHandler : IQueryHandler<ReviewOrdersQuery, Respons
         }
     }
 
-    private string GenerateQrCode(OrderItem orderItem, Guid userId)
+    private TicketQrCode GenerateQrCode(OrderItem orderItem, Guid userId)
     {
         var qrCodeData = new OrderItemQrCodeDto
         {
@@ -92,7 +95,8 @@ public class ReviewOrdersQueryHandler : IQueryHandler<ReviewOrdersQuery, Respons
             BuyerName = orderItem.Order.BuyerName,
             BuyerPhone = orderItem.Order.BuyerPhone,
             OrderId = orderItem.OrderId,
-            OrderItemId = orderItem.Id
+            OrderItemId = orderItem.Id,
+            SeatsOrdered = orderItem.SeatsOrdered
         };
 
         return _qrCodeService.GenerateQrCode(qrCodeData);

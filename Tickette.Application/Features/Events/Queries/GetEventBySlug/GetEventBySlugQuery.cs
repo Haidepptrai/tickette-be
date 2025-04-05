@@ -32,7 +32,7 @@ public class GetEventBySlugQueryHandler : IQueryHandler<GetEventBySlugQuery, Eve
             if (result == null)
                 throw new KeyNotFoundException($"Event with ID {query.Slug} was not found.");
 
-            var resultDto = result.ToEventDetailDto(null);
+            var resultDto = result.ToEventDetailDto(null, null);
 
             return resultDto;
         }

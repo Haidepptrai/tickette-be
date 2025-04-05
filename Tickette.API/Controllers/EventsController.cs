@@ -84,6 +84,9 @@ public class EventsController : BaseController
     [SwaggerOperation("Get event detail by id")]
     public async Task<ResponseDto<EventDetailDto>> GetEventById(GetEventByIdRequest query, CancellationToken cancellationToken = default)
     {
+        var userId = GetUserId();
+        query.UserId = Guid.Parse(userId);
+
         var result = await _queryDispatcher.Dispatch<GetEventByIdRequest, EventDetailDto>(query, cancellationToken);
         var response = ResponseHandler.SuccessResponse(result, "Get event by id successfully");
         return response;
