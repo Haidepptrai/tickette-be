@@ -1,9 +1,8 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
-using QRCoder;
 using System.Security.Cryptography;
-using Tickette.Application.Common;
 using Tickette.Application.Common.Interfaces;
+using Tickette.Application.Features.Orders.Common;
 using Tickette.Application.Features.QRCode.Common;
 using Tickette.Application.Features.QRCode.Queries.ValidateQrCode;
 
@@ -18,7 +17,7 @@ public class QrCodeService : IQrCodeService
         _secretKey = configuration["QrCodeSecretKey"] ?? throw new KeyNotFoundException("Missing Secret Key For QR Code Generator");
     }
 
-    public string GenerateQrCode(OrderItemQrCodeDto order, int pixelSize = 20)
+    public TicketQrCode GenerateQrCode(OrderItemQrCodeDto order, int pixelSize = 20)
     {
         // 1. Serialize the OrderItemQrCodeDto to JSON
         var jsonData = JsonConvert.SerializeObject(order);
@@ -26,22 +25,20 @@ public class QrCodeService : IQrCodeService
         // 2. Generate a HMAC signature using the secret key
         var signature = GenerateSignature(jsonData);
 
-        // 3. Create a payload with the order data and the signature
-        var payload = new QrCodePayload(jsonData, signature);
-
-        // 4. Serialize the payload to JSON
-        var payloadJson = JsonConvert.SerializeObject(payload);
-
-        // 5. Generate the QR code using PngByteQRCode
-        using var qrGenerator = new QRCodeGenerator();
-        var qrCodeData = qrGenerator.CreateQrCode(payloadJson, QRCodeGenerator.ECCLevel.Q);
-        var qrCode = new PngByteQRCode(qrCodeData);
-
-        // 6. Get the QR code as a PNG byte array
-        byte[] qrCodeBytes = qrCode.GetGraphic(10);
+        // 
+        var qrCodeWithSignatureData = new TicketQrCode
+        {
+            BuyerEmail = order.BuyerEmail,
+            BuyerName = order.BuyerName,
+            BuyerPhone = order.BuyerPhone,
+            OrderId = order.OrderId,
+            OrderItemId = order.OrderItemId,
+            SeatsOrdered = order.SeatsOrdered,
+            Signature = signature,
+        };
 
         // 7. Convert bytes to Base64 string
-        return Convert.ToBase64String(qrCodeBytes);
+        return qrCodeWithSignatureData;
     }
 
     public bool VerifyQrCodeSignature(string data, string providedSignature)

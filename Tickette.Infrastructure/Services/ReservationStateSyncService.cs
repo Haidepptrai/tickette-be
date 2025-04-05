@@ -11,11 +11,11 @@ namespace Tickette.Infrastructure.Services;
 /// Since Redis could potentially crash
 /// We need to ensure that the reservation is saved in the database to recover it later.
 /// </summary>
-public class ReservationPersistenceService
+public class ReservationStateSyncService
 {
     private readonly IApplicationDbContext _dbContext;
 
-    public ReservationPersistenceService(IApplicationDbContext dbContext)
+    public ReservationStateSyncService(IApplicationDbContext dbContext)
     {
         _dbContext = dbContext;
     }
@@ -65,6 +65,7 @@ public class ReservationPersistenceService
             .Where(r => r.UserId == userId)
             .Include(r => r.Items)
             .ThenInclude(i => i.SeatAssignments)
+            .OrderByDescending(i => i.CreatedAt)
             .FirstOrDefaultAsync(r => r.Items.Any(i => i.TicketId == ticketId));
 
         if (reservation == null)

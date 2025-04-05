@@ -69,14 +69,15 @@ public class ExceptionHandlingMiddleware
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = statusCode;
 
-        var response = context.Response.StatusCode switch
+        var response = ResponseHandler.ErrorResponse(Unit.Value, message, statusCode);
+
+        var jsonOptions = new JsonSerializerOptions
         {
-            409 => ResponseHandler.ErrorResponse(Unit.Value, message, statusCode),
-            400 => ResponseHandler.ErrorResponse(Unit.Value, message, statusCode),
-            404 => ResponseHandler.ErrorResponse(Unit.Value, message, statusCode),
-            _ => ResponseHandler.ErrorResponse(Unit.Value, message, statusCode)
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DictionaryKeyPolicy = JsonNamingPolicy.CamelCase
         };
 
-        return context.Response.WriteAsync(JsonSerializer.Serialize(response));
+        var json = JsonSerializer.Serialize(response, jsonOptions);
+        return context.Response.WriteAsync(json);
     }
 }

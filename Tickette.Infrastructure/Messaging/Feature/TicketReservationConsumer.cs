@@ -10,6 +10,12 @@ using Tickette.Infrastructure.Services;
 
 namespace Tickette.Infrastructure.Messaging.Feature;
 
+/// <summary>
+/// This class is responsible for synchronizing the ticket reservation with database
+/// after done in Redis.
+/// Since user need to know if the reservation is done or not, so we cannot
+/// put redis cache reservation in background.
+/// </summary>
 public class TicketReservationConsumer : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
@@ -35,7 +41,7 @@ public class TicketReservationConsumer : BackgroundService
             using var scope = _serviceProvider.CreateScope();
 
             var redisHandler = scope.ServiceProvider.GetRequiredService<IReservationService>();
-            var persistenceService = scope.ServiceProvider.GetRequiredService<ReservationPersistenceService>();
+            var persistenceService = scope.ServiceProvider.GetRequiredService<ReservationStateSyncService>();
 
             foreach (var ticket in reservation.Tickets)
             {

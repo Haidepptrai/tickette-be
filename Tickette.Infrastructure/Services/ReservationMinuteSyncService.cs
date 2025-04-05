@@ -8,15 +8,19 @@ using Tickette.Infrastructure.Persistence.Redis;
 
 namespace Tickette.Infrastructure.Services;
 
-public class ReservationSyncService : BackgroundService
+/// <summary>
+/// Sync Redis reservation to database.
+/// Run every 1 minute.
+/// </summary>
+public class ReservationMinuteSyncService : BackgroundService
 {
-    private readonly ILogger<ReservationSyncService> _logger;
+    private readonly ILogger<ReservationMinuteSyncService> _logger;
     private readonly IConnectionMultiplexer _redis;
     private readonly IServiceProvider _serviceProvider;
     private readonly RedisSettings _redisSettings;
 
-    public ReservationSyncService(
-        ILogger<ReservationSyncService> logger,
+    public ReservationMinuteSyncService(
+        ILogger<ReservationMinuteSyncService> logger,
         IConnectionMultiplexer redis,
         IServiceProvider serviceProvider,
         IOptions<RedisSettings> redisSettings)

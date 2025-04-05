@@ -16,5 +16,5 @@ public record OrderedTicketDto
 
     public string Currency { get; set; }
 
-    public string QrCode { get; set; }
+    public TicketQrCode QrCode { get; set; }
 }
