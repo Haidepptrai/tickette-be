@@ -1,5 +1,6 @@
 ﻿using Amazon;
 using Amazon.S3;
+using Audit.EntityFramework;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -51,11 +52,15 @@ public static class DependencyInjection
 {
     public static void AddInfrastructure(this IHostApplicationBuilder builder)
     {
+        builder.Services.AddScoped<AuditSaveChangesInterceptor>();
+
         string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-        builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        builder.Services.AddDbContext<ApplicationDbContext>((provider, options) =>
         {
             options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention();
+
+            options.AddInterceptors(provider.GetRequiredService<AuditSaveChangesInterceptor>());
         });
 
         builder.Services.AddScoped<IApplicationDbContext>(provider =>
@@ -237,8 +242,8 @@ public static class DependencyInjection
 
             dbContext.Database.Migrate();
 
-            SeedDatabase.SeedCategories(dbContext).Wait();
-            SeedDatabase.SeedRolesAsync(roleManager).Wait();
+            SeedDatabase.SeedCategories(dbContext);
+            SeedDatabase.SeedRoles(roleManager);
             SeedDatabase.SeedRolesAndPermissions(dbContext).Wait();
         }
     }

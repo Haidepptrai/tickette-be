@@ -7,6 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Audit.EntityFramework.Core" Version="27.5.1" />
+    <PackageReference Include="Audit.EntityFramework.Identity.Core" Version="27.5.1" />
+    <PackageReference Include="Audit.NET.PostgreSql" Version="27.5.1" />
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.301" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.413.1" />
     <PackageReference Include="EFCore.NamingConventions" Version="9.0.0" />
@@ -51,6 +54,7 @@
     <Folder Include="Authorization\Handlers\" />
     <Folder Include="Authorization\Requirements\" />
     <Folder Include="Authentication\" />
+    <Folder Include="Data\Interceptors\" />
     <Folder Include="Prediction\Models\" />
   </ItemGroup>
 

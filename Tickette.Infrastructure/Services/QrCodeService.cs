@@ -4,7 +4,6 @@ using System.Security.Cryptography;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Application.Features.QRCode.Common;
-using Tickette.Application.Features.QRCode.Queries.ValidateQrCode;
 
 namespace Tickette.Infrastructure.Services;
 
@@ -47,7 +46,7 @@ public class QrCodeService : IQrCodeService
         return expectedSignature == providedSignature;
     }
 
-    public string SerializeData(ValidateQrCodeQuery request)
+    public string SerializeData(OrderItemQrCodeDto request)
     {
         return JsonConvert.SerializeObject(request);
     }

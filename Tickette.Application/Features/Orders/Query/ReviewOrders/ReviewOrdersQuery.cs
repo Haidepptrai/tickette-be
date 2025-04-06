@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.Orders.Common;
@@ -10,10 +11,19 @@ namespace Tickette.Application.Features.Orders.Query.ReviewOrders;
 
 public record ReviewOrdersQuery
 {
-    public required Guid UserId { get; set; }
+    [JsonIgnore]
+    public Guid UserId { get; set; }
+
+    public required int PageNumber { get; init; }
+
+    public required int PageSize { get; init; }
+
+    public required string TicketType { get; init; } = string.Empty; // "Active", "Recent", "Used"
+
+    public string? Search { get; init; }
 }
 
-public class ReviewOrdersQueryHandler : IQueryHandler<ReviewOrdersQuery, ResponseDto<List<OrderedTicketGroupListDto>>>
+public class ReviewOrdersQueryHandler : IQueryHandler<ReviewOrdersQuery, PagedResult<OrderedTicketGroupListDto>>
 {
     private readonly IApplicationDbContext _context;
     private readonly IQrCodeService _qrCodeService;
@@ -24,70 +34,138 @@ public class ReviewOrdersQueryHandler : IQueryHandler<ReviewOrdersQuery, Respons
         _qrCodeService = qrCodeService;
     }
 
-    public async Task<ResponseDto<List<OrderedTicketGroupListDto>>> Handle(ReviewOrdersQuery query, CancellationToken cancellation)
+    public async Task<PagedResult<OrderedTicketGroupListDto>> Handle(ReviewOrdersQuery query, CancellationToken cancellation)
     {
-        try
-        {
-            var result = await _context.Orders
-                .Where(order => order.UserOrderedId == query.UserId)
-                .Include(order => order.Items)
-                .ThenInclude(orderItem => orderItem.Ticket)
-                .ThenInclude(ticket => ticket.EventDate) // Each ticket has a specific event date
-                .ThenInclude(eventDate => eventDate.Event)
-                .ToListAsync(cancellation);
+        var now = DateTime.UtcNow;
 
-            var groupedOrders = result
-                .Select(order => new OrderedTicketGroupListDto()
+        // Normalize TicketType
+        var ticketType = query.TicketType.Trim().ToLowerInvariant();
+
+        IQueryable<Order> baseQuery = _context.Orders
+            .Where(o => o.UserOrderedId == query.UserId)
+            .Include(o => o.Items)
+                .ThenInclude(i => i.Ticket)
+                    .ThenInclude(t => t.EventDate)
+                        .ThenInclude(ed => ed.Event);
+
+        // Apply search filtering if Search is provided
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            var keyword = query.Search.Trim().ToLower();
+
+            baseQuery = baseQuery.Where(o =>
+                o.BuyerName.ToLower().Contains(keyword) ||
+                o.BuyerEmail.ToLower().Contains(keyword) ||
+                o.Items.Any(i =>
+                    i.Ticket.Name.ToLower().Contains(keyword) ||
+                    i.Ticket.EventDate.Event.Name.ToLower().Contains(keyword)
+                ));
+        }
+
+        // Apply TicketType-specific filtering
+        switch (ticketType)
+        {
+            case "active":
+                baseQuery = baseQuery.Where(o =>
+                    o.Items.Any(i => !i.IsScanned && i.Ticket.EventDate.EndDate >= now));
+                break;
+
+            case "used":
+                baseQuery = baseQuery.Where(o =>
+                    o.Items.Any(i => i.Ticket.EventDate.EndDate < now));
+                break;
+
+            case "recent":
+                baseQuery = baseQuery.OrderByDescending(o => o.CreatedAt);
+                break;
+
+            default:
+                return new PagedResult<OrderedTicketGroupListDto>(
+                    items: [],
+                    totalCount: 0,
+                    pageNumber: query.PageNumber,
+                    pageSize: query.PageSize
+                );
+        }
+
+        // Get total count before pagination
+        var totalCount = await baseQuery.CountAsync(cancellation);
+
+        // Apply pagination
+        var pagedOrders = await baseQuery
+            .OrderByDescending(o => o.CreatedAt)
+            .Skip((query.PageNumber - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .ToListAsync(cancellation);
+
+        // Transform result
+        var grouped = pagedOrders.Select(order =>
+        {
+            var eventDate = order.Items.First().Ticket.EventDate;
+            var eventInfo = eventDate.Event;
+
+            var address = string.Join(" at ", new[]
+            {
+            eventInfo.LocationName,
+            string.Join(", ", new[]
+            {
+                eventInfo.StreetAddress,
+                eventInfo.Ward,
+                eventInfo.District,
+                eventInfo.City
+            }.Where(s => !string.IsNullOrWhiteSpace(s)))
+        }.Where(s => !string.IsNullOrWhiteSpace(s)));
+
+            // Filter items based on TicketType again, but now in memory
+            var filteredItems = ticketType switch
+            {
+                "active" => order.Items.Where(i => !i.IsScanned && i.Ticket.EventDate.EndDate >= now).ToList(),
+                "used" => order.Items.Where(i => i.IsScanned || i.Ticket.EventDate.EndDate < now).ToList(),
+                "recent" => order.Items.ToList(), // For recent orders, include all items without filtering
+                _ => []
+            };
+
+            var orderItems = filteredItems.Select(orderItem => new OrderItemListDto
+            {
+                Id = orderItem.Id,
+                StartDate = orderItem.Ticket.EventDate.StartDate,
+                EndDate = orderItem.Ticket.EventDate.EndDate,
+                BuyerName = order.BuyerName,
+                BuyerEmail = order.BuyerEmail,
+                BuyerPhone = order.BuyerPhone,
+                Tickets = new OrderedTicketDto
                 {
-                    Id = order.Id,
-                    EventName = order.Event.Name,
-                    EventBanner = order.Event.Banner,
-                    Address = string.Join(" at ", new[]
-                    {
-                        order.Event.LocationName, // Place name first
-                        string.Join(", ", new[]
-                        {
-                            order.Event.StreetAddress,
-                            order.Event.Ward,
-                            order.Event.District,
-                            order.Event.City
-                        }.Where(s => !string.IsNullOrWhiteSpace(s)))
-                    }.Where(s => !string.IsNullOrWhiteSpace(s))),
-                    OrderItems = order.Items
-                        .Select(orderItem => new OrderItemListDto()
-                        {
-                            Id = orderItem.Id,
-                            StartDate = orderItem.Ticket.EventDate.StartDate, // Assign event date from ticket
-                            EndDate = orderItem.Ticket.EventDate.EndDate,
-                            BuyerName = order.BuyerName,
-                            BuyerEmail = order.BuyerEmail,
-                            BuyerPhone = order.BuyerPhone,
-                            Tickets = new OrderedTicketDto()
-                            {
-                                Id = orderItem.Ticket.Id,
-                                Name = orderItem.Ticket.Name,
-                                Image = orderItem.Ticket.Image,
-                                Description = orderItem.Ticket.Description,
-                                Quantity = orderItem.Quantity,
-                                TotalPrice = orderItem.Quantity * orderItem.Ticket.Price.Amount,
-                                Currency = orderItem.Ticket.Price.Currency,
-                                QrCode = GenerateQrCode(orderItem, order.UserOrderedId)
-                            }
-                        })
-                        .ToList()
-                })
-                .ToList();
+                    Id = orderItem.Ticket.Id,
+                    Name = orderItem.Ticket.Name,
+                    Image = orderItem.Ticket.Image,
+                    Description = orderItem.Ticket.Description,
+                    Quantity = orderItem.Quantity,
+                    TotalPrice = orderItem.Quantity * orderItem.Ticket.Price.Amount,
+                    Currency = orderItem.Ticket.Price.Currency,
+                    QrCode = GenerateQrCode(orderItem)
+                }
+            }).ToList();
 
+            return new OrderedTicketGroupListDto
+            {
+                Id = order.Id,
+                EventName = eventInfo.Name,
+                EventBanner = eventInfo.Banner,
+                Address = address,
+                OrderItems = orderItems
+            };
+        }).Where(g => g.OrderItems.Any()) // Exclude any orders that got filtered to empty
+        .ToList();
 
-            return ResponseHandler.SuccessResponse(groupedOrders);
-        }
-        catch
-        {
-            throw new Exception("An error occurred while fetching the orders.");
-        }
+        return new PagedResult<OrderedTicketGroupListDto>(
+            items: grouped,
+            totalCount: totalCount,
+            pageNumber: query.PageNumber,
+            pageSize: query.PageSize
+        );
     }
 
-    private TicketQrCode GenerateQrCode(OrderItem orderItem, Guid userId)
+    private TicketQrCode GenerateQrCode(OrderItem orderItem)
     {
         var qrCodeData = new OrderItemQrCodeDto
         {
