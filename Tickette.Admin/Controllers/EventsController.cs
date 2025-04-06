@@ -6,11 +6,11 @@ using Tickette.Application.Features.Events.Commands.UpdateEventStatus;
 using Tickette.Application.Features.Events.Common;
 using Tickette.Application.Features.Events.Common.Admin;
 using Tickette.Application.Features.Events.Queries.Admin.GetAllEvents;
+using Tickette.Application.Features.Events.Queries.Admin.GetEventById;
 using Tickette.Application.Features.Events.Queries.Admin.GetEventsStatistic;
 using Tickette.Application.Features.Events.Queries.Admin.SearchEventsByName;
 using Tickette.Application.Features.Events.Queries.Client.GetEventByUserId;
 using Tickette.Application.Features.Events.Queries.GetEventByCategory;
-using Tickette.Application.Features.Events.Queries.GetEventById;
 using Tickette.Application.Wrappers;
 
 namespace Tickette.Admin.Controllers;
@@ -69,9 +69,9 @@ public class EventsController : ControllerBase
 
     // GET event by id
     [HttpPost("id")]
-    public async Task<ResponseDto<EventDetailDto>> GetEventById(GetEventByIdRequest query, CancellationToken cancellationToken = default)
+    public async Task<ResponseDto<EventDetailDto>> GetEventById(AdminGetEventByIdRequest query, CancellationToken cancellationToken = default)
     {
-        var result = await _queryDispatcher.Dispatch<GetEventByIdRequest, EventDetailDto>(query, cancellationToken);
+        var result = await _queryDispatcher.Dispatch<AdminGetEventByIdRequest, EventDetailDto>(query, cancellationToken);
         var response = ResponseHandler.SuccessResponse(result, "Get event by id successfully");
         return response;
     }
@@ -133,15 +133,8 @@ public class EventsController : ControllerBase
     //[Authorize(Roles = Constant.APPLICATION_ROLE.Admin)]
     public async Task<ResponseDto<Guid>> UpdateEventStatus(UpdateEventStatusCommand command, CancellationToken token)
     {
-        try
-        {
-            var response = await _commandDispatcher.Dispatch<UpdateEventStatusCommand, Guid>(command, token);
-            return ResponseHandler.SuccessResponse(response, "Event status updated successfully");
-        }
-        catch (Exception ex)
-        {
-            return ResponseHandler.ErrorResponse(Guid.Empty, ex.Message, 500);
-        }
+        var response = await _commandDispatcher.Dispatch<UpdateEventStatusCommand, Guid>(command, token);
+        return ResponseHandler.SuccessResponse(response, "Event status updated successfully");
     }
 
     [HttpPost("statistic")]

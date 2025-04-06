@@ -1,7 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.DTOs.Auth;
@@ -46,15 +44,6 @@ namespace Tickette.Admin.Controllers
             }
 
             return ResponseHandler.SuccessResponse<object>(result.Data, "Token refreshed successfully.");
-        }
-
-        public class RegisterRequest
-        {
-            [EmailAddress]
-            public string Email { get; set; }
-
-            [PasswordPropertyText]
-            public string Password { get; set; }
         }
 
         [HttpDelete("{userId:guid}")]

@@ -27,7 +27,9 @@ public sealed class Event : BaseEntity, IAuditable
 
     public string EventSlug { get; private set; }
 
-    public ApprovalStatus Status { get; set; }
+    public ApprovalStatus Status { get; private set; }
+
+    public string? Reason { get; private set; }
 
     public string EventOwnerStripeId { get; init; }
 
@@ -79,6 +81,7 @@ public sealed class Event : BaseEntity, IAuditable
         EventSlug = GenerateSlug(name);
         Status = ApprovalStatus.Pending;
         IsOffline = isOffline;
+        Reason = null;
     }
 
     public static Event CreateEvent(
@@ -147,6 +150,15 @@ public sealed class Event : BaseEntity, IAuditable
     public void AddEventDates(EventDate eventDate)
     {
         EventDates.Add(eventDate);
+    }
+
+    public void ChangeStatus(ApprovalStatus status, string? reason = null)
+    {
+        //if (status == ApprovalStatus.Approved && Status == ApprovalStatus.Approved)
+        //    throw new InvalidOperationException("Event status cannot be updated once it is approved.");
+
+        Status = status;
+        Reason = reason;
     }
 
     private static string GenerateSlug(string name)

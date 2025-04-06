@@ -88,6 +88,8 @@ namespace Tickette.Admin
                 app.UseSwaggerUI();
             }
 
+            app.UseCors("AllowDevelopment");
+
             app.UseHttpsRedirection();
 
             app.MapControllers();

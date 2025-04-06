@@ -1,9 +1,9 @@
-﻿using Audit.EntityFramework;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.JsonWebTokens;
 using System.Security.Claims;
 using System.Text.Json;
 using Tickette.Domain.Common;
@@ -11,13 +11,13 @@ using Tickette.Domain.Entities;
 
 namespace Tickette.Infrastructure.Data.Interceptors;
 
-public class AuditInterceptor : SaveChangesInterceptor
+public class AuditSaveChangesInterceptor : SaveChangesInterceptor
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<AuditSaveChangesInterceptor> _logger;
-    private readonly string[] _importantFields = { "Status" }; // Add more fields if needed
+    private readonly string[] _importantFields = ["Status", "Reason"];
 
-    public AuditInterceptor(IHttpContextAccessor httpContextAccessor, ILogger<AuditSaveChangesInterceptor> logger)
+    public AuditSaveChangesInterceptor(IHttpContextAccessor httpContextAccessor, ILogger<AuditSaveChangesInterceptor> logger)
     {
         _httpContextAccessor = httpContextAccessor;
         _logger = logger;
@@ -43,19 +43,18 @@ public class AuditInterceptor : SaveChangesInterceptor
         if (context == null) return;
 
         if (!IsAdmin()) return;
-        var userId = GetCurrentUserId();
 
-        if (userId == null || userId == Guid.Empty)
+        var (userId, userEmail) = GetCurrentUserInformation();
+        if (userId == null || userEmail == null)
         {
-            _logger.LogWarning("Audit skipped: user ID is missing.");
-            return; // Enforce user context
+            _logger.LogWarning("User information is not available.");
+            return;
         }
 
-
-        CreateAuditLogs(context, userId.Value);
+        CreateAuditLogs(context, userId.Value, userEmail);
     }
 
-    private void CreateAuditLogs(DbContext context, Guid userId)
+    private void CreateAuditLogs(DbContext context, Guid userId, string userEmail)
     {
         var auditEntries = new List<AuditEntry>();
 
@@ -123,6 +122,7 @@ public class AuditInterceptor : SaveChangesInterceptor
                 action: auditEntry.Action,
                 timestamp: auditEntry.Timestamp,
                 userId: auditEntry.UserId,
+                userEmail: userEmail,
                 data: JsonSerializer.Serialize(auditEntry.Changes)
             );
 
@@ -138,10 +138,18 @@ public class AuditInterceptor : SaveChangesInterceptor
         return value is Guid guid ? guid : Guid.Empty;
     }
 
-    private Guid? GetCurrentUserId()
+    private (Guid?, string) GetCurrentUserInformation()
     {
-        var userIdStr = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-        return Guid.TryParse(userIdStr, out var userId) ? userId : (Guid?)null;
+        var userIdStr = _httpContextAccessor.HttpContext?.User?.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        var userEmail = _httpContextAccessor.HttpContext?.User?.FindFirstValue(JwtRegisteredClaimNames.Email);
+
+        if (string.IsNullOrEmpty(userIdStr) || string.IsNullOrEmpty(userEmail))
+            return (null, null);
+
+        if (!Guid.TryParse(userIdStr, out var userId))
+            return (null, null);
+
+        return (userId, userEmail);
     }
 
     private bool IsAdmin()
@@ -165,5 +173,4 @@ public class AuditInterceptor : SaveChangesInterceptor
                || type == typeof(TimeSpan)
                || Nullable.GetUnderlyingType(type) is not null && IsSupportedScalarType(Nullable.GetUnderlyingType(type)!);
     }
-
 }

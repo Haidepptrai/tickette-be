@@ -1,6 +1,5 @@
 ﻿using Amazon;
 using Amazon.S3;
-using Audit.EntityFramework;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -34,6 +33,7 @@ using Tickette.Infrastructure.Authorization.Handlers;
 using Tickette.Infrastructure.Authorization.Requirements;
 using Tickette.Infrastructure.CQRS;
 using Tickette.Infrastructure.Data;
+using Tickette.Infrastructure.Data.Interceptors;
 using Tickette.Infrastructure.Email;
 using Tickette.Infrastructure.FileStorage;
 using Tickette.Infrastructure.Hubs;
@@ -52,8 +52,6 @@ public static class DependencyInjection
 {
     public static void AddInfrastructure(this IHostApplicationBuilder builder)
     {
-        builder.Services.AddScoped<AuditSaveChangesInterceptor>();
-
         string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
         builder.Services.AddDbContext<ApplicationDbContext>((provider, options) =>
@@ -65,6 +63,8 @@ public static class DependencyInjection
 
         builder.Services.AddScoped<IApplicationDbContext>(provider =>
             provider.GetService<ApplicationDbContext>() ?? throw new InvalidOperationException());
+
+        builder.Services.AddScoped<AuditSaveChangesInterceptor>();
 
         // Add Identity
         builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
