@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Tickette.Domain.Common;
 
@@ -15,10 +14,7 @@ namespace Tickette.Infrastructure.Data
             optionsBuilder.UseNpgsql(connectionString)
                 .UseSnakeCaseNamingConvention();
 
-            // Create a fake HttpContextAccessor for design-time purposes
-            var httpContextAccessor = new HttpContextAccessor();
-
-            return new ApplicationDbContext(optionsBuilder.Options, httpContextAccessor);
+            return new ApplicationDbContext(optionsBuilder.Options);
         }
     }
 }

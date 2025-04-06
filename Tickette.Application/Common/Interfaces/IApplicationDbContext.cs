@@ -5,6 +5,8 @@ namespace Tickette.Application.Common.Interfaces;
 
 public interface IApplicationDbContext
 {
+    DbSet<AuditLog> AuditLogs { get; set; }
+
     DbSet<Event> Events { get; set; }
 
     DbSet<EventCommittee> EventCommittees { get; set; }

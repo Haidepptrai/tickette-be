@@ -29,41 +29,28 @@ public class OrdersController : BaseController
         _queryDispatcher = queryDispatcher;
     }
 
-    [HttpGet("my-orders")]
+    [HttpPost("my-orders")]
     [Authorize]
-    public async Task<IActionResult> Get(CancellationToken cancellation)
+    public async Task<ActionResult<ResponseDto<List<OrderedTicketGroupListDto>>>> Get([FromBody] ReviewOrdersQuery query, CancellationToken cancellation)
     {
-        try
-        {
-            // Extract UserId from JWT token claims
-            var userId = GetUserId();
+        // Extract UserId from JWT token claims
+        var userId = GetUserId();
+        query.UserId = Guid.Parse(userId);
 
-            // Set the UserId in the query object
-            var query = new ReviewOrdersQuery
-            {
-                UserId = Guid.Parse(userId)
-            };
+        // Dispatch the query
+        var result = await _queryDispatcher.Dispatch<ReviewOrdersQuery, PagedResult<OrderedTicketGroupListDto>>(query, cancellation);
+        var meta = new PaginationMeta(
+            result.PageNumber,
+            result.PageSize,
+            result.TotalCount,
+            result.TotalPages);
 
-            // Dispatch the query
-            var response =
-                await _queryDispatcher.Dispatch<ReviewOrdersQuery, ResponseDto<List<OrderedTicketGroupListDto>>>(
-                    query, cancellation);
-
-            if (!response.Success)
-            {
-                return BadRequest(response);
-            }
-
-            return Ok(response);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ResponseHandler.ErrorResponse<List<OrderedTicketGroupListDto>>(null, ex.Message));
-        }
+        var response = ResponseHandler.PaginatedResponse(result.Items, meta, "Orders retrieved successfully");
+        return Ok(response);
     }
 
     [HttpPost("validate-qrcode")]
-    [Authorize(Policy = "CheckInAccess")]
+    //[Authorize(Policy = "CheckInAccess")]
     public async Task<IActionResult> ValidateQrCode([FromBody] ValidateQrCodeQuery query,
         CancellationToken cancellation)
     {

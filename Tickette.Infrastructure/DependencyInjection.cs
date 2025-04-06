@@ -33,6 +33,7 @@ using Tickette.Infrastructure.Authorization.Handlers;
 using Tickette.Infrastructure.Authorization.Requirements;
 using Tickette.Infrastructure.CQRS;
 using Tickette.Infrastructure.Data;
+using Tickette.Infrastructure.Data.Interceptors;
 using Tickette.Infrastructure.Email;
 using Tickette.Infrastructure.FileStorage;
 using Tickette.Infrastructure.Hubs;
@@ -53,13 +54,17 @@ public static class DependencyInjection
     {
         string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-        builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        builder.Services.AddDbContext<ApplicationDbContext>((provider, options) =>
         {
             options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention();
+
+            options.AddInterceptors(provider.GetRequiredService<AuditSaveChangesInterceptor>());
         });
 
         builder.Services.AddScoped<IApplicationDbContext>(provider =>
             provider.GetService<ApplicationDbContext>() ?? throw new InvalidOperationException());
+
+        builder.Services.AddScoped<AuditSaveChangesInterceptor>();
 
         // Add Identity
         builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
@@ -237,8 +242,8 @@ public static class DependencyInjection
 
             dbContext.Database.Migrate();
 
-            SeedDatabase.SeedCategories(dbContext).Wait();
-            SeedDatabase.SeedRolesAsync(roleManager).Wait();
+            SeedDatabase.SeedCategories(dbContext);
+            SeedDatabase.SeedRoles(roleManager);
             SeedDatabase.SeedRolesAndPermissions(dbContext).Wait();
         }
     }

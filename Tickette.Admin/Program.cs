@@ -26,10 +26,13 @@ namespace Tickette.Admin
             builder.AddInfrastructure();
             builder.AddRabbitMQSettings();
             builder.AddRedisSettings();
+            builder.AddInMemoryCacheService();
             builder.AddStripeSettings();
             builder.AddS3Service();
             builder.AddMachineLearningModel();
             builder.AddEmailService();
+            builder.AddSignalRService();
+            builder.AddCorsService();
 
             //Add Swagger
             builder.Services.AddEndpointsApiExplorer();
@@ -84,6 +87,8 @@ namespace Tickette.Admin
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+
+            app.UseCors("AllowDevelopment");
 
             app.UseHttpsRedirection();
 

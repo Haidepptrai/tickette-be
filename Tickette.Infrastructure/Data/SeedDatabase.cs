@@ -9,7 +9,7 @@ namespace Tickette.Infrastructure.Data;
 
 public static class SeedDatabase
 {
-    public static async Task SeedCategories(ApplicationDbContext dbContext)
+    public static void SeedCategories(ApplicationDbContext dbContext)
     {
         var categories = new List<Category>
         {
@@ -25,23 +25,25 @@ public static class SeedDatabase
 
         foreach (var cat in categories)
         {
-            var existingCategory = await dbContext.Categories.FirstOrDefaultAsync(c => c.Name == cat.Name);
-            if (existingCategory == null)
+            var exists = dbContext.Categories.Any(c => c.Name.Contains(cat.Name));
+            if (!exists)
             {
-                await dbContext.Categories.AddAsync(cat);
+                dbContext.Categories.Add(cat);
             }
-
-            await dbContext.SaveChangesAsync();
         }
+
+        dbContext.SaveChanges();
     }
 
-    public static async Task SeedRolesAsync(RoleManager<IdentityRole<Guid>> roleManager)
+
+    public static void SeedRoles(RoleManager<IdentityRole<Guid>> roleManager)
     {
         var roles = Constant.APPLICATION_ROLES;
 
         foreach (var role in roles)
         {
-            if (!await roleManager.RoleExistsAsync(role))
+            var exists = roleManager.RoleExistsAsync(role).GetAwaiter().GetResult();
+            if (!exists)
             {
                 var identityRole = new IdentityRole<Guid>
                 {
@@ -50,7 +52,7 @@ public static class SeedDatabase
                     NormalizedName = role.ToUpper()
                 };
 
-                await roleManager.CreateAsync(identityRole);
+                roleManager.CreateAsync(identityRole).GetAwaiter().GetResult();
                 Console.WriteLine($"Created new role: {role}");
             }
             else
@@ -59,6 +61,7 @@ public static class SeedDatabase
             }
         }
     }
+
 
     public static async Task SeedRolesAndPermissions(ApplicationDbContext dbContext)
     {

@@ -3,23 +3,25 @@ using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.QRCode.Common;
 using Tickette.Application.Wrappers;
+using Tickette.Domain.Entities;
 
 namespace Tickette.Application.Features.QRCode.Queries.ValidateQrCode;
 
 public record ValidateQrCodeQuery
 {
-    public required Guid EventId { get; init; }
-    public required string BuyerEmail { get; init; }
+    public string BuyerEmail { get; init; }
 
-    public required string BuyerName { get; init; }
+    public string BuyerName { get; init; }
 
-    public required string BuyerPhone { get; init; }
+    public string BuyerPhone { get; init; }
 
-    public required Guid OrderId { get; init; }
+    public Guid OrderId { get; init; }
 
-    public required Guid OrderItemId { get; init; }
+    public Guid OrderItemId { get; init; }
 
-    public required string Signature { get; init; }
+    public string Signature { get; init; }
+
+    public ICollection<SeatOrder>? SeatsOrdered { get; init; }
 }
 
 public class ValidateQrCodeQueryHandler : IQueryHandler<ValidateQrCodeQuery, ResponseDto<DataRetrievedFromQrCode>>
@@ -38,7 +40,16 @@ public class ValidateQrCodeQueryHandler : IQueryHandler<ValidateQrCodeQuery, Res
         try
         {
             // 1. Concatenate data fields into a single string for verification
-            var dataToVerify = _qrCodeService.SerializeData(query);
+            var toOrderData = new OrderItemQrCodeDto()
+            {
+                BuyerEmail = query.BuyerEmail,
+                BuyerName = query.BuyerName,
+                BuyerPhone = query.BuyerPhone,
+                OrderId = query.OrderId,
+                OrderItemId = query.OrderItemId,
+                SeatsOrdered = query.SeatsOrdered
+            };
+            var dataToVerify = _qrCodeService.SerializeData(toOrderData);
 
             // 2. Validate the QR Code Signature using QrCodeService
             if (!_qrCodeService.VerifyQrCodeSignature(dataToVerify, query.Signature))

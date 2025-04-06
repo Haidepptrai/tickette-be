@@ -8,7 +8,14 @@ using Tickette.Infrastructure.Helpers;
 
 namespace Tickette.Application.Features.Events.Commands.UpdateEventStatus;
 
-public record UpdateEventStatusCommand(Guid EventId, ApprovalStatus Status);
+public record UpdateEventStatusCommand
+{
+    public Guid EventId { get; init; }
+
+    public ApprovalStatus Status { get; init; }
+
+    public string? Reason { get; init; } // Optional reason for the status update
+};
 
 public class UpdateEventStatusHandler : ICommandHandler<UpdateEventStatusCommand, Guid>
 {
@@ -23,59 +30,48 @@ public class UpdateEventStatusHandler : ICommandHandler<UpdateEventStatusCommand
 
     public async Task<Guid> Handle(UpdateEventStatusCommand command, CancellationToken cancellationToken)
     {
-        try
+        // Fetch the event with its dates and tickets
+        var eventToUpdate = await _context.Events
+            .Include(e => e.EventDates)
+                .ThenInclude(ed => ed.Tickets) // Include tickets for each event date
+            .AsSplitQuery()
+            .IgnoreQueryFilters()
+            .SingleOrDefaultAsync(ev => ev.Id == command.EventId, cancellationToken);
+
+        if (eventToUpdate == null)
+            throw new KeyNotFoundException($"Event with ID {command.EventId} was not found.");
+
+        // Update the event status
+        eventToUpdate.ChangeStatus(command.Status, command.Reason);
+
+        var redisData = new Dictionary<string, string>();
+
+        foreach (var eventDate in eventToUpdate.EventDates)
         {
-            // Fetch the event with its dates and tickets
-            var eventToUpdate = await _context.Events
-                .Include(e => e.EventDates)
-                    .ThenInclude(ed => ed.Tickets) // Include tickets for each event date
-                .AsSplitQuery()
-                .IgnoreQueryFilters()
-                .SingleOrDefaultAsync(ev => ev.Id == command.EventId, cancellationToken);
-
-            if (eventToUpdate == null)
-                throw new KeyNotFoundException($"Event with ID {command.EventId} was not found.");
-
-            //if (eventToUpdate.Status == ApprovalStatus.Approved)
-            //    throw new InvalidOperationException("Event status cannot be updated once it is approved.");
-
-            // Update the event status
-            eventToUpdate.Status = command.Status;
-
-
-            var redisData = new Dictionary<string, string>();
-
-            foreach (var eventDate in eventToUpdate.EventDates)
+            foreach (var ticket in eventDate.Tickets)
             {
-                foreach (var ticket in eventDate.Tickets)
-                {
-                    string inventoryKey = RedisKeys.GetTicketQuantityKey(ticket.Id);
+                string inventoryKey = RedisKeys.GetTicketQuantityKey(ticket.Id);
 
-                    // Only add if it doesn't already exist in Redis
-                    var existingValue = await _redisService.GetAsync(inventoryKey);
-                    if (existingValue == null || existingValue == "0")
-                    {
-                        redisData[inventoryKey] = ticket.RemainingTickets.ToString();
-                    }
+                // Only add if it doesn't already exist in Redis
+                var existingValue = await _redisService.GetAsync(inventoryKey);
+                if (existingValue == null || existingValue == "0")
+                {
+                    redisData[inventoryKey] = ticket.RemainingTickets.ToString();
                 }
             }
-
-            if (redisData.Count > 0)
-            {
-                await _redisService.SetBatchAsync(redisData);
-            }
-
-            await _context.SaveChangesAsync(cancellationToken);
-
-            // Ensure all approved event tickets exist in Redis
-            await VerifyAllTicketsExistInRedis(eventToUpdate);
-
-            return command.EventId;
         }
-        catch (Exception ex)
+
+        if (redisData.Count > 0)
         {
-            throw new ApplicationException($"Error updating event status: {ex.Message}", ex);
+            await _redisService.SetBatchAsync(redisData);
         }
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Ensure all approved event tickets exist in Redis
+        await VerifyAllTicketsExistInRedis(eventToUpdate);
+
+        return command.EventId;
     }
 
     private async Task VerifyAllTicketsExistInRedis(Event eventToUpdate)

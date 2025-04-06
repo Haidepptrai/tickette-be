@@ -25,24 +25,22 @@ public class GetSeatsOrderedInfoQueryHandler : IQueryHandler<GetSeatsOrderedInfo
         var seatsOrderedInfo = new List<SeatsOrderedInfoDto>();
         foreach (var ticketId in request.TicketIds)
         {
-            var reservationItem = await _context.ReservationItems
-                .Include(x => x.SeatAssignments)
-                .Include(x => x.Reservation)
-                .Where(x => x.TicketId == ticketId && x.Reservation.Status == ReservationStatus.Confirmed)
-                .FirstOrDefaultAsync(cancellationToken);
+            var reservations = await _context.ReservationItems
+                .Include(ri => ri.SeatAssignments)
+                .Include(ri => ri.Reservation)
+                .Where(ri => ri.TicketId == ticketId && ri.Reservation.Status == ReservationStatus.Confirmed)
+                .ToListAsync(cancellationToken);
 
-            if (reservationItem == null)
+            foreach (var reservation in reservations)
             {
-                continue;
-            }
-
-            foreach (var seatAssignment in reservationItem.SeatAssignments)
-            {
-                seatsOrderedInfo.Add(new SeatsOrderedInfoDto
+                foreach (var seat in reservation.SeatAssignments)
                 {
-                    RowName = seatAssignment.RowName,
-                    SeatNumber = seatAssignment.SeatNumber
-                });
+                    seatsOrderedInfo.Add(new SeatsOrderedInfoDto
+                    {
+                        RowName = seat.RowName,
+                        SeatNumber = seat.SeatNumber
+                    });
+                }
             }
 
         }
