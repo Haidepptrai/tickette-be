@@ -2,14 +2,14 @@
 
 public static class ResponseHandler
 {
-    public static ResponseDto<T> SuccessResponse<T>(T data, string message = "Operation completed successfully.", int statusCode = 200)
+    public static ResponseDto<T> SuccessResponse<T>(T data, string message = "Operation completed successfully.")
     {
-        return new ResponseDto<T>(message, data, statusCode, true);
+        return new ResponseDto<T>(message, data);
     }
 
-    public static ResponseDto<T> ErrorResponse<T>(T? data, string message = "Operation failed.", int statusCode = 400)
+    public static ResponseDto<T> ErrorResponse<T>(T? data, string message = "Operation failed.")
     {
-        return new ResponseDto<T>(message, data, statusCode, false);
+        return new ResponseDto<T>(message, data);
     }
 
     public static ResponseDto<IEnumerable<T>> PaginatedResponse<T>(
@@ -18,7 +18,7 @@ public static class ResponseHandler
         string message = "Operation completed successfully.",
         int statusCode = 200)
     {
-        return new ResponseDto<IEnumerable<T>>(message, data, statusCode, true, meta);
+        return new ResponseDto<IEnumerable<T>>(message, data, meta);
     }
 }
 
@@ -26,34 +26,30 @@ public class ResponseDto<T>
 {
     public string Message { get; set; }
     public T? Data { get; set; }
-    public int StatusCode { get; set; }
-    public bool Success { get; set; }
     public PaginationMeta? Meta { get; set; } // Optional pagination metadata
 
-    public ResponseDto(string message, T? data, int statusCode, bool success, PaginationMeta? meta = null)
+    public ResponseDto(string message, T? data, PaginationMeta? meta = null)
     {
         Message = message;
         Data = data;
-        StatusCode = statusCode;
-        Success = success;
         Meta = meta;
     }
 }
 
 public class PaginationMeta
 {
-    public int Page { get; set; }
+    public int PageNumber { get; set; }
 
-    public int PerPage { get; set; }
+    public int PageSize { get; set; }
 
     public int TotalItems { get; set; }
 
     public int TotalPages { get; set; }
 
-    public PaginationMeta(int page, int perPage, int totalItems, int totalPages)
+    public PaginationMeta(int pageNumber, int pageSize, int totalItems, int totalPages)
     {
-        Page = page;
-        PerPage = perPage;
+        PageNumber = pageNumber;
+        PageSize = pageSize;
         TotalItems = totalItems;
         TotalPages = totalPages;
     }

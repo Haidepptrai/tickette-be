@@ -10,6 +10,7 @@ public record GetEventAuditLogsQuery
 {
     public int PageNumber { get; init; } = 0;
     public int PageSize { get; init; } = 10;
+    public string Type { get; init; }
 }
 
 public class GetEventAuditLogsQueryHandler : IQueryHandler<GetEventAuditLogsQuery, PagedResult<EventAuditLogDto>>
@@ -21,20 +22,20 @@ public class GetEventAuditLogsQueryHandler : IQueryHandler<GetEventAuditLogsQuer
         _context = context;
     }
 
-    public async Task<PagedResult<EventAuditLogDto>> Handle(GetEventAuditLogsQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<EventAuditLogDto>> Handle(GetEventAuditLogsQuery query, CancellationToken cancellationToken)
     {
         // Step 1: Build the query
-        var query = _context.AuditLogs
-            .Where(al => al.TableName == "events")
+        var sqlQuery = _context.AuditLogs
+            .Where(al => al.TableName.Contains(query.Type))
             .OrderByDescending(al => al.Timestamp);
 
         // Step 2: Count total logs
-        var totalCount = await query.CountAsync(cancellationToken);
+        var totalCount = await sqlQuery.CountAsync(cancellationToken);
 
         // Step 3: Apply pagination directly in the DB
-        var pagedAuditLogs = await query
-            .Skip(request.PageNumber * request.PageSize)
-            .Take(request.PageSize)
+        var pagedAuditLogs = await sqlQuery
+            .Skip(query.PageNumber * query.PageSize)
+            .Take(query.PageSize)
             .ToListAsync(cancellationToken);
 
         // Step 4: Extract EventIds
@@ -57,7 +58,8 @@ public class GetEventAuditLogsQueryHandler : IQueryHandler<GetEventAuditLogsQuer
             return new EventAuditLogDto
             {
                 Id = al.Id,
-                EventName = eventName ?? "(deleted or unknown)",
+                EntityName = eventName ?? "(deleted or unknown)",
+                EntityId = al.EntityId,
                 Action = al.Action,
                 UserId = al.UserId,
                 UserEmail = al.UserEmail,
@@ -70,8 +72,8 @@ public class GetEventAuditLogsQueryHandler : IQueryHandler<GetEventAuditLogsQuer
         return new PagedResult<EventAuditLogDto>(
             items: auditLogsDto,
             totalCount: totalCount,
-            pageNumber: request.PageNumber,
-            pageSize: request.PageSize
+            pageNumber: query.PageNumber,
+            pageSize: query.PageSize
         );
     }
 

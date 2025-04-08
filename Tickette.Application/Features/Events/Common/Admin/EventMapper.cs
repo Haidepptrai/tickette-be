@@ -18,6 +18,8 @@ public static class EventMapper
         CategoryName = entity.Category.Name,
         Slug = entity.EventSlug,
         Status = entity.Status,
+        StartDate = entity.EventDates.Min(ed => ed.StartDate),
+        EndDate = entity.EventDates.Max(ed => ed.EndDate),
     };
 
 }

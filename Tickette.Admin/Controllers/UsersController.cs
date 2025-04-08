@@ -1,10 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
-using Tickette.Application.Common.Models;
 using Tickette.Application.Features.Users.Common;
 using Tickette.Application.Features.Users.Query.Admin.AdminGetUserById;
-using Tickette.Application.Features.Users.Query.GetAllUsers;
+using Tickette.Application.Features.Users.Query.Admin.GetAllUsers;
 using Tickette.Application.Wrappers;
 using Tickette.Domain.Common;
 
@@ -23,32 +22,24 @@ namespace Tickette.Admin.Controllers
             _identityServices = identityServices;
         }
 
-        [HttpPost]
-        public async Task<ActionResult> GetAllUsers([FromBody] GetAllUsersQuery request, CancellationToken cancellationToken)
+        [HttpPost("all")]
+        public async Task<ActionResult<ResponseDto<PreviewUserResponse>>> GetAllUsers([FromBody] GetAllUsersQuery request, CancellationToken cancellationToken)
         {
             if (request.PageNumber < 1 || request.PageSize < 1)
             {
                 return BadRequest(ResponseHandler.ErrorResponse(Unit.Value, "Invalid Request"));
             }
 
-            var result = await _queryDispatcher.Dispatch<GetAllUsersQuery, AuthResult<IEnumerable<PreviewUserResponse>>>(request, cancellationToken);
+            var result = await _queryDispatcher.Dispatch<GetAllUsersQuery, PagedResult<PreviewUserResponse>>(request, cancellationToken);
 
-            if (!result.Succeeded)
-            {
-                return NotFound(ResponseHandler.ErrorResponse(Unit.Value, "Users not found"));
-            }
+            var paginationMeta = new PaginationMeta(request.PageNumber, request.PageSize, result.TotalCount, result.TotalPages);
 
-            var totalItems = result.Data!.Count();
-            var totalPages = (int)Math.Ceiling((double)totalItems / request.PageSize);
-
-            var paginationMeta = new PaginationMeta(request.PageNumber, request.PageSize, totalItems, totalPages);
-
-            return Ok(ResponseHandler.PaginatedResponse(result.Data, paginationMeta, "Users retrieved successfully"));
+            return Ok(ResponseHandler.PaginatedResponse(result.Items, paginationMeta, "Users retrieved successfully"));
         }
 
         // Get user by ID, Update user, Delete user, etc.
-        [HttpPost("get-user-by-id")]
-        public async Task<ActionResult> GetUserById([FromBody] GetUserByIdRequest body, CancellationToken cancellationToken)
+        [HttpPost("id")]
+        public async Task<ActionResult<ResponseDto<GetUserByIdResponse>>> GetUserById([FromBody] GetUserByIdRequest body, CancellationToken cancellationToken)
         {
             var request = new AdminGetUserByIdQuery(body.UserId);
             var result = await _queryDispatcher.Dispatch<AdminGetUserByIdQuery, GetUserByIdResponse>(request, cancellationToken);

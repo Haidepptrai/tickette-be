@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using System.Text.Json.Serialization;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.Orders.Common;
@@ -11,14 +10,13 @@ namespace Tickette.Application.Features.Orders.Query.ReviewOrders;
 
 public record ReviewOrdersQuery
 {
-    [JsonIgnore]
     public Guid UserId { get; set; }
 
     public required int PageNumber { get; init; }
 
     public required int PageSize { get; init; }
 
-    public required string TicketType { get; init; } = string.Empty; // "Active", "Recent", "Used"
+    public string? TicketType { get; init; } = null; // "Active", "Recent", "Used"
 
     public string? Search { get; init; }
 }
@@ -39,7 +37,7 @@ public class ReviewOrdersQueryHandler : IQueryHandler<ReviewOrdersQuery, PagedRe
         var now = DateTime.UtcNow;
 
         // Normalize TicketType
-        var ticketType = query.TicketType.Trim().ToLowerInvariant();
+        var ticketType = query.TicketType?.Trim().ToLowerInvariant();
 
         IQueryable<Order> baseQuery = _context.Orders
             .Where(o => o.UserOrderedId == query.UserId)
@@ -63,29 +61,32 @@ public class ReviewOrdersQueryHandler : IQueryHandler<ReviewOrdersQuery, PagedRe
         }
 
         // Apply TicketType-specific filtering
-        switch (ticketType)
+        if (ticketType is not null)
         {
-            case "active":
-                baseQuery = baseQuery.Where(o =>
-                    o.Items.Any(i => !i.IsScanned && i.Ticket.EventDate.EndDate >= now));
-                break;
+            switch (ticketType)
+            {
+                case "active":
+                    baseQuery = baseQuery.Where(o =>
+                        o.Items.Any(i => !i.IsScanned && i.Ticket.EventDate.EndDate >= now));
+                    break;
 
-            case "used":
-                baseQuery = baseQuery.Where(o =>
-                    o.Items.Any(i => i.Ticket.EventDate.EndDate < now));
-                break;
+                case "used":
+                    baseQuery = baseQuery.Where(o =>
+                        o.Items.Any(i => i.Ticket.EventDate.EndDate < now));
+                    break;
 
-            case "recent":
-                baseQuery = baseQuery.OrderByDescending(o => o.CreatedAt);
-                break;
+                case "recent":
+                    baseQuery = baseQuery.OrderByDescending(o => o.CreatedAt);
+                    break;
 
-            default:
-                return new PagedResult<OrderedTicketGroupListDto>(
-                    items: [],
-                    totalCount: 0,
-                    pageNumber: query.PageNumber,
-                    pageSize: query.PageSize
-                );
+                default:
+                    return new PagedResult<OrderedTicketGroupListDto>(
+                        items: [],
+                        totalCount: 0,
+                        pageNumber: query.PageNumber,
+                        pageSize: query.PageSize
+                    );
+            }
         }
 
         // Get total count before pagination
@@ -122,7 +123,7 @@ public class ReviewOrdersQueryHandler : IQueryHandler<ReviewOrdersQuery, PagedRe
                 "active" => order.Items.Where(i => !i.IsScanned && i.Ticket.EventDate.EndDate >= now).ToList(),
                 "used" => order.Items.Where(i => i.IsScanned || i.Ticket.EventDate.EndDate < now).ToList(),
                 "recent" => order.Items.ToList(), // For recent orders, include all items without filtering
-                _ => []
+                _ => order.Items.ToList()
             };
 
             var orderItems = filteredItems.Select(orderItem => new OrderItemListDto
