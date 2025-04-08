@@ -32,21 +32,14 @@ public class EventsController : ControllerBase
     [HttpGet("categories/{categoryId:guid}")]
     public async Task<ResponseDto<IEnumerable<EventListDto>>> GetEventsByCategory(Guid categoryId, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var query = new GetEventByCategory(categoryId);
-            var result = await _queryDispatcher.Dispatch<GetEventByCategory, IEnumerable<EventListDto>>(query, cancellationToken);
-            var response = ResponseHandler.SuccessResponse(result, "Get all events successfully");
-            return response;
-        }
-        catch (Exception ex)
-        {
-            return ResponseHandler.ErrorResponse<IEnumerable<EventListDto>>(null, "Internal Server Error", 500);
-        }
+        var query = new GetEventByCategory(categoryId);
+        var result = await _queryDispatcher.Dispatch<GetEventByCategory, IEnumerable<EventListDto>>(query, cancellationToken);
+        var response = ResponseHandler.SuccessResponse(result, "Get all events successfully");
+        return response;
     }
 
     // GET all events
-    [HttpPost("get-all")]
+    [HttpPost("all")]
     [SwaggerOperation(
         Summary = "Get All Events",
         Description = "Get all events with pagination"
@@ -90,28 +83,20 @@ public class EventsController : ControllerBase
         int perPage = 10
         )
     {
+        var result = await _queryDispatcher.Dispatch<GetEventByUserIdQuery, IEnumerable<EventListDto>>(query, token);
 
-        try
-        {
-            var result = await _queryDispatcher.Dispatch<GetEventByUserIdQuery, IEnumerable<EventListDto>>(query, token);
+        var totalItems = result.Count();
+        var totalPages = (int)Math.Ceiling((double)totalItems / perPage);
 
-            var totalItems = result.Count();
-            var totalPages = (int)Math.Ceiling((double)totalItems / perPage);
+        var paginatedData = result
+            .Skip((page - 1) * perPage)
+            .Take(perPage)
+            .ToList();
 
-            var paginatedData = result
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToList();
+        var paginationMeta = new PaginationMeta(page, perPage, totalItems, totalPages);
 
-            var paginationMeta = new PaginationMeta(page, perPage, totalItems, totalPages);
-
-            var response = ResponseHandler.PaginatedResponse(paginatedData, paginationMeta, "Get events successfully");
-            return response;
-        }
-        catch (Exception ex)
-        {
-            return ResponseHandler.ErrorResponse<IEnumerable<EventListDto>>(null, "Internal Server Error", 500);
-        }
+        var response = ResponseHandler.PaginatedResponse(paginatedData, paginationMeta, "Get events successfully");
+        return response;
     }
 
     [HttpPost("search")]

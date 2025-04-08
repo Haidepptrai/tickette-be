@@ -7,6 +7,7 @@ using Tickette.Application.DTOs.Auth;
 using Tickette.Application.Exceptions;
 using Tickette.Application.Features.Auth.Command;
 using Tickette.Application.Features.Users.Common;
+using Tickette.Application.Wrappers;
 using Tickette.Domain.Common.Exceptions;
 using Tickette.Domain.Entities;
 
@@ -222,7 +223,7 @@ public class IdentityServices : IIdentityServices
 
         if (user == null)
         {
-            return AuthResult<(User, List<string>)>.Failure(["User not found."]);
+            throw new NotFoundException("User", userId);
         }
 
         var roles = await _userManager.GetRolesAsync(user);
@@ -230,32 +231,72 @@ public class IdentityServices : IIdentityServices
         return AuthResult<(User, List<string>)>.Success((user, roles.ToList()));
     }
 
-
-    public async Task<AuthResult<IEnumerable<PreviewUserResponse>>> GetAllUsers(
-        int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public async Task<GetUserByIdResponse> GetUserByIdWithRolesAsync(Guid userId)
     {
-        // Fetch paginated users first
-        var users = await _userManager.Users
-            .AsNoTracking()
+        var user = await _userManager.Users
+            .SingleOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null)
+        {
+            throw new NotFoundException("User", userId);
+        }
+
+        var roles = await _userManager.GetRolesAsync(user);
+        var systemRoles = await _roleManager.Roles
+            .Select(r => new RoleResponse
+            {
+                Id = r.Id,
+                Name = r.Name!
+            })
+            .ToListAsync();
+
+        var userDto = user.MapToGetUserByIdResponseForAdmin(roles, systemRoles);
+
+        return userDto;
+    }
+
+
+    public async Task<PagedResult<PreviewUserResponse>> GetAllUsers(
+        int pageNumber, int pageSize, string? search, CancellationToken cancellationToken)
+    {
+        // Start with base query
+        var query = _userManager.Users.AsNoTracking();
+
+        // Apply case-insensitive search by email
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var loweredSearch = search.ToLower();
+            query = query.Where(u => u.Email!.ToLower().Contains(loweredSearch));
+        }
+
+        // Get the count AFTER filtering
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        // Apply ordering, paging
+        var users = await query
             .OrderBy(u => u.Email)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        if (!users.Any())
-            return AuthResult<IEnumerable<PreviewUserResponse>>.Failure(["Users not found."]);
-
-        // Fetch roles sequentially to avoid DbContext threading issues
+        // Sequential role fetching
         var userResponses = new List<PreviewUserResponse>();
-
         foreach (var user in users)
         {
-            var roles = await _userManager.GetRolesAsync(user); // Fetch roles one by one
+            var roles = await _userManager.GetRolesAsync(user);
             userResponses.Add(user.MapToPreviewUserResponse(roles));
         }
 
-        return AuthResult<IEnumerable<PreviewUserResponse>>.Success(userResponses);
+        // Wrap and return
+        return new PagedResult<PreviewUserResponse>(
+            userResponses,
+            totalCount,
+            pageNumber,
+            pageSize
+        );
     }
+
+
 
     public async Task<TokenRetrieval> SyncGoogleUserAsync(LoginWithGoogleCommand request)
     {

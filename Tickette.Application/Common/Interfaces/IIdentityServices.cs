@@ -2,6 +2,7 @@
 using Tickette.Application.DTOs.Auth;
 using Tickette.Application.Features.Auth.Command;
 using Tickette.Application.Features.Users.Common;
+using Tickette.Application.Wrappers;
 using Tickette.Domain.Entities;
 
 namespace Tickette.Application.Common.Interfaces;
@@ -20,7 +21,9 @@ public interface IIdentityServices
 
     Task<AuthResult<(User user, List<string> roles)>> GetUserByIdAsync(Guid userId);
 
-    Task<AuthResult<IEnumerable<PreviewUserResponse>>> GetAllUsers(int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<GetUserByIdResponse> GetUserByIdWithRolesAsync(Guid userId);
+
+    Task<PagedResult<PreviewUserResponse>> GetAllUsers(int pageNumber, int pageSize, string? search, CancellationToken cancellationToken);
 
     Task<TokenRetrieval> SyncGoogleUserAsync(LoginWithGoogleCommand request);
 

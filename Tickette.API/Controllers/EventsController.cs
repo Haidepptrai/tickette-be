@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-using System.IdentityModel.Tokens.Jwt;
 using Tickette.API.Dto;
 using Tickette.API.Helpers;
 using Tickette.Application.Common.CQRS;
@@ -38,17 +37,10 @@ public class EventsController : BaseController
     [HttpGet("categories/{categoryId:guid}")]
     public async Task<ResponseDto<IEnumerable<EventListDto>>> GetEventsByCategory(Guid categoryId, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var query = new GetEventByCategory(categoryId);
-            var result = await _queryDispatcher.Dispatch<GetEventByCategory, IEnumerable<EventListDto>>(query, cancellationToken);
-            var response = ResponseHandler.SuccessResponse(result, "Get all events successfully");
-            return response;
-        }
-        catch (Exception ex)
-        {
-            return ResponseHandler.ErrorResponse<IEnumerable<EventListDto>>(null, "Internal Server Error", 500);
-        }
+        var query = new GetEventByCategory(categoryId);
+        var result = await _queryDispatcher.Dispatch<GetEventByCategory, IEnumerable<EventListDto>>(query, cancellationToken);
+        var response = ResponseHandler.SuccessResponse(result, "Get all events successfully");
+        return response;
     }
 
     // GET all events
@@ -116,46 +108,33 @@ public class EventsController : BaseController
     )]
     public async Task<ResponseDto<Guid>> CreateEvent([FromForm] CreateEventCommandDto commandDto, CancellationToken token)
     {
-        try
-        {
-            // Extract the UserId from the JWT token
-            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub);
+        // Extract the UserId from the JWT token
+        var userId = GetUserId();
 
-            if (userIdClaim == null || string.IsNullOrWhiteSpace(userIdClaim.Value))
-            {
-                return ResponseHandler.ErrorResponse(Guid.Empty, "User ID not found in token", 500);
-            }
+        var bannerFile = new FormFileAdapter(commandDto.BannerFile);
+        var committeeLogo = new FormFileAdapter(commandDto.CommitteeLogo);
 
+        var command = new CreateEventCommand(
+            UserId: Guid.Parse(userId),
+            Name: commandDto.Name,
+            LocationName: commandDto.LocationName,
+            City: commandDto.City,
+            District: commandDto.District,
+            Ward: commandDto.Ward,
+            StreetAddress: commandDto.StreetAddress,
+            CategoryId: commandDto.CategoryId,
+            Description: commandDto.Description,
+            CommitteeLogo: committeeLogo,
+            CommitteeName: commandDto.CommitteeName,
+            CommitteeDescription: commandDto.CommitteeDescription,
+            IsOffline: commandDto.IsOffline,
+            EventDatesInformation: commandDto.EventDates,
+            bannerFile,
+            EventOwnerStripeId: commandDto.EventOwnerStripeId
+        );
 
-            var bannerFile = new FormFileAdapter(commandDto.BannerFile);
-            var committeeLogo = new FormFileAdapter(commandDto.CommitteeLogo);
-
-            var command = new CreateEventCommand(
-                UserId: Guid.Parse(userIdClaim.Value),
-                Name: commandDto.Name,
-                LocationName: commandDto.LocationName,
-                City: commandDto.City,
-                District: commandDto.District,
-                Ward: commandDto.Ward,
-                StreetAddress: commandDto.StreetAddress,
-                CategoryId: commandDto.CategoryId,
-                Description: commandDto.Description,
-                CommitteeLogo: committeeLogo,
-                CommitteeName: commandDto.CommitteeName,
-                CommitteeDescription: commandDto.CommitteeDescription,
-                IsOffline: commandDto.IsOffline,
-                EventDatesInformation: commandDto.EventDates,
-                bannerFile,
-                EventOwnerStripeId: commandDto.EventOwnerStripeId
-            );
-
-            var response = await _commandDispatcher.Dispatch<CreateEventCommand, Guid>(command, token);
-            return ResponseHandler.SuccessResponse(response, "Event created successfully");
-        }
-        catch (Exception ex)
-        {
-            return ResponseHandler.ErrorResponse(Guid.Empty, ex.Message, 500);
-        }
+        var response = await _commandDispatcher.Dispatch<CreateEventCommand, Guid>(command, token);
+        return ResponseHandler.SuccessResponse(response, "Event created successfully");
     }
 
     // GET Event By User id

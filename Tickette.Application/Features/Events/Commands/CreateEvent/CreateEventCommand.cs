@@ -44,11 +44,6 @@ public class CreateEventCommandHandler : ICommandHandler<CreateEventCommand, Gui
     {
         var userCreatedResult = await _identityServices.GetUserByIdAsync(command.UserId);
 
-        if (!userCreatedResult.Succeeded)
-        {
-            throw new Exception("Not found user in database");
-        }
-
         var bannerUrl = await _fileUploadService.UploadFileAsync(command.BannerFile, "banners");
 
         var committeeUrl = await _fileUploadService.UploadFileAsync(command.CommitteeLogo, "committees");

@@ -1,4 +1,5 @@
-﻿using Tickette.Domain.Entities;
+﻿using Tickette.Application.DTOs.Auth;
+using Tickette.Domain.Entities;
 
 namespace Tickette.Application.Features.Users.Common;
 
@@ -15,7 +16,7 @@ public static class UserMappers
         };
     }
 
-    public static GetUserByIdResponse MapToGetUserByIdResponseForAdmin(this User user, IEnumerable<string> roles)
+    public static GetUserByIdResponse MapToGetUserByIdResponseForAdmin(this User user, IEnumerable<string> roles, IEnumerable<RoleResponse> systemRoles)
     {
         return new GetUserByIdResponse
         {
@@ -23,7 +24,8 @@ public static class UserMappers
             Email = user.Email,
             FullName = user.FullName,
             PhoneNumber = user.PhoneNumber,
-            Roles = roles
+            Roles = roles,
+            SystemRoles = systemRoles
         };
     }
 

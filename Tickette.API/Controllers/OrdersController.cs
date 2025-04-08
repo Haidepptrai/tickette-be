@@ -54,23 +54,9 @@ public class OrdersController : BaseController
     public async Task<IActionResult> ValidateQrCode([FromBody] ValidateQrCodeQuery query,
         CancellationToken cancellation)
     {
-        try
-        {
-            var response =
-                await _queryDispatcher.Dispatch<ValidateQrCodeQuery, ResponseDto<DataRetrievedFromQrCode>>(query,
-                    cancellation);
+        var response = await _queryDispatcher.Dispatch<ValidateQrCodeQuery, ResponseDto<DataRetrievedFromQrCode>>(query, cancellation);
 
-            if (!response.Success)
-            {
-                return BadRequest(response);
-            }
-
-            return Ok(response);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ResponseHandler.ErrorResponse(false, ex.Message));
-        }
+        return Ok(response);
     }
 
     [HttpPost("create")]
