@@ -38,13 +38,13 @@ public class ResponseDto<T>
 
 public class PaginationMeta
 {
-    public int PageNumber { get; set; }
+    public int PageNumber { get; private set; }
 
-    public int PageSize { get; set; }
+    public int PageSize { get; private set; }
 
-    public int TotalItems { get; set; }
+    public int TotalItems { get; private set; }
 
-    public int TotalPages { get; set; }
+    public int TotalPages { get; private set; }
 
     public PaginationMeta(int pageNumber, int pageSize, int totalItems, int totalPages)
     {

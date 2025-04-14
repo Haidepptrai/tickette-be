@@ -2,8 +2,11 @@
 
 public static class InMemoryCacheKey
 {
-    public static string CommitteeMemberOfEvent(Guid eventId) => $"CommitteeMemberOfEvent-{eventId}";
+    private const string Suffix = "Cache";
 
-    public static string CouponList(Guid eventId) => $"CouponList-{eventId}";
+    public static string CommitteeMemberOfEvent(Guid eventId) => $"CommitteeMemberOfEvent-{eventId}-{Suffix}";
 
+    public static string CouponList(Guid eventId) => $"CouponList-{eventId}-{Suffix}";
+
+    public static string CategoryList() => $"CategoryList-{Suffix}";
 }

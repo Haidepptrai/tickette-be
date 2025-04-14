@@ -87,19 +87,8 @@ namespace Tickette.API.Controllers
         [Authorize(Policy = "EventOwnerPolicy")]
         public async Task<IActionResult> CalculateDiscount([FromBody] CalculateDiscountQuery query, CancellationToken cancellation = default)
         {
-            try
-            {
-                var response = await _queryDispatcher.Dispatch<CalculateDiscountQuery, ResponseDto<PriceDiscountInformationDto>>(query, cancellation);
-                if (!response.Success)
-                {
-                    return BadRequest(response);
-                }
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ResponseHandler.ErrorResponse<PriceDiscountInformationDto>(null, ex.Message));
-            }
+            var response = await _queryDispatcher.Dispatch<CalculateDiscountQuery, ResponseDto<PriceDiscountInformationDto>>(query, cancellation);
+            return Ok(response);
         }
     }
 }

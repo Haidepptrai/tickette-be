@@ -47,7 +47,9 @@ public static class EventMapper
         Description = entity.Description,
         Banner = entity.Banner,
         CategoryName = entity.Category.Name,
-        Slug = entity.EventSlug
+        Slug = entity.EventSlug,
+        StartDate = entity.EventDates.Min(ed => ed.StartDate),
+        EndDate = entity.EventDates.Max(ed => ed.EndDate),
     };
 
     public static EventDetailDto ToEventDetailDto(this Event entity, IEnumerable<Category>? category, CommitteeMember? currentUser) => new()

@@ -27,13 +27,13 @@ public class GetEventByIdHandler : IQueryHandler<GetEventByIdRequest, EventDetai
     public async Task<EventDetailDto> Handle(GetEventByIdRequest query, CancellationToken cancellation)
     {
         var result = await _context.Events
-       .Include(ev => ev.Category)
-       .Include(ev => ev.Committee)
-       .Include(ev => ev.EventDates)
-           .ThenInclude(ed => ed.Tickets)
-       .AsSplitQuery()
-       .AsNoTracking()
-       .SingleOrDefaultAsync(ev => ev.Id == query.Id, cancellation);
+           .Include(ev => ev.Category)
+           .Include(ev => ev.Committee)
+           .Include(ev => ev.EventDates)
+               .ThenInclude(ed => ed.Tickets)
+           .AsSplitQuery()
+           .AsNoTracking()
+           .SingleOrDefaultAsync(ev => ev.Id == query.Id, cancellation);
 
         if (result == null)
             throw new NotFoundException("Event", query.Id);

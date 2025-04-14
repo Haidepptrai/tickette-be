@@ -10,7 +10,6 @@ using Tickette.Application.Features.Events.Queries.Admin.GetEventById;
 using Tickette.Application.Features.Events.Queries.Admin.GetEventsStatistic;
 using Tickette.Application.Features.Events.Queries.Admin.SearchEventsByName;
 using Tickette.Application.Features.Events.Queries.Client.GetEventByUserId;
-using Tickette.Application.Features.Events.Queries.GetEventByCategory;
 using Tickette.Application.Wrappers;
 
 namespace Tickette.Admin.Controllers;
@@ -26,16 +25,6 @@ public class EventsController : ControllerBase
     {
         _queryDispatcher = queryDispatcher;
         _commandDispatcher = commandDispatcher;
-    }
-
-    // GET event by category id
-    [HttpGet("categories/{categoryId:guid}")]
-    public async Task<ResponseDto<IEnumerable<EventListDto>>> GetEventsByCategory(Guid categoryId, CancellationToken cancellationToken = default)
-    {
-        var query = new GetEventByCategory(categoryId);
-        var result = await _queryDispatcher.Dispatch<GetEventByCategory, IEnumerable<EventListDto>>(query, cancellationToken);
-        var response = ResponseHandler.SuccessResponse(result, "Get all events successfully");
-        return response;
     }
 
     // GET all events

@@ -69,7 +69,7 @@ public class ExceptionHandlingMiddleware
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = statusCode;
 
-        var response = ResponseHandler.ErrorResponse(Unit.Value, message, statusCode);
+        var response = ResponseHandler.ErrorResponse(Unit.Value, message);
 
         var jsonOptions = new JsonSerializerOptions
         {

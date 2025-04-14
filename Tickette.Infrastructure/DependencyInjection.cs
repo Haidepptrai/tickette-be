@@ -381,8 +381,27 @@ public static class DependencyInjection
 
     public static void AddMachineLearningModel(this IHostApplicationBuilder builder)
     {
-        builder.Services.AddSingleton<ITrainingModelService, TrainingModelService>();
-        builder.Services.AddSingleton<IRecommendationService, RecommendationService>();
+        builder.Services.AddDbContext<TrainingDbContext>(options =>
+        {
+            options.UseNpgsql(
+                    builder.Configuration.GetConnectionString("TrainingAIConnection"),
+                    npgsqlOptions =>
+                    {
+                        npgsqlOptions.MigrationsAssembly(typeof(TrainingDbContext).Assembly.FullName);
+                    })
+                .UseSnakeCaseNamingConvention();
+        });
+
+        builder.Services.AddScoped<ITrainingModelService, TrainingModelService>();
+        builder.Services.AddScoped<IRecommendationService, RecommendationService>();
+
+        // Apply migrations during app initialization
+        using (var scope = builder.Services.BuildServiceProvider().CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<TrainingDbContext>();
+
+            dbContext.Database.Migrate();
+        }
     }
 
     public static void AddEmailService(this IHostApplicationBuilder builder)

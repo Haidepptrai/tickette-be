@@ -51,7 +51,6 @@
     <Folder Include="Authorization\Handlers\" />
     <Folder Include="Authorization\Requirements\" />
     <Folder Include="Authentication\" />
-    <Folder Include="Prediction\Models\" />
   </ItemGroup>
 
   <ItemGroup>

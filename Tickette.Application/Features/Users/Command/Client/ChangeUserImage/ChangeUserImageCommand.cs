@@ -36,7 +36,7 @@ public class ChangeUserImageCommandHandler : ICommandHandler<ChangeUserImageComm
             throw new NotFoundException("User", command.UserId);
         }
 
-        var image = await _fileUploadServices.UploadFileAsync(command.Image, "users");
+        var image = await _fileUploadServices.UploadImageAsync(command.Image, "users");
 
         await _identityServices.ChangeUserImageAsync(command.UserId, image);
         return image;

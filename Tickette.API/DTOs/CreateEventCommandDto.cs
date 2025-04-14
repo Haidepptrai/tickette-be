@@ -1,6 +1,6 @@
 ﻿using Tickette.Application.Features.Events.Common;
 
-namespace Tickette.API.Dto;
+namespace Tickette.API.DTOs;
 
 public class CreateEventCommandDto
 {

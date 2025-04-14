@@ -44,9 +44,9 @@ public class CreateEventCommandHandler : ICommandHandler<CreateEventCommand, Gui
     {
         var userCreatedResult = await _identityServices.GetUserByIdAsync(command.UserId);
 
-        var bannerUrl = await _fileUploadService.UploadFileAsync(command.BannerFile, "banners");
+        var bannerUrl = await _fileUploadService.UploadImageAsync(command.BannerFile, "banners");
 
-        var committeeUrl = await _fileUploadService.UploadFileAsync(command.CommitteeLogo, "committees");
+        var committeeUrl = await _fileUploadService.UploadImageAsync(command.CommitteeLogo, "committees");
         var committee = EventCommittee.CreateEventCommittee(committeeUrl, command.CommitteeName, command.CommitteeDescription);
         var newEventCreated = Event.CreateEvent(
             name: command.Name,
