@@ -5,6 +5,7 @@ using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Features.Orders.Command.RemoveReserveTicket;
+using Tickette.Infrastructure.Services;
 
 namespace Tickette.Infrastructure.Messaging.Feature;
 
@@ -35,6 +36,7 @@ public class TicketCancelReservationConsumer : BackgroundService
 
                 using var scope = _serviceProvider.CreateScope();
                 var redisHandler = scope.ServiceProvider.GetRequiredService<IReservationService>();
+                var dbSyncHandler = scope.ServiceProvider.GetRequiredService<ReservationStateSyncService>();
 
                 foreach (var ticket in command.Tickets)
                 {
@@ -45,6 +47,13 @@ public class TicketCancelReservationConsumer : BackgroundService
                         if (!redisReleased)
                         {
                             Console.WriteLine($"[Warning] Could not release Redis for ticket {ticket.Id}");
+                        }
+
+                        // 2. Remove from DB (permanent reservation)
+                        var dbReleased = await dbSyncHandler.ReleaseReservationFromDatabaseAsync(command.UserId, ticket.Id);
+                        if (!dbReleased)
+                        {
+                            Console.WriteLine($"[Warning] Could not release DB for ticket {ticket.Id}");
                         }
                     }
                     catch (Exception ex)

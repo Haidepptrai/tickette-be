@@ -172,9 +172,6 @@ public class ReservationService : IReservationService
             // Add back the quantity to the inventory
             long quantity = ticketReservationInfo.Quantity;
             await db.StringIncrementAsync(inventoryKey, quantity);
-
-            // Sync the reservation state in the database
-            await _dbSyncHandler.ExpireReservationInDatabaseAsync(userId, ticketReservationInfo.Id);
         }
         else
         {
@@ -191,9 +188,6 @@ public class ReservationService : IReservationService
 
             // Delete reservation
             await db.KeyDeleteAsync(reservationKey);
-
-            // Regardless of Redis result, attempt to cancel latest matching DB reservation
-            await _dbSyncHandler.ExpireReservationInDatabaseAsync(userId, ticketReservationInfo.Id);
         }
 
         return true;
