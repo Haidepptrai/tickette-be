@@ -5,8 +5,8 @@ public interface ITrainingModelService
     /// <summary>
     /// Trains the AI model.
     /// </summary>
-    void TrainModel();
-    
+    Task TrainModel();
+
     /// <summary>
     /// Gets the path where the trained model is saved
     /// </summary>

@@ -36,7 +36,7 @@ public class TicketCancelReservationConsumer : BackgroundService
 
                 using var scope = _serviceProvider.CreateScope();
                 var redisHandler = scope.ServiceProvider.GetRequiredService<IReservationService>();
-                var dbHandler = scope.ServiceProvider.GetRequiredService<ReservationStateSyncService>();
+                var dbSyncHandler = scope.ServiceProvider.GetRequiredService<ReservationStateSyncService>();
 
                 foreach (var ticket in command.Tickets)
                 {
@@ -49,11 +49,11 @@ public class TicketCancelReservationConsumer : BackgroundService
                             Console.WriteLine($"[Warning] Could not release Redis for ticket {ticket.Id}");
                         }
 
-                        // 2. Mark reservation as cancelled in DB
-                        var dbReleased = await dbHandler.ReleaseReservationFromDatabaseAsync(command.UserId, ticket.Id);
+                        // 2. Remove from DB (permanent reservation)
+                        var dbReleased = await dbSyncHandler.ReleaseReservationFromDatabaseAsync(command.UserId, ticket.Id);
                         if (!dbReleased)
                         {
-                            Console.WriteLine($"[Warning] Could not find DB reservation to cancel for ticket {ticket.Id}");
+                            Console.WriteLine($"[Warning] Could not release DB for ticket {ticket.Id}");
                         }
                     }
                     catch (Exception ex)

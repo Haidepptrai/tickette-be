@@ -47,7 +47,9 @@ public static class EventMapper
         Description = entity.Description,
         Banner = entity.Banner,
         CategoryName = entity.Category.Name,
-        Slug = entity.EventSlug
+        Slug = entity.EventSlug,
+        StartDate = entity.EventDates.Min(ed => ed.StartDate),
+        EndDate = entity.EventDates.Max(ed => ed.EndDate),
     };
 
     public static EventDetailDto ToEventDetailDto(this Event entity, IEnumerable<Category>? category, CommitteeMember? currentUser) => new()
@@ -68,6 +70,7 @@ public static class EventMapper
         CommitteeName = entity.Committee.Name,
         CommitteeDescription = entity.Committee.Description,
         CommitteeLogo = entity.Committee.Logo,
+        Reason = entity.Reason,
         EventDates = entity.EventDates.Select(ev => new EventDateDto()
         {
             Id = ev.Id,
@@ -97,7 +100,7 @@ public static class EventMapper
         }),
         UserInEventInfo = currentUser is null ? null : new CommitteeMemberDto()
         {
-            Id = currentUser.Id,
+            UserId = currentUser.UserId,
             FullName = currentUser.User.FullName!,
             Email = currentUser.User.Email!,
             Role = currentUser.CommitteeRole.Name,
@@ -148,7 +151,7 @@ public static class EventMapper
             EventOwnerStripeId = entity.EventOwnerStripeId,
             CommitteeMembers = entity.CommitteeMembers.Select(cm => new CommitteeMemberDto()
             {
-                Id = cm.Id,
+                UserId = cm.UserId,
                 FullName = cm.User.FullName!,
                 Email = cm.User.Email!,
                 Role = cm.CommitteeRole.Name,

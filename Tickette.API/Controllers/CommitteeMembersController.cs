@@ -37,9 +37,9 @@ namespace Tickette.API.Controllers
 
         // POST: api/committeeMembers
         [HttpPost("add-member")]
-        public async Task<ResponseDto<string>> AddNewMemberToEvent([FromBody] AddCommitteeMemberCommand command, CancellationToken cancellation)
+        public async Task<ResponseDto<CommitteeMemberDto>> AddNewMemberToEvent([FromBody] AddCommitteeMemberCommand command, CancellationToken cancellation)
         {
-            var result = await _commandDispatcher.Dispatch<AddCommitteeMemberCommand, string>(command, cancellation);
+            var result = await _commandDispatcher.Dispatch<AddCommitteeMemberCommand, CommitteeMemberDto>(command, cancellation);
 
             return ResponseHandler.SuccessResponse(result, "Add member to event successfully");
         }
@@ -54,12 +54,11 @@ namespace Tickette.API.Controllers
             return ResponseHandler.SuccessResponse(result, "Update member role successfully");
         }
 
-
         // DELETE:
         [HttpDelete]
-        public async Task<ResponseDto<object>> RemoveMemberFromEvent([FromBody] RemoveCommitteeMemberCommand command, CancellationToken cancellation)
+        public async Task<ResponseDto<Unit>> RemoveMemberFromEvent([FromBody] RemoveCommitteeMemberCommand command, CancellationToken cancellation)
         {
-            var result = await _commandDispatcher.Dispatch<RemoveCommitteeMemberCommand, object>(command, cancellation);
+            var result = await _commandDispatcher.Dispatch<RemoveCommitteeMemberCommand, Unit>(command, cancellation);
 
             return ResponseHandler.SuccessResponse(result, "Remove member from event successfully");
         }

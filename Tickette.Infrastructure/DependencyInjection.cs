@@ -19,6 +19,7 @@ using System.Configuration;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using Tickette.Application.Common;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Email;
@@ -26,7 +27,6 @@ using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Interfaces.Prediction;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Common.Interfaces.Stripe;
-using Tickette.Application.Common.Models;
 using Tickette.Domain.Entities;
 using Tickette.Infrastructure.Authentication;
 using Tickette.Infrastructure.Authorization.Handlers;
@@ -211,8 +211,6 @@ public static class DependencyInjection
                     COMMITTEE_MEMBER_ROLES.Manager, elevatedRoles)));
         });
 
-        builder.Services.AddHostedService<ConfirmEmailServiceConsumer>();
-
         builder.Services.TryAddScoped<IQueryDispatcher, QueryDispatcher>();
         builder.Services.TryAddScoped<ICommandDispatcher, CommandDispatcher>();
 
@@ -260,7 +258,6 @@ public static class DependencyInjection
 
         builder.Services.AddHostedService<TicketReservationConsumer>();
         builder.Services.AddHostedService<TicketCancelReservationConsumer>();
-        builder.Services.AddHostedService<ReservationMinuteSyncService>();
         builder.Services.AddHostedService<TicketConfirmationReservationConsumer>();
         builder.Services.AddHostedService<ConfirmCreateOrderEmailService>();
         builder.Services.AddScoped<ReservationStateSyncService>();
@@ -381,14 +378,36 @@ public static class DependencyInjection
 
     public static void AddMachineLearningModel(this IHostApplicationBuilder builder)
     {
-        builder.Services.AddSingleton<ITrainingModelService, TrainingModelService>();
-        builder.Services.AddSingleton<IRecommendationService, RecommendationService>();
+        builder.Services.AddDbContext<TrainingDbContext>(options =>
+        {
+            options.UseNpgsql(
+                    builder.Configuration.GetConnectionString("TrainingAIConnection"),
+                    npgsqlOptions =>
+                    {
+                        npgsqlOptions.MigrationsAssembly(typeof(TrainingDbContext).Assembly.FullName);
+                    })
+                .UseSnakeCaseNamingConvention();
+        });
+
+        builder.Services.AddScoped<ITrainingModelService, TrainingModelService>();
+        builder.Services.AddScoped<IRecommendationService, RecommendationService>();
+
+        // Apply migrations during app initialization
+        using (var scope = builder.Services.BuildServiceProvider().CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<TrainingDbContext>();
+
+            dbContext.Database.Migrate();
+        }
     }
 
     public static void AddEmailService(this IHostApplicationBuilder builder)
     {
-        builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+        var emailSettings = builder.Configuration
+            .GetSection("EmailSettings");
 
+        builder.Services.Configure<EmailSettings>(emailSettings);
+        builder.Services.AddHostedService<EmailServiceConsumer>();
         builder.Services.TryAddScoped<IEmailService, EmailService>();
     }
 

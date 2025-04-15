@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-using Tickette.API.Dto;
+using Tickette.API.DTOs;
 using Tickette.API.Helpers;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.Events.Commands.CreateEvent;
-using Tickette.Application.Features.Events.Commands.UpdateEventStatus;
+using Tickette.Application.Features.Events.Commands.UpdateEvent;
 using Tickette.Application.Features.Events.Common;
 using Tickette.Application.Features.Events.Common.Client;
 using Tickette.Application.Features.Events.Queries.Client.GetEventByUserId;
@@ -16,7 +16,6 @@ using Tickette.Application.Features.Events.Queries.GetEventByCategory;
 using Tickette.Application.Features.Events.Queries.GetEventById;
 using Tickette.Application.Features.Events.Queries.GetEventBySlug;
 using Tickette.Application.Wrappers;
-using Tickette.Domain.Common;
 
 namespace Tickette.API.Controllers;
 
@@ -34,12 +33,20 @@ public class EventsController : BaseController
     }
 
     // GET event by category id
-    [HttpGet("categories/{categoryId:guid}")]
-    public async Task<ResponseDto<IEnumerable<EventListDto>>> GetEventsByCategory(Guid categoryId, CancellationToken cancellationToken = default)
+    [HttpPost("category")]
+    [SwaggerOperation("Get all events by a specific category")]
+    public async Task<ResponseDto<IEnumerable<EventPreviewDto>>> GetEventsByCategory(
+        [FromBody] GetEventByCategory query,
+        CancellationToken cancellationToken = default)
     {
-        var query = new GetEventByCategory(categoryId);
-        var result = await _queryDispatcher.Dispatch<GetEventByCategory, IEnumerable<EventListDto>>(query, cancellationToken);
-        var response = ResponseHandler.SuccessResponse(result, "Get all events successfully");
+        var result = await _queryDispatcher.Dispatch<GetEventByCategory, PagedResult<EventPreviewDto>>(query, cancellationToken);
+
+        var meta = new PaginationMeta(
+            result.PageNumber,
+            result.PageSize,
+            result.TotalCount,
+            result.TotalPages);
+        var response = ResponseHandler.PaginatedResponse(result.Items, meta, "Get all events by category successfully");
         return response;
     }
 
@@ -51,25 +58,18 @@ public class EventsController : BaseController
     )]
     public async Task<ActionResult<ResponseDto<IEnumerable<EventPreviewDto>>>> GetAllEvents(GetAllEventsQuery query, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var result = await _queryDispatcher.Dispatch<GetAllEventsQuery, PagedResult<EventPreviewDto>>(query, cancellationToken);
+        var result = await _queryDispatcher.Dispatch<GetAllEventsQuery, PagedResult<EventPreviewDto>>(query, cancellationToken);
 
-            var paginationMeta = new PaginationMeta(
-                result.PageNumber,
-                result.PageSize,
-                result.TotalCount,
-                (int)Math.Ceiling((double)result.TotalCount / result.PageSize)
-            );
+        var paginationMeta = new PaginationMeta(
+            result.PageNumber,
+            result.PageSize,
+            result.TotalCount,
+            (int)Math.Ceiling((double)result.TotalCount / result.PageSize)
+        );
 
-            var response = ResponseHandler.PaginatedResponse(result.Items, paginationMeta, "Get all events successfully");
+        var response = ResponseHandler.PaginatedResponse(result.Items, paginationMeta, "Get all events successfully");
 
-            return Ok(response);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ResponseHandler.ErrorResponse(Unit.Value, ex.Message, 500));
-        }
+        return Ok(response);
     }
 
     [HttpPost("id")]
@@ -85,19 +85,13 @@ public class EventsController : BaseController
     }
 
     // GET event by slug
-    [HttpPost("get-by-slug")]
+    [HttpPost("slug")]
+    [SwaggerOperation("Get event detail by slug")]
     public async Task<ActionResult<ResponseDto<EventDetailDto>>> GetEventBySlug(GetEventBySlugQuery query, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var result = await _queryDispatcher.Dispatch<GetEventBySlugQuery, EventDetailDto>(query, cancellationToken);
-            var response = ResponseHandler.SuccessResponse(result, "Get event by slug successfully");
-            return Ok(response);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ResponseHandler.ErrorResponse<EventDetailDto>(null, "Internal Server Error", 500));
-        }
+        var result = await _queryDispatcher.Dispatch<GetEventBySlugQuery, EventDetailDto>(query, cancellationToken);
+        var response = ResponseHandler.SuccessResponse(result, "Get event by slug successfully");
+        return Ok(response);
     }
 
     [HttpPost]
@@ -111,7 +105,7 @@ public class EventsController : BaseController
         // Extract the UserId from the JWT token
         var userId = GetUserId();
 
-        var bannerFile = new FormFileAdapter(commandDto.BannerFile);
+        var bannerFile = new FormFileAdapter(commandDto.Banner);
         var committeeLogo = new FormFileAdapter(commandDto.CommitteeLogo);
 
         var command = new CreateEventCommand(
@@ -137,6 +131,50 @@ public class EventsController : BaseController
         return ResponseHandler.SuccessResponse(response, "Event created successfully");
     }
 
+    [HttpPost("update")]
+    [Authorize]
+    [SwaggerOperation(
+        Summary = "Update Event",
+        Description = "Update an existing Event, default will have approval status is 0"
+    )]
+    public async Task<ResponseDto<Guid>> UpdateEvent([FromForm] UpdateEventCommandDto commandDto, CancellationToken token)
+    {
+        // Extract the UserId from the JWT token
+        var userId = GetUserId();
+
+        var bannerFile = commandDto.BannerFile != null ? new FormFileAdapter(commandDto.BannerFile) : null;
+        var committeeLogo = commandDto.CommitteeLogo != null ? new FormFileAdapter(commandDto.CommitteeLogo) : null;
+
+        var bannerUrl = commandDto.BannerUrl;
+        var committeeLogoUrl = commandDto.CommitteeLogoUrl;
+
+        var command = new UpdateEventCommand(
+            Id: commandDto.Id,
+            UserId: Guid.Parse(userId),
+            Name: commandDto.Name,
+            LocationName: commandDto.IsOffline ? commandDto.LocationName! : string.Empty,
+            City: commandDto.IsOffline ? commandDto.City! : string.Empty,
+            District: commandDto.IsOffline ? commandDto.District! : string.Empty,
+            Ward: commandDto.IsOffline ? commandDto.Ward! : string.Empty,
+            StreetAddress: commandDto.IsOffline ? commandDto.StreetAddress! : string.Empty,
+            CategoryId: commandDto.CategoryId,
+            Description: commandDto.Description,
+            CommitteeLogo: committeeLogo,
+            CommitteeLogoUrl: committeeLogoUrl,
+            CommitteeName: commandDto.CommitteeName,
+            CommitteeDescription: commandDto.CommitteeDescription,
+            IsOffline: commandDto.IsOffline,
+            EventDatesInformation: commandDto.EventDates,
+            bannerFile,
+            BannerUrl: bannerUrl,
+            EventOwnerStripeId: commandDto.EventOwnerStripeId
+        );
+
+        var response = await _commandDispatcher.Dispatch<UpdateEventCommand, Guid>(command, token);
+        return ResponseHandler.SuccessResponse(response, "Event created successfully");
+    }
+
+
     // GET Event By User id
     [HttpPost("user")]
     [Authorize]
@@ -158,22 +196,6 @@ public class EventsController : BaseController
 
         var response = ResponseHandler.PaginatedResponse(result.Items, paginationMeta, "Get events successfully");
         return Ok(response);
-    }
-
-    //Update Event Status
-    [HttpPatch("status")]
-    //[Authorize(Roles = Constant.APPLICATION_ROLE.Admin)]
-    public async Task<ResponseDto<Guid>> UpdateEventStatus(UpdateEventStatusCommand command, CancellationToken token)
-    {
-        try
-        {
-            var response = await _commandDispatcher.Dispatch<UpdateEventStatusCommand, Guid>(command, token);
-            return ResponseHandler.SuccessResponse(response, "Event status updated successfully");
-        }
-        catch (Exception ex)
-        {
-            return ResponseHandler.ErrorResponse(Guid.Empty, ex.Message, 500);
-        }
     }
 
     [HttpPost("detail-statistic")]

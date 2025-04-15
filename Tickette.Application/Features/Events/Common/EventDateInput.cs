@@ -7,5 +7,4 @@ public record EventDateInput
     public DateTime EndDate { get; set; }
 
     public required List<TicketInput> Tickets { get; set; }
-
 }

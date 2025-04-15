@@ -1,999 +1,150 @@
--- Training Database Schema for Recommendation System
--- Core Tables (Mirror of Production)
-
-CREATE TABLE users (
-    id UUID PRIMARY KEY,
-    user_name VARCHAR(256) NULL,
-    full_name VARCHAR(100) NULL,
-    gender SMALLINT NOT NULL DEFAULT 0
-);
-
-CREATE TABLE events (
-    id UUID PRIMARY KEY,
-    category_id UUID NOT NULL,
-    created_by_id UUID NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    location_name VARCHAR(255) NOT NULL,
-    city VARCHAR(100) NOT NULL,
-    district VARCHAR(100) NOT NULL,
-    ward VARCHAR(100) NOT NULL,
-    street_address VARCHAR(255) NOT NULL,
-    description TEXT NULL,
-    banner VARCHAR(255) NULL,
-    start_date TIMESTAMP NOT NULL,
-    end_date TIMESTAMP NOT NULL,
-    event_slug VARCHAR(300) NOT NULL,
-    status SMALLINT NOT NULL
-);
-
-CREATE TABLE categories (
-    id UUID PRIMARY KEY,
-    name VARCHAR(100) NOT NULL
-);
-
-CREATE TABLE orders (
-    id UUID PRIMARY KEY,
-    event_id UUID NOT NULL,
-    user_ordered_id UUID NOT NULL,
-    total_price DECIMAL(18,2) NOT NULL,
-    total_quantity INT NOT NULL,
-    created_at TIMESTAMP NOT NULL
-);
-
--- Interaction & Training Data Tables
-
-CREATE TABLE user_event_interactions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
-    event_id UUID NOT NULL,
-    interaction_type VARCHAR(50) NOT NULL,
-    interaction_strength FLOAT NOT NULL,
-    interaction_count INT NOT NULL DEFAULT 1,
-    last_interaction_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX ix_user_event_interactions_user ON user_event_interactions(user_id);
-CREATE INDEX ix_user_event_interactions_event ON user_event_interactions(event_id);
-CREATE INDEX ix_user_event_interactions_type ON user_event_interactions(interaction_type);
-CREATE UNIQUE INDEX uq_user_event_interaction ON user_event_interactions(user_id, event_id, interaction_type);
-
-CREATE TABLE event_features (
-    event_id UUID PRIMARY KEY,
-    popularity FLOAT NOT NULL DEFAULT 0,
-    avg_ticket_price DECIMAL(18,2) NULL,
-    view_count INT NOT NULL DEFAULT 0,
-    purchase_count INT NOT NULL DEFAULT 0,
-    predicted_demand FLOAT NULL,
-    last_updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE user_features (
-    user_id UUID PRIMARY KEY,
-    activity_level FLOAT NOT NULL DEFAULT 0,
-    price_sensitivity FLOAT NULL,
-    event_category_preferences TEXT NULL,
-    last_updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE training_datasets (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(100) NOT NULL,
-    description VARCHAR(500) NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    sample_count INT NOT NULL,
-    dataset_path VARCHAR(255) NULL,
-    dataset_json TEXT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT FALSE
-);
-
-CREATE TABLE model_registry (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    model_name VARCHAR(100) NOT NULL,
-    model_version VARCHAR(20) NOT NULL,
-    training_dataset_id UUID NULL,
-    model_path VARCHAR(255) NOT NULL,
-    trained_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    metrics TEXT NOT NULL,
-    parameters TEXT NOT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT FALSE,
-    
-    CONSTRAINT fk_model_registry_training_dataset 
-        FOREIGN KEY (training_dataset_id) 
-        REFERENCES training_datasets(id)
-);
-
--- Data Sync and ETL Stored Procedures
-
--- Note: Replace [ProductionDB] with your actual production database name in these procedures
-
-CREATE OR REPLACE FUNCTION sync_users() 
-RETURNS VOID AS $$
-BEGIN
-    -- For demonstration purposes, using a temporary table structure to simulate the MERGE
-    -- In a real implementation, you would query from your production database
-    CREATE TEMPORARY TABLE temp_users (
-        id UUID,
-        user_name VARCHAR(256),
-        full_name VARCHAR(100),
-        gender SMALLINT
-    );
-    
-    -- In a real scenario, this would be populated with data from your production database
-    -- INSERT INTO temp_users 
-    -- SELECT id, user_name, full_name, gender FROM production_database.users;
-    
-    -- Update existing users
-    UPDATE users
-    SET user_name = tu.user_name,
-        full_name = tu.full_name,
-        gender = tu.gender
-    FROM temp_users tu
-    WHERE users.id = tu.id;
-    
-    -- Insert new users
-    INSERT INTO users (id, user_name, full_name, gender)
-    SELECT tu.id, tu.user_name, tu.full_name, tu.gender
-    FROM temp_users tu
-    WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.id = tu.id);
-    
-    -- Clean up
-    DROP TABLE IF EXISTS temp_users;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION sync_events() 
-RETURNS VOID AS $$
-BEGIN
-    -- For demonstration purposes, using a temporary table
-    CREATE TEMPORARY TABLE temp_events (
-        id UUID,
-        category_id UUID,
-        created_by_id UUID,
-        name VARCHAR(255),
-        location_name VARCHAR(255),
-        city VARCHAR(100),
-        district VARCHAR(100),
-        ward VARCHAR(100),
-        street_address VARCHAR(255),
-        description TEXT,
-        banner VARCHAR(255),
-        start_date TIMESTAMP,
-        end_date TIMESTAMP,
-        event_slug VARCHAR(300),
-        status SMALLINT
-    );
-    
-    -- In a real scenario, this would be populated with data from your production database
-    -- INSERT INTO temp_events 
-    -- SELECT * FROM production_database.events;
-    
-    -- Update existing events
-    UPDATE events
-    SET category_id = te.category_id,
-        name = te.name,
-        location_name = te.location_name,
-        city = te.city,
-        district = te.district,
-        ward = te.ward,
-        street_address = te.street_address,
-        description = te.description,
-        banner = te.banner,
-        start_date = te.start_date,
-        end_date = te.end_date,
-        event_slug = te.event_slug,
-        status = te.status
-    FROM temp_events te
-    WHERE events.id = te.id;
-    
-    -- Insert new events
-    INSERT INTO events (id, category_id, created_by_id, name, location_name, city, district,
-                      ward, street_address, description, banner, start_date, end_date,
-                      event_slug, status)
-    SELECT te.id, te.category_id, te.created_by_id, te.name, te.location_name, te.city, te.district,
-           te.ward, te.street_address, te.description, te.banner, te.start_date, te.end_date,
-           te.event_slug, te.status
-    FROM temp_events te
-    WHERE NOT EXISTS (SELECT 1 FROM events e WHERE e.id = te.id);
-    
-    -- Clean up
-    DROP TABLE IF EXISTS temp_events;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION sync_categories() 
-RETURNS VOID AS $$
-BEGIN
-    -- For demonstration purposes
-    CREATE TEMPORARY TABLE temp_categories (
-        id UUID,
-        name VARCHAR(100)
-    );
-    
-    -- In a real scenario, populate with production data
-    -- INSERT INTO temp_categories
-    -- SELECT id, name FROM production_database.categories;
-    
-    -- Update existing categories
-    UPDATE categories
-    SET name = tc.name
-    FROM temp_categories tc
-    WHERE categories.id = tc.id;
-    
-    -- Insert new categories
-    INSERT INTO categories (id, name)
-    SELECT tc.id, tc.name
-    FROM temp_categories tc
-    WHERE NOT EXISTS (SELECT 1 FROM categories c WHERE c.id = tc.id);
-    
-    -- Clean up
-    DROP TABLE IF EXISTS temp_categories;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION sync_orders() 
-RETURNS VOID AS $$
-BEGIN
-    -- For demonstration purposes
-    CREATE TEMPORARY TABLE temp_orders (
-        id UUID,
-        event_id UUID,
-        user_ordered_id UUID,
-        total_price DECIMAL(18,2),
-        total_quantity INT,
-        created_at TIMESTAMP
-    );
-    
-    -- In a real scenario, populate with recent production data
-    -- INSERT INTO temp_orders
-    -- SELECT id, event_id, user_ordered_id, total_price, total_quantity, created_at
-    -- FROM production_database.orders
-    -- WHERE created_at > (CURRENT_TIMESTAMP - INTERVAL '90 days');
-    
-    -- Update existing orders
-    UPDATE orders
-    SET total_price = to_orders.total_price,
-        total_quantity = to_orders.total_quantity
-    FROM temp_orders to_orders
-    WHERE orders.id = to_orders.id;
-    
-    -- Insert new orders
-    INSERT INTO orders (id, event_id, user_ordered_id, total_price, total_quantity, created_at)
-    SELECT to_orders.id, to_orders.event_id, to_orders.user_ordered_id, 
-           to_orders.total_price, to_orders.total_quantity, to_orders.created_at
-    FROM temp_orders to_orders
-    WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.id = to_orders.id);
-    
-    -- Generate purchase interactions from orders
-    INSERT INTO user_event_interactions (user_id, event_id, interaction_type, interaction_strength, interaction_count, last_interaction_at)
-    SELECT 
-        o.user_ordered_id, o.event_id, 'Purchase', 1.0, 1, o.created_at
-    FROM orders o
-    WHERE NOT EXISTS (
-        SELECT 1 FROM user_event_interactions uei 
-        WHERE uei.user_id = o.user_ordered_id AND uei.event_id = o.event_id AND uei.interaction_type = 'Purchase'
-    );
-    
-    -- Clean up
-    DROP TABLE IF EXISTS temp_orders;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION sync_interactions() 
-RETURNS VOID AS $$
-BEGIN
-    -- For demonstration purposes
-    CREATE TEMPORARY TABLE temp_page_views (
-        user_id UUID,
-        event_id UUID,
-        duration_seconds INT,
-        viewed_at TIMESTAMP
-    );
-    
-    -- Then create a temporary table with processed view data:
-    CREATE TEMPORARY TABLE temp_interactions AS
-    SELECT 
-        user_id, 
-        event_id, 
-        'View' AS interaction_type,
-        CASE 
-            WHEN duration_seconds > 300 THEN 0.7 -- Long view (>5 min)
-            WHEN duration_seconds > 60 THEN 0.5  -- Medium view (1-5 min)
-            ELSE 0.3                           -- Brief view (<1 min)
-        END AS interaction_strength,
-        COUNT(*) AS interaction_count,
-        MAX(viewed_at) AS last_interaction_at
-    FROM temp_page_views
-    WHERE viewed_at > (CURRENT_TIMESTAMP - INTERVAL '30 days')
-    AND user_id IS NOT NULL
-    GROUP BY user_id, event_id, 
-        CASE 
-            WHEN duration_seconds > 300 THEN 0.7
-            WHEN duration_seconds > 60 THEN 0.5
-            ELSE 0.3
-        END;
-    
-    -- Update existing interactions
-    UPDATE user_event_interactions
-    SET interaction_count = ti.interaction_count,
-        interaction_strength = ti.interaction_strength,
-        last_interaction_at = ti.last_interaction_at
-    FROM temp_interactions ti
-    WHERE user_event_interactions.user_id = ti.user_id
-    AND user_event_interactions.event_id = ti.event_id
-    AND user_event_interactions.interaction_type = ti.interaction_type;
-    
-    -- Insert new interactions
-    INSERT INTO user_event_interactions 
-        (user_id, event_id, interaction_type, interaction_strength, interaction_count, last_interaction_at)
-    SELECT 
-        ti.user_id, ti.event_id, ti.interaction_type, 
-        ti.interaction_strength, ti.interaction_count, ti.last_interaction_at
-    FROM temp_interactions ti
-    WHERE NOT EXISTS (
-        SELECT 1 FROM user_event_interactions uei 
-        WHERE uei.user_id = ti.user_id 
-        AND uei.event_id = ti.event_id 
-        AND uei.interaction_type = ti.interaction_type
-    );
-    
-    -- Clean up
-    DROP TABLE IF EXISTS temp_page_views;
-    DROP TABLE IF EXISTS temp_interactions;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION update_event_features() 
-RETURNS VOID AS $$
-BEGIN
-    -- Create a temporary table with all the data we need
-    CREATE TEMPORARY TABLE temp_event_features AS
-    SELECT 
-        e.id AS event_id,
-        COALESCE(ViewCounts.view_count, 0) AS view_count,
-        COALESCE(PurchaseCounts.purchase_count, 0) AS purchase_count,
-        COALESCE(AvgPrices.avg_price, 0) AS avg_ticket_price,
-        -- Calculate popularity score (normalized to 0-1)
-        CASE 
-            WHEN MAX(AllCounts.total_interactions) OVER() = 0 THEN 0
-            ELSE CAST(COALESCE(AllCounts.total_interactions, 0) AS FLOAT) / 
-                NULLIF(MAX(AllCounts.total_interactions) OVER(), 0)
-        END AS popularity
-    FROM events e
-    LEFT JOIN (
-        -- View counts per event
-        SELECT event_id, SUM(interaction_count) AS view_count
-        FROM user_event_interactions
-        WHERE interaction_type = 'View'
-        GROUP BY event_id
-    ) ViewCounts ON e.id = ViewCounts.event_id
-    LEFT JOIN (
-        -- Purchase counts per event
-        SELECT event_id, SUM(interaction_count) AS purchase_count
-        FROM user_event_interactions
-        WHERE interaction_type = 'Purchase'
-        GROUP BY event_id
-    ) PurchaseCounts ON e.id = PurchaseCounts.event_id
-    LEFT JOIN (
-        -- Average ticket price
-        SELECT event_id, AVG(total_price / total_quantity) AS avg_price
-        FROM orders
-        GROUP BY event_id
-    ) AvgPrices ON e.id = AvgPrices.event_id
-    LEFT JOIN (
-        -- Total interactions per event (for normalization)
-        SELECT event_id, SUM(interaction_count) AS total_interactions
-        FROM user_event_interactions
-        GROUP BY event_id
-    ) AllCounts ON e.id = AllCounts.event_id;
-    
-    -- Update existing features
-    UPDATE event_features
-    SET view_count = tef.view_count,
-        purchase_count = tef.purchase_count,
-        avg_ticket_price = tef.avg_ticket_price,
-        popularity = tef.popularity,
-        last_updated_at = CURRENT_TIMESTAMP
-    FROM temp_event_features tef
-    WHERE event_features.event_id = tef.event_id;
-    
-    -- Insert new features
-    INSERT INTO event_features 
-        (event_id, view_count, purchase_count, avg_ticket_price, popularity, last_updated_at)
-    SELECT 
-        tef.event_id, tef.view_count, tef.purchase_count, 
-        tef.avg_ticket_price, tef.popularity, CURRENT_TIMESTAMP
-    FROM temp_event_features tef
-    WHERE NOT EXISTS (
-        SELECT 1 FROM event_features ef WHERE ef.event_id = tef.event_id
-    );
-    
-    -- Clean up
-    DROP TABLE IF EXISTS temp_event_features;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION update_user_features() 
-RETURNS VOID AS $$
-BEGIN
-    -- Create a temporary table with all the data we need
-    CREATE TEMPORARY TABLE temp_user_features AS
-    SELECT 
-        u.id AS user_id,
-        -- Calculate activity level (normalized to 0-1)
-        CASE 
-            WHEN MAX(UserCounts.total_interactions) OVER() = 0 THEN 0
-            ELSE CAST(COALESCE(UserCounts.total_interactions, 0) AS FLOAT) / 
-                NULLIF(MAX(UserCounts.total_interactions) OVER(), 0)
-        END AS activity_level,
-        -- Calculate price sensitivity (based on purchase history)
-        CASE 
-            WHEN PriceData.avg_spend IS NULL THEN NULL
-            WHEN MAX(PriceData.avg_spend) OVER() = 0 THEN 0
-            ELSE 1 - (CAST(PriceData.avg_spend AS FLOAT) / 
-                    NULLIF(MAX(PriceData.avg_spend) OVER(), 0))
-        END AS price_sensitivity,
-        -- JSON with category preferences (PostgreSQL uses json_agg instead of FOR JSON PATH)
-        (
-            SELECT json_agg(json_build_object('category_id', cp.category_id, 'preference_score', cp.preference_score))
-            FROM (
-                SELECT 
-                    e.category_id,
-                    SUM(uei.interaction_strength * uei.interaction_count) / 
-                        NULLIF(SUM(uei.interaction_count), 0) AS preference_score
-                FROM user_event_interactions uei
-                JOIN events e ON uei.event_id = e.id
-                WHERE uei.user_id = u.id
-                GROUP BY e.category_id
-            ) cp
-        ) AS event_category_preferences
-    FROM users u
-    LEFT JOIN (
-        -- Total interactions per user (for normalization)
-        SELECT user_id, SUM(interaction_count) AS total_interactions
-        FROM user_event_interactions
-        GROUP BY user_id
-    ) UserCounts ON u.id = UserCounts.user_id
-    LEFT JOIN (
-        -- Average spend per user
-        SELECT user_ordered_id, AVG(total_price) AS avg_spend
-        FROM orders
-        GROUP BY user_ordered_id
-    ) PriceData ON u.id = PriceData.user_ordered_id;
-    
-    -- Update existing features
-    UPDATE user_features
-    SET activity_level = tuf.activity_level,
-        price_sensitivity = tuf.price_sensitivity,
-        event_category_preferences = tuf.event_category_preferences,
-        last_updated_at = CURRENT_TIMESTAMP
-    FROM temp_user_features tuf
-    WHERE user_features.user_id = tuf.user_id;
-    
-    -- Insert new features
-    INSERT INTO user_features 
-        (user_id, activity_level, price_sensitivity, event_category_preferences, last_updated_at)
-    SELECT 
-        tuf.user_id, tuf.activity_level, tuf.price_sensitivity, 
-        tuf.event_category_preferences, CURRENT_TIMESTAMP
-    FROM temp_user_features tuf
-    WHERE NOT EXISTS (
-        SELECT 1 FROM user_features uf WHERE uf.user_id = tuf.user_id
-    );
-    
-    -- Clean up
-    DROP TABLE IF EXISTS temp_user_features;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION generate_training_dataset(
-    dataset_name VARCHAR(100),
-    description VARCHAR(500) DEFAULT NULL
-) 
-RETURNS UUID AS $$
-DECLARE
-    dataset_id UUID := gen_random_uuid();
-    sample_count INT := 0;
-    dataset_json TEXT;
-BEGIN
-    -- Create JSON array of samples (using PostgreSQL json functions)
-    SELECT json_agg(
-        json_build_object(
-            'user_id', CAST(uei.user_id AS VARCHAR),
-            'event_id', CAST(uei.event_id AS VARCHAR),
-            'label', uei.interaction_strength
-        )
-    )
-    INTO dataset_json
-    FROM user_event_interactions uei;
-    
-    -- Count samples
-    SELECT COUNT(*) INTO sample_count FROM user_event_interactions;
-    
-    -- Store the dataset
-    INSERT INTO training_datasets (id, name, description, created_at, sample_count, is_active, dataset_json)
-    VALUES (dataset_id, dataset_name, description, CURRENT_TIMESTAMP, sample_count, TRUE, dataset_json);
-    
-    -- Deactivate other datasets
-    UPDATE training_datasets SET is_active = FALSE WHERE id <> dataset_id;
-    
-    -- Return the dataset ID
-    RETURN dataset_id;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION run_data_sync() 
-RETURNS TEXT AS $$
-DECLARE
-    dataset_name VARCHAR(100);
-    result_message TEXT;
-BEGIN
-    -- Execute each function in sequence
-    PERFORM sync_users();
-    PERFORM sync_categories();
-    PERFORM sync_events();
-    PERFORM sync_orders();
-    PERFORM sync_interactions();
-    
-    -- Update derived features
-    PERFORM update_event_features();
-    PERFORM update_user_features();
-    
-    -- Generate a new training dataset
-    dataset_name := 'recommendation_dataset_' || to_char(CURRENT_DATE, 'YYYYMMDD');
-    PERFORM generate_training_dataset(dataset_name, 'Auto-generated dataset');
-    
-    result_message := 'Data sync completed successfully';
-    RETURN result_message;
-END;
-$$ LANGUAGE plpgsql;
-
--- Recommendation System Training Database Initialization Script
--- This script creates all tables and populates them with mock data (2025)
-
--- Insert mock data
--- Add categories
-INSERT INTO categories (id, name) VALUES 
-    (gen_random_uuid(), 'Concert'),
-    (gen_random_uuid(), 'Sports'),
-    (gen_random_uuid(), 'Theater'),
-    (gen_random_uuid(), 'Festival'),
-    (gen_random_uuid(), 'Conference'),
-    (gen_random_uuid(), 'Comedy'),
-    (gen_random_uuid(), 'Exhibition'),
-    (gen_random_uuid(), 'Family & Kids');
-    
--- Add users with direct UUID generation
-INSERT INTO users (id, user_name, full_name, gender) VALUES
-    (gen_random_uuid(), 'john.doe', 'John Doe', 0),
-    (gen_random_uuid(), 'jane.smith', 'Jane Smith', 1),
-    (gen_random_uuid(), 'alex.wilson', 'Alex Wilson', 0),
-    (gen_random_uuid(), 'emily.johnson', 'Emily Johnson', 1),
-    (gen_random_uuid(), 'michael.brown', 'Michael Brown', 0),
-    (gen_random_uuid(), 'sarah.lee', 'Sarah Lee', 1),
-    (gen_random_uuid(), 'david.wong', 'David Wong', 0),
-    (gen_random_uuid(), 'olivia.garcia', 'Olivia Garcia', 1),
-    (gen_random_uuid(), 'james.nguyen', 'James Nguyen', 0),
-    (gen_random_uuid(), 'sophia.patel', 'Sophia Patel', 1),
-    (gen_random_uuid(), 'ryan.moore', 'Ryan Moore', 0),
-    (gen_random_uuid(), 'emma.kim', 'Emma Kim', 1),
-    (gen_random_uuid(), 'tyler.jackson', 'Tyler Jackson', 0),
-    (gen_random_uuid(), 'ava.martinez', 'Ava Martinez', 1),
-    (gen_random_uuid(), 'noah.miller', 'Noah Miller', 2);
-
--- Create temporary tables to store IDs
-CREATE TEMPORARY TABLE category_ids (category_name VARCHAR(100), category_id UUID);
-CREATE TEMPORARY TABLE user_ids (user_name VARCHAR(100), user_id UUID);
-
--- Populate the temporary tables with the IDs we just created
-INSERT INTO category_ids (category_name, category_id)
-SELECT name, id FROM categories;
-
-INSERT INTO user_ids (user_name, user_id)
-SELECT user_name, id FROM users;
-
--- Now we can use these to create events
-INSERT INTO events (id, category_id, created_by_id, name, location_name, city, district, ward, 
-                   street_address, description, banner, start_date, end_date, event_slug, status) VALUES
-    (gen_random_uuid(), (SELECT category_id FROM category_ids WHERE category_name = 'Concert'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'john.doe'), 
-        'Summer Music Festival 2025', 'Central Park Arena', 'New York', 'Manhattan', 'Midtown', 
-        '123 Main St', 'The biggest summer music festival of the year', 'banner1.jpg', 
-        '2025-06-15', '2025-06-17', 'summer-music-2025', 1),
-    
-    (gen_random_uuid(), (SELECT category_id FROM category_ids WHERE category_name = 'Theater'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'jane.smith'), 
-        'Hamilton: 2025 Tour', 'Broadway Theater', 'New York', 'Manhattan', 'Theater District', 
-        '222 Broadway Ave', 'Award-winning musical on national tour', 'hamilton.jpg', 
-        '2025-03-20', '2025-04-15', 'hamilton-2025-tour', 1),
-    
-    (gen_random_uuid(), (SELECT category_id FROM category_ids WHERE category_name = 'Sports'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'alex.wilson'), 
-        'NBA Finals 2025', 'Madison Square Garden', 'New York', 'Manhattan', 'Midtown', 
-        '4 Pennsylvania Plaza', 'Championship basketball games', 'nba2025.jpg', 
-        '2025-05-25', '2025-06-10', 'nba-finals-2025', 1),
-    
-    (gen_random_uuid(), (SELECT category_id FROM category_ids WHERE category_name = 'Festival'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'emily.johnson'), 
-        'Food & Wine Festival 2025', 'Javits Convention Center', 'New York', 'Manhattan', 'Hell''s Kitchen', 
-        '429 11th Ave', 'Gourmet food and wine tasting event', 'foodfest.jpg', 
-        '2025-09-12', '2025-09-14', 'food-wine-fest-2025', 1),
-    
-    (gen_random_uuid(), (SELECT category_id FROM category_ids WHERE category_name = 'Conference'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'michael.brown'), 
-        'Tech Innovation Summit 2025', 'Moscone Center', 'San Francisco', 'SoMa', 'Mission Bay', 
-        '747 Howard St', 'Annual technology conference showcasing the latest innovations', 'techsummit.jpg', 
-        '2025-10-05', '2025-10-07', 'tech-summit-2025', 1),
-    
-    (gen_random_uuid(), (SELECT category_id FROM category_ids WHERE category_name = 'Comedy'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'sarah.lee'), 
-        'Stand-up Comedy Night', 'Comedy Cellar', 'New York', 'Manhattan', 'Greenwich Village', 
-        '117 MacDougal St', 'A night of laughs with top comedians', 'comedy.jpg', 
-        '2025-02-14', '2025-02-14', 'comedy-night-2025', 1),
-    
-    (gen_random_uuid(), (SELECT category_id FROM category_ids WHERE category_name = 'Concert'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'david.wong'), 
-        'Taylor Swift: Eras Tour 2025', 'Allegiant Stadium', 'Las Vegas', 'Paradise', 'Strip', 
-        '3333 Al Davis Way', 'The most anticipated tour of the year', 'swift2025.jpg', 
-        '2025-07-21', '2025-07-23', 'swift-eras-2025', 1),
-    
-    (gen_random_uuid(), (SELECT category_id FROM category_ids WHERE category_name = 'Exhibition'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'olivia.garcia'), 
-        'Modern Art Exhibition', 'MoMA', 'New York', 'Manhattan', 'Midtown', 
-        '11 W 53rd St', 'Showcasing contemporary artists from around the world', 'modernart.jpg', 
-        '2025-04-10', '2025-08-15', 'modern-art-2025', 1),
-    
-    (gen_random_uuid(), (SELECT category_id FROM category_ids WHERE category_name = 'Sports'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'james.nguyen'), 
-        'US Open Tennis 2025', 'USTA Billie Jean King National Tennis Center', 'New York', 'Queens', 'Flushing', 
-        'Flushing Meadows-Corona Park', 'Grand Slam tennis tournament', 'usopen.jpg', 
-        '2025-08-25', '2025-09-07', 'us-open-2025', 1),
-    
-    (gen_random_uuid(), (SELECT category_id FROM category_ids WHERE category_name = 'Festival'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'sophia.patel'), 
-        'International Film Festival', 'Lincoln Center', 'New York', 'Manhattan', 'Upper West Side', 
-        '10 Lincoln Center Plaza', 'Celebrating cinema from around the world', 'filmfest.jpg', 
-        '2025-11-01', '2025-11-15', 'film-festival-2025', 1),
-    
-    (gen_random_uuid(), (SELECT category_id FROM category_ids WHERE category_name = 'Family & Kids'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'ryan.moore'), 
-        'Disney On Ice 2025', 'Barclays Center', 'New York', 'Brooklyn', 'Prospect Heights', 
-        '620 Atlantic Ave', 'Magical ice skating show for the whole family', 'disneyice.jpg', 
-        '2025-12-20', '2025-12-28', 'disney-ice-2025', 1),
-    
-    (gen_random_uuid(), (SELECT category_id FROM category_ids WHERE category_name = 'Conference'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'emma.kim'), 
-        'Global Business Forum', 'Jacob K. Javits Convention Center', 'New York', 'Manhattan', 'Hell''s Kitchen', 
-        '429 11th Ave', 'Leading business conference for executives', 'bizforum.jpg', 
-        '2025-03-15', '2025-03-17', 'business-forum-2025', 1),
-    
-    (gen_random_uuid(), (SELECT category_id FROM category_ids WHERE category_name = 'Concert'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'tyler.jackson'), 
-        'Classical Symphony Night', 'Carnegie Hall', 'New York', 'Manhattan', 'Midtown', 
-        '881 7th Ave', 'Evening of classical masterpieces', 'symphony.jpg', 
-        '2025-05-10', '2025-05-10', 'symphony-night-2025', 1),
-    
-    (gen_random_uuid(), (SELECT category_id FROM category_ids WHERE category_name = 'Theater'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'ava.martinez'), 
-        'Broadway Show Collection', 'Various Theaters', 'New York', 'Manhattan', 'Theater District', 
-        'Broadway & 7th Ave', 'Collection of the best Broadway shows', 'broadway.jpg', 
-        '2025-01-15', '2025-12-31', 'broadway-collection-2025', 1),
-    
-    (gen_random_uuid(), (SELECT category_id FROM category_ids WHERE category_name = 'Exhibition'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'noah.miller'), 
-        'Science & Technology Expo', 'American Museum of Natural History', 'New York', 'Manhattan', 'Upper West Side', 
-        'Central Park West & 79th St', 'Interactive exhibition of scientific discoveries', 'scienceexpo.jpg', 
-        '2025-06-01', '2025-08-31', 'science-expo-2025', 1);
-
--- Create a temporary table for event IDs
-CREATE TEMPORARY TABLE event_ids (event_name VARCHAR(255), event_id UUID);
-
--- Populate the temporary table
-INSERT INTO event_ids (event_name, event_id)
-SELECT name, id FROM events;
-
--- Insert mock orders
-INSERT INTO orders (id, event_id, user_ordered_id, total_price, total_quantity, created_at) VALUES
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'Summer Music Festival 2025'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'jane.smith'), 150.00, 2, '2025-01-05'),
-        
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'Hamilton: 2025 Tour'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'alex.wilson'), 200.00, 1, '2025-02-10'),
-        
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'NBA Finals 2025'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'john.doe'), 300.00, 2, '2025-03-12'),
-        
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'Summer Music Festival 2025'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'emily.johnson'), 75.00, 1, '2025-01-07'),
-        
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'Tech Innovation Summit 2025'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'michael.brown'), 350.00, 1, '2025-04-16'),
-        
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'Stand-up Comedy Night'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'david.wong'), 80.00, 2, '2025-01-18'),
-        
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'Taylor Swift: Eras Tour 2025'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'olivia.garcia'), 450.00, 2, '2025-03-22'),
-        
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'Modern Art Exhibition'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'james.nguyen'), 40.00, 1, '2025-02-28'),
-        
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'US Open Tennis 2025'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'sophia.patel'), 250.00, 2, '2025-05-10'),
-        
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'International Film Festival'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'ryan.moore'), 90.00, 1, '2025-06-15'),
-        
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'Disney On Ice 2025'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'emma.kim'), 180.00, 3, '2025-07-20'),
-        
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'Global Business Forum'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'tyler.jackson'), 400.00, 1, '2025-08-25'),
-        
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'Classical Symphony Night'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'ava.martinez'), 120.00, 2, '2025-02-15'),
-        
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'Broadway Show Collection'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'noah.miller'), 280.00, 2, '2025-01-30'),
-        
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'Science & Technology Expo'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'john.doe'), 60.00, 2, '2025-06-05'),
-        
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'Taylor Swift: Eras Tour 2025'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'jane.smith'), 225.00, 1, '2025-03-25'),
-        
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'NBA Finals 2025'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'david.wong'), 350.00, 2, '2025-05-30'),
-        
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'Food & Wine Festival 2025'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'sophia.patel'), 90.00, 1, '2025-09-01'),
-        
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'Modern Art Exhibition'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'emma.kim'), 40.00, 1, '2025-04-05'),
-        
-    (gen_random_uuid(), (SELECT event_id FROM event_ids WHERE event_name = 'US Open Tennis 2025'), 
-        (SELECT user_id FROM user_ids WHERE user_name = 'tyler.jackson'), 125.00, 1, '2025-08-30');
-
--- Insert mock user event interactions (views, bookmarks, etc.)
-INSERT INTO user_event_interactions (user_id, event_id, interaction_type, interaction_strength, interaction_count, last_interaction_at) VALUES
-    -- Jane Smith views and purchases Summer Music Festival
-    ((SELECT user_id FROM user_ids WHERE user_name = 'jane.smith'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Summer Music Festival 2025'),
-     'View', 0.4, 3, '2025-01-01'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'jane.smith'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Summer Music Festival 2025'),
-     'Purchase', 1.0, 1, '2025-01-05'),
-      
-    -- Alex Wilson views Hamilton and NBA Finals, purchases Hamilton
-    ((SELECT user_id FROM user_ids WHERE user_name = 'alex.wilson'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Hamilton: 2025 Tour'),
-     'View', 0.5, 4, '2025-02-05'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'alex.wilson'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Hamilton: 2025 Tour'),
-     'Purchase', 1.0, 1, '2025-02-10'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'alex.wilson'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'NBA Finals 2025'),
-     'View', 0.3, 2, '2025-03-01'),
-      
-    -- John Doe views NBA Finals, purchases it
-    ((SELECT user_id FROM user_ids WHERE user_name = 'john.doe'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'NBA Finals 2025'),
-     'View', 0.6, 5, '2025-03-10'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'john.doe'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'NBA Finals 2025'),
-     'Purchase', 1.0, 1, '2025-03-12'),
-      
-    -- Emily Johnson views and bookmarks several events
-    ((SELECT user_id FROM user_ids WHERE user_name = 'emily.johnson'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Summer Music Festival 2025'),
-     'View', 0.3, 2, '2025-01-06'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'emily.johnson'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Summer Music Festival 2025'),
-     'Purchase', 1.0, 1, '2025-01-07'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'emily.johnson'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Taylor Swift: Eras Tour 2025'),
-     'View', 0.4, 3, '2025-03-01'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'emily.johnson'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Taylor Swift: Eras Tour 2025'),
-     'Bookmark', 0.7, 1, '2025-03-02'),
-      
-    -- Michael Brown has specific interests
-    ((SELECT user_id FROM user_ids WHERE user_name = 'michael.brown'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Tech Innovation Summit 2025'),
-     'View', 0.6, 6, '2025-04-10'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'michael.brown'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Tech Innovation Summit 2025'),
-     'Purchase', 1.0, 1, '2025-04-16'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'michael.brown'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Science & Technology Expo'),
-     'View', 0.5, 4, '2025-05-15'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'michael.brown'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Global Business Forum'),
-     'View', 0.3, 2, '2025-03-05'),
-      
-    -- Add 20 more interactions for different users and events
-    ((SELECT user_id FROM user_ids WHERE user_name = 'david.wong'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Stand-up Comedy Night'),
-     'View', 0.5, 4, '2025-01-15'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'david.wong'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Stand-up Comedy Night'),
-     'Purchase', 1.0, 1, '2025-01-18'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'olivia.garcia'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Taylor Swift: Eras Tour 2025'),
-     'View', 0.6, 7, '2025-03-15'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'olivia.garcia'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Taylor Swift: Eras Tour 2025'),
-     'Purchase', 1.0, 1, '2025-03-22'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'james.nguyen'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Modern Art Exhibition'),
-     'View', 0.4, 3, '2025-02-25'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'james.nguyen'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Modern Art Exhibition'),
-     'Purchase', 1.0, 1, '2025-02-28'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'sophia.patel'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'International Film Festival'),
-     'View', 0.5, 5, '2025-10-25'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'sophia.patel'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'US Open Tennis 2025'),
-     'View', 0.4, 4, '2025-05-05'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'sophia.patel'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'US Open Tennis 2025'),
-     'Purchase', 1.0, 1, '2025-05-10'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'ryan.moore'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'International Film Festival'),
-     'View', 0.3, 2, '2025-06-10'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'ryan.moore'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'International Film Festival'),
-     'Purchase', 1.0, 1, '2025-06-15'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'emma.kim'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Disney On Ice 2025'),
-     'View', 0.5, 5, '2025-07-15'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'emma.kim'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Disney On Ice 2025'),
-     'Purchase', 1.0, 1, '2025-07-20'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'tyler.jackson'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Global Business Forum'),
-     'View', 0.6, 6, '2025-08-20'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'tyler.jackson'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Global Business Forum'),
-     'Purchase', 1.0, 1, '2025-08-25'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'ava.martinez'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Classical Symphony Night'),
-     'View', 0.4, 3, '2025-02-10'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'ava.martinez'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Classical Symphony Night'),
-     'Purchase', 1.0, 1, '2025-02-15'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'noah.miller'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Broadway Show Collection'),
-     'View', 0.5, 4, '2025-01-25'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'noah.miller'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Broadway Show Collection'),
-     'Purchase', 1.0, 1, '2025-01-30'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'john.doe'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Science & Technology Expo'),
-     'View', 0.3, 2, '2025-06-01'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'john.doe'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Science & Technology Expo'),
-     'Purchase', 1.0, 1, '2025-06-05'),
-      
-    -- Add view interactions for events that weren't purchased
-    ((SELECT user_id FROM user_ids WHERE user_name = 'john.doe'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Taylor Swift: Eras Tour 2025'),
-     'View', 0.2, 1, '2025-07-10'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'jane.smith'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Classical Symphony Night'),
-     'View', 0.3, 2, '2025-04-20'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'alex.wilson'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Disney On Ice 2025'),
-     'View', 0.1, 1, '2025-11-15'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'emily.johnson'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Science & Technology Expo'),
-     'View', 0.4, 3, '2025-06-20'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'michael.brown'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Taylor Swift: Eras Tour 2025'),
-     'View', 0.1, 1, '2025-07-10'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'sarah.lee'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'NBA Finals 2025'),
-     'View', 0.2, 1, '2025-05-15'),
-      
-    ((SELECT user_id FROM user_ids WHERE user_name = 'david.wong'),
-     (SELECT event_id FROM event_ids WHERE event_name = 'Food & Wine Festival 2025'),
-     'View', 0.3, 2, '2025-09-01');
-
--- Generate event features based on interactions
-INSERT INTO event_features (event_id, popularity, avg_ticket_price, view_count, purchase_count, last_updated_at)
-SELECT 
-    e.id,
-    CASE
-        WHEN COUNT(uei.id) = 0 THEN 0.1 -- Some baseline popularity
-        ELSE 0.1 + (0.9 * COUNT(uei.id) / 10.0) -- Normalized to max of 1.0
-    END AS popularity,
-    COALESCE(AVG(o.total_price / o.total_quantity), 50.00) AS avg_ticket_price,
-    SUM(CASE WHEN uei.interaction_type = 'View' THEN uei.interaction_count ELSE 0 END) AS view_count,
-    SUM(CASE WHEN uei.interaction_type = 'Purchase' THEN uei.interaction_count ELSE 0 END) AS purchase_count,
-    CURRENT_TIMESTAMP AS last_updated_at
-FROM 
-    events e
-LEFT JOIN 
-    user_event_interactions uei ON e.id = uei.event_id
-LEFT JOIN 
-    orders o ON e.id = o.event_id
-GROUP BY 
-    e.id;
-    
--- Generate user features based on interactions
-INSERT INTO user_features (user_id, activity_level, price_sensitivity, event_category_preferences, last_updated_at)
-SELECT 
-    u.id AS user_id,
-    CASE
-        WHEN COUNT(uei.id) = 0 THEN 0.1
-        ELSE 0.1 + (0.9 * COUNT(uei.id) / 10.0) -- Normalize to 0-1
-    END AS activity_level,
-    CASE
-        WHEN AVG(o.total_price) IS NULL THEN 0.5 -- Default mid sensitivity
-        WHEN AVG(o.total_price) > 200 THEN 0.2   -- Less sensitive to price (buys expensive tickets)
-        WHEN AVG(o.total_price) > 100 THEN 0.5   -- Medium sensitivity
-        ELSE 0.8                                -- High sensitivity (prefers cheaper tickets)
-    END AS price_sensitivity,
-    NULL AS event_category_preferences,
-    CURRENT_TIMESTAMP AS last_updated_at
-FROM 
-    users u
-LEFT JOIN 
-    user_event_interactions uei ON u.id = uei.user_id
-LEFT JOIN 
-    orders o ON u.id = o.user_ordered_id
-GROUP BY 
-    u.id;
-
--- Create a sample training dataset from interactions
-INSERT INTO training_datasets (id, name, description, created_at, sample_count, is_active, dataset_json)
-SELECT
-    gen_random_uuid() AS id,
-    'initial_training_dataset_2025' AS name,
-    'Automatically generated initial training data with 2025 events' AS description,
-    CURRENT_TIMESTAMP AS created_at,
-    (SELECT COUNT(*) FROM user_event_interactions) AS sample_count,
-    TRUE AS is_active,
-    NULL AS dataset_json;
-
--- Clean up temporary tables
-DROP TABLE category_ids;
-DROP TABLE user_ids;
-DROP TABLE event_ids;
-
-SELECT 'Training database initialized successfully with 2025 mock data.' AS initialization_complete;
+-- Generate 50 sample records for training data with dates starting from February 1, 2025
+INSERT INTO user_event_interactions (user_id, event_id, event_type, location, event_date_time, label)
+VALUES
+    ('f47ac10b-58cc-4372-a567-0e02b2c3d479', 'e8c16c48-702d-4f5d-9e8f-0c1a2b3c4d5e', 'Concerts', 'Thành phố Hồ Chí Minh', '2025-02-01 18:30:00+07', 0.9),
+    ('f47ac10b-58cc-4372-a567-0e02b2c3d479', '3a4b5c6d-7e8f-4a5b-8c9d-1e2f3a4b5c6d', 'Workshops', 'Hà Nội', '2025-02-03 09:00:00+07', 0.4),
+    ('f47ac10b-58cc-4372-a567-0e02b2c3d479', '2b3c4d5e-6f7a-4b5c-9d8e-2f3a4b5c6d7e', 'Exhibitions', 'Đà Nẵng', '2025-02-05 14:00:00+07', 0.7),
+    ('98765432-10ab-4cde-f876-543210abcdef', 'e8c16c48-702d-4f5d-9e8f-0c1a2b3c4d5e', 'Concerts', 'Thành phố Hồ Chí Minh', '2025-02-01 18:30:00+07', 0.2),
+    ('98765432-10ab-4cde-f876-543210abcdef', '4c5d6e7f-8a9b-4c5d-a6b7-3c4d5e6f7a8b', 'Festivals', 'Huế', '2025-02-07 16:30:00+07', 0.8),
+    ('98765432-10ab-4cde-f876-543210abcdef', '5d6e7f8a-9b0c-4d5e-b7c8-4d5e6f7a8b9c', 'Theaters', 'Cần Thơ', '2025-02-09 19:00:00+07', 0.85),
+    ('12345678-90ab-4cde-8765-4321abcdef12', '5d6e7f8a-9b0c-4d5e-b7c8-4d5e6f7a8b9c', 'Theaters', 'Cần Thơ', '2025-02-09 19:00:00+07', 0.85),
+    ('12345678-90ab-4cde-8765-4321abcdef12', '6e7f8a9b-0c1d-4e5f-c8d9-5e6f7a8b9c0d', 'Concerts', 'Nha Trang', '2025-02-11 20:00:00+07', 0.3),
+    ('12345678-90ab-4cde-8765-4321abcdef12', '7f8a9b0c-1d2e-4f5a-d9e0-6f7a8b9c0d1e', 'Sports', 'Vũng Tàu', '2025-02-13 15:30:00+07', 0.95),
+    ('abcdef12-3456-4789-abcd-ef1234567890', '7f8a9b0c-1d2e-4f5a-d9e0-6f7a8b9c0d1e', 'Sports', 'Vũng Tàu', '2025-02-13 15:30:00+07', 0.95),
+    ('abcdef12-3456-4789-abcd-ef1234567890', '8a9b0c1d-2e3f-4a5b-e0f1-7a8b9c0d1e2f', 'Workshops', 'Đà Lạt', '2025-02-15 10:00:00+07', 0.6),
+    ('abcdef12-3456-4789-abcd-ef1234567890', '9b0c1d2e-3f4a-4b5c-f1a2-8b9c0d1e2f3a', 'Exhibitions', 'Hải Phòng', '2025-02-17 13:00:00+07', 0.75),
+    ('45678901-2345-4678-9012-34567890abcd', '9b0c1d2e-3f4a-4b5c-f1a2-8b9c0d1e2f3a', 'Exhibitions', 'Hải Phòng', '2025-02-17 13:00:00+07', 0.75),
+    ('45678901-2345-4678-9012-34567890abcd', 'a0b1c2d3-e4f5-4a6b-a3b4-9c0d1e2f3a4b', 'Festivals', 'Quy Nhơn', '2025-02-19 16:00:00+07', 0.4),
+    ('45678901-2345-4678-9012-34567890abcd', 'b1c2d3e4-f5a6-4b7c-b5c6-0d1e2f3a4b5c', 'Concerts', 'Buôn Ma Thuột', '2025-02-21 18:30:00+07', 0.85),
+    ('89abcdef-0123-4456-7890-abcdef123456', 'b1c2d3e4-f5a6-4b7c-b5c6-0d1e2f3a4b5c', 'Concerts', 'Buôn Ma Thuột', '2025-02-21 18:30:00+07', 0.85),
+    ('89abcdef-0123-4456-7890-abcdef123456', 'c2d3e4f5-a6b7-4c8d-c7d8-1e2f3a4b5c6d', 'Theater', 'Pleiku', '2025-02-23 19:00:00+07', 0.5),
+    ('89abcdef-0123-4456-7890-abcdef123456', 'd3e4f5a6-b7c8-4d9e-d9e0-2f3a4b5c6d7e', 'Workshops', 'Biên Hòa', '2025-02-25 09:30:00+07', 0.7),
+    ('cdef1234-5678-490a-bcde-f1234567890a', 'd3e4f5a6-b7c8-4d9e-d9e0-2f3a4b5c6d7e', 'Workshops', 'Biên Hòa', '2025-02-25 09:30:00+07', 0.7),
+    ('cdef1234-5678-490a-bcde-f1234567890a', 'e4f5a6b7-c8d9-4e0f-e1f2-3a4b5c6d7e8f', 'Sports', 'Long Xuyên', '2025-02-27 15:00:00+07', 0.25),
+    ('cdef1234-5678-490a-bcde-f1234567890a', 'f5a6b7c8-d9e0-4f1a-f3a4-4b5c6d7e8f9a', 'Exhibitions', 'Thành phố Hồ Chí Minh', '2025-03-01 11:00:00+07', 0.9),
+    ('01234567-89ab-4cde-f012-3456789abcde', 'f5a6b7c8-d9e0-4f1a-f3a4-4b5c6d7e8f9a', 'Exhibitions', 'Thành phố Hồ Chí Minh', '2025-03-01 11:00:00+07', 0.9),
+    ('01234567-89ab-4cde-f012-3456789abcde', 'a6b7c8d9-e0f1-4a2b-a5b6-5c6d7e8f9a0b', 'Festivals', 'Phan Thiết', '2025-03-03 17:30:00+07', 0.65),
+    ('01234567-89ab-4cde-f012-3456789abcde', 'b7c8d9e0-f1a2-4b3c-b7c8-6d7e8f9a0b1c', 'Concerts', 'Hà Nội', '2025-03-05 20:00:00+07', 0.8),
+    ('56789abc-def0-4123-4567-89abcdef0123', 'b7c8d9e0-f1a2-4b3c-b7c8-6d7e8f9a0b1c', 'Concerts', 'Hà Nội', '2025-03-05 20:00:00+07', 0.8),
+    ('56789abc-def0-4123-4567-89abcdef0123', 'c8d9e0f1-a2b3-4c4d-c9d0-7e8f9a0b1c2d', 'Workshops', 'Thái Nguyên', '2025-03-07 09:00:00+07', 0.55),
+    ('56789abc-def0-4123-4567-89abcdef0123', 'd9e0f1a2-b3c4-4d5e-d1e2-8f9a0b1c2d3e', 'Theater', 'Thanh Hóa', '2025-03-09 19:30:00+07', 0.7),
+    ('9abcdef0-1234-4567-89ab-cdef01234567', 'd9e0f1a2-b3c4-4d5e-d1e2-8f9a0b1c2d3e', 'Theater', 'Thanh Hóa', '2025-03-09 19:30:00+07', 0.7),
+    ('9abcdef0-1234-4567-89ab-cdef01234567', 'e0f1a2b3-c4d5-4e6f-e3f4-9a0b1c2d3e4f', 'Sports', 'Vinh', '2025-03-11 16:00:00+07', 0.3),
+    ('9abcdef0-1234-4567-89ab-cdef01234567', 'f1a2b3c4-d5e6-4f7a-f5a6-0b1c2d3e4f5a', 'Exhibitions', 'Hạ Long', '2025-03-13 13:30:00+07', 0.85),
+    ('ef012345-6789-4abc-def0-123456789abc', 'f1a2b3c4-d5e6-4f7a-f5a6-0b1c2d3e4f5a', 'Exhibitions', 'Hạ Long', '2025-03-13 13:30:00+07', 0.85),
+    ('ef012345-6789-4abc-def0-123456789abc', 'a2b3c4d5-e6f7-4a8b-a7b8-1c2d3e4f5a6b', 'Festivals', 'Ninh Bình', '2025-03-15 17:00:00+07', 0.5),
+    ('ef012345-6789-4abc-def0-123456789abc', 'b3c4d5e6-f7a8-4b9c-b9c0-2d3e4f5a6b7c', 'Concerts', 'Đồng Hới', '2025-03-17 18:30:00+07', 0.75),
+    ('34567890-abcd-4ef0-1234-56789abcdef0', 'b3c4d5e6-f7a8-4b9c-b9c0-2d3e4f5a6b7c', 'Concerts', 'Đồng Hới', '2025-03-17 18:30:00+07', 0.75),
+    ('34567890-abcd-4ef0-1234-56789abcdef0', 'c4d5e6f7-a8b9-4c0d-c1d2-3e4f5a6b7c8d', 'Workshops', 'Đồng Nai', '2025-03-19 10:00:00+07', 0.45),
+    ('34567890-abcd-4ef0-1234-56789abcdef0', 'd5e6f7a8-b9c0-4d1e-d3e4-4f5a6b7c8d9e', 'Theater', 'Bắc Ninh', '2025-03-21 19:00:00+07', 0.6),
+    ('7890abcd-ef01-4234-5678-90abcdef0123', 'd5e6f7a8-b9c0-4d1e-d3e4-4f5a6b7c8d9e', 'Theater', 'Bắc Ninh', '2025-03-21 19:00:00+07', 0.6),
+    ('7890abcd-ef01-4234-5678-90abcdef0123', 'e6f7a8b9-c0d1-4e2f-e5f6-5a6b7c8d9e0f', 'Sports', 'Cà Mau', '2025-03-23 15:30:00+07', 0.9),
+    ('7890abcd-ef01-4234-5678-90abcdef0123', 'f7a8b9c0-d1e2-4f3a-f7a8-6b7c8d9e0f1a', 'Exhibitions', 'Bạc Liêu', '2025-03-25 11:30:00+07', 0.4),
+    ('bcdef012-3456-4789-abcd-ef0123456789', 'f7a8b9c0-d1e2-4f3a-f7a8-6b7c8d9e0f1a', 'Exhibitions', 'Bạc Liêu', '2025-03-25 11:30:00+07', 0.4),
+    ('bcdef012-3456-4789-abcd-ef0123456789', 'a8b9c0d1-e2f3-4a4b-a9b0-7c8d9e0f1a2b', 'Festivals', 'Sóc Trăng', '2025-03-27 16:30:00+07', 0.8),
+    ('bcdef012-3456-4789-abcd-ef0123456789', 'b9c0d1e2-f3a4-4b5c-b1c2-8d9e0f1a2b3c', 'Concerts', 'Rạch Giá', '2025-03-29 20:00:00+07', 0.65),
+    ('2345678a-bcde-4f01-2345-6789abcdef01', 'b9c0d1e2-f3a4-4b5c-b1c2-8d9e0f1a2b3c', 'Concerts', 'Rạch Giá', '2025-03-29 20:00:00+07', 0.65),
+    ('2345678a-bcde-4f01-2345-6789abcdef01', 'c0d1e2f3-a4b5-4c6d-c3d4-9e0f1a2b3c4d', 'Workshops', 'Bến Tre', '2025-03-31 09:30:00+07', 0.55),
+    ('2345678a-bcde-4f01-2345-6789abcdef01', 'd1e2f3a4-b5c6-4d7e-d5e6-0f1a2b3c4d5e', 'Theater', 'Mỹ Tho', '2025-04-02 19:00:00+07', 0.75),
+    ('6789abcd-ef01-4234-5678-9abcdef01234', 'd1e2f3a4-b5c6-4d7e-d5e6-0f1a2b3c4d5e', 'Theater', 'Mỹ Tho', '2025-04-02 19:00:00+07', 0.75),
+    ('6789abcd-ef01-4234-5678-9abcdef01234', 'e2f3a4b5-c6d7-4e8f-e7f8-1a2b3c4d5e6f', 'Sports', 'Trà Vinh', '2025-04-04 16:00:00+07', 0.35),
+    ('6789abcd-ef01-4234-5678-9abcdef01234', 'f3a4b5c6-d7e8-4f9a-f9a0-2b3c4d5e6f7a', 'Exhibitions', 'Sa Đéc', '2025-04-06 13:00:00+07', 0.8),
+    ('abcdef01-2345-4678-9abc-def012345678', 'f3a4b5c6-d7e8-4f9a-f9a0-2b3c4d5e6f7a', 'Exhibitions', 'Sa Đéc', '2025-04-06 13:00:00+07', 0.8),
+    ('abcdef01-2345-4678-9abc-def012345678', 'a4b5c6d7-e8f9-4a0b-a1b2-3c4d5e6f7a8b', 'Festivals', 'Cao Lãnh', '2025-04-08 17:30:00+07', 0.6),
+    ('abcdef01-2345-4678-9abc-def012345678', 'b5c6d7e8-f9a0-4b1c-b3c4-4d5e6f7a8b9c', 'Concerts', 'Châu Đốc', '2025-04-10 19:30:00+07', 0.7),
+    ('ef012345-6789-4abc-def0-12345678abcd', 'b5c6d7e8-f9a0-4b1c-b3c4-4d5e6f7a8b9c', 'Concerts', 'Châu Đốc', '2025-04-10 19:30:00+07', 0.7),
+    ('ef012345-6789-4abc-def0-12345678abcd', 'c6d7e8f9-a0b1-4c2d-c5d6-5e6f7a8b9c0d', 'Workshops', 'Tuy Hòa', '2025-04-12 09:00:00+07', 0.5),
+    ('ef012345-6789-4abc-def0-12345678abcd', 'd7e8f9a0-b1c2-4d3e-d7e8-6f7a8b9c0d1e', 'Theater', 'Tam Kỳ', '2025-04-14 20:00:00+07', 0.85),
+    ('3456789a-bcde-4f01-2345-678abcdef012', 'd7e8f9a0-b1c2-4d3e-d7e8-6f7a8b9c0d1e', 'Theater', 'Tam Kỳ', '2025-04-14 20:00:00+07', 0.85),
+    ('3456789a-bcde-4f01-2345-678abcdef012', 'e8f9a0b1-c2d3-4e4f-e9f0-7a8b9c0d1e2f', 'Sports', 'Quảng Ngãi', '2025-04-16 15:30:00+07', 0.4),
+    ('3456789a-bcde-4f01-2345-678abcdef012', 'f9a0b1c2-d3e4-4f5a-f1a2-8b9c0d1e2f3a', 'Exhibitions', 'Kon Tum', '2025-04-18 11:00:00+07', 0.7),
+    ('789abcde-f012-4345-6789-abcdef012345', 'f9a0b1c2-d3e4-4f5a-f1a2-8b9c0d1e2f3a', 'Exhibitions', 'Kon Tum', '2025-04-18 11:00:00+07', 0.7),
+    ('789abcde-f012-4345-6789-abcdef012345', 'a0b1c2d3-e4f5-4a6b-a3b4-9c0d1e2f3a4b', 'Festivals', 'Gia Nghĩa', '2025-04-20 17:00:00+07', 0.55),
+    ('789abcde-f012-4345-6789-abcdef012345', 'b1c2d3e4-f5a6-4b7c-b5c6-0d1e2f3a4b5c', 'Concerts', 'Điện Biên Phủ', '2025-04-22 18:30:00+07', 0.8),
+    ('bcdef012-3456-4789-abcd-ef012345678a', 'b1c2d3e4-f5a6-4b7c-b5c6-0d1e2f3a4b5c', 'Concerts', 'Điện Biên Phủ', '2025-04-22 18:30:00+07', 0.8),
+    ('bcdef012-3456-4789-abcd-ef012345678a', 'c2d3e4f5-a6b7-4c8d-c7d8-1e2f3a4b5c6d', 'Workshops', 'Lai Châu', '2025-04-24 10:00:00+07', 0.3),
+    ('bcdef012-3456-4789-abcd-ef012345678a', 'd3e4f5a6-b7c8-4d9e-d9e0-2f3a4b5c6d7e', 'Theater', 'Sơn La', '2025-04-26 19:00:00+07', 0.65),
+    ('01234567-89ab-4cde-f012-3456789abcdf', 'd3e4f5a6-b7c8-4d9e-d9e0-2f3a4b5c6d7e', 'Theater', 'Sơn La', '2025-04-26 19:00:00+07', 0.65),
+    ('01234567-89ab-4cde-f012-3456789abcdf', 'e4f5a6b7-c8d9-4e0f-e1f2-3a4b5c6d7e8f', 'Sports', 'Lào Cai', '2025-04-28 16:30:00+07', 0.9),
+    ('01234567-89ab-4cde-f012-3456789abcdf', 'f5a6b7c8-d9e0-4f1a-f3a4-4b5c6d7e8f9a', 'Exhibitions', 'Yên Bái', '2025-04-30 12:30:00+07', 0.45),
+    ('5678abcd-ef01-4234-5678-9abcdef01235', 'f5a6b7c8-d9e0-4f1a-f3a4-4b5c6d7e8f9a', 'Exhibitions', 'Yên Bái', '2025-04-30 12:30:00+07', 0.45),
+    ('5678abcd-ef01-4234-5678-9abcdef01235', 'a6b7c8d9-e0f1-4a2b-a5b6-5c6d7e8f9a0b', 'Festivals', 'Phú Thọ', '2025-05-02 17:30:00+07', 0.75),
+    ('5678abcd-ef01-4234-5678-9abcdef01235', 'b7c8d9e0-f1a2-4b3c-b7c8-6d7e8f9a0b1d', 'Theater', 'Thành phố Hồ Chí Minh', '2025-05-04 19:00:00+07', 0.85),
+    ('67890abc-def1-4234-5678-9abcdef01236', 'b7c8d9e0-f1a2-4b3c-b7c8-6d7e8f9a0b1d', 'Theater', 'Thành phố Hồ Chí Minh', '2025-05-04 19:00:00+07', 0.85),
+    ('67890abc-def1-4234-5678-9abcdef01236', 'c8d9e0f1-a2b3-4c4d-c9d0-7e8f9a0b1c2f', 'Family Events', 'Hà Nội', '2025-05-06 10:00:00+07', 0.95),
+    ('67890abc-def1-4234-5678-9abcdef01236', 'd9e0f1a2-b3c4-4d5e-d1e2-8f9a0b1c2d3f', 'Conferences', 'Đà Nẵng', '2025-05-08 09:00:00+07', 0.75),
+    ('a1b2c3d4-e5f6-47a8-9b0c-d1e2f3a4b5c6', 'd9e0f1a2-b3c4-4d5e-d1e2-8f9a0b1c2d3f', 'Conferences', 'Đà Nẵng', '2025-05-08 09:00:00+07', 0.75),
+    ('a1b2c3d4-e5f6-47a8-9b0c-d1e2f3a4b5c6', '550e8400-e29b-41d4-a716-446655440000', 'Comedy Shows', 'Nha Trang', '2025-05-10 20:00:00+07', 0.8),
+    ('a1b2c3d4-e5f6-47a8-9b0c-d1e2f3a4b5c6', 'f1a2b3c4-d5e6-4f7a-f5a6-0b1c2d3e4f5b', 'Festivals', 'Huế', '2025-05-12 16:00:00+07', 0.7),
+    ('b2c3d4e5-f6a7-48b9-c0d1-e2f3a4b5c6d7', 'f1a2b3c4-d5e6-4f7a-f5a6-0b1c2d3e4f5b', 'Festivals', 'Huế', '2025-05-12 16:00:00+07', 0.7),
+    ('b2c3d4e5-f6a7-48b9-c0d1-e2f3a4b5c6d7', 'a2b3c4d5-e6f7-4a8b-a7b8-1c2d3e4f5a6c', 'Concerts', 'Cần Thơ', '2025-05-14 18:30:00+07', 0.9),
+    ('b2c3d4e5-f6a7-48b9-c0d1-e2f3a4b5c6d7', 'b3c4d5e6-f7a8-4b9c-b9c0-2d3e4f5a6b7d', 'Workshops', 'Đà Lạt', '2025-05-16 09:30:00+07', 0.6),
+    ('c3d4e5f6-a7b8-49c0-d1e2-f3a4b5c6d7e8', 'b3c4d5e6-f7a8-4b9c-b9c0-2d3e4f5a6b7d', 'Workshops', 'Đà Lạt', '2025-05-16 09:30:00+07', 0.6),
+    ('c3d4e5f6-a7b8-49c0-d1e2-f3a4b5c6d7e8', 'c4d5e6f7-a8b9-4c0d-c1d2-3e4f5a6b7c8e', 'Sports', 'Vũng Tàu', '2025-05-18 15:00:00+07', 0.85),
+    ('c3d4e5f6-a7b8-49c0-d1e2-f3a4b5c6d7e8', 'd5e6f7a8-b9c0-4d1e-d3e4-4f5a6b7c8d9f', 'Family Events', 'Bắc Giang', '2025-05-20 11:00:00+07', 0.75),
+    ('d4e5f6a7-b8c9-4ad1-e2f3-a4b5c6d7e8f9', 'd5e6f7a8-b9c0-4d1e-d3e4-4f5a6b7c8d9f', 'Family Events', 'Bắc Giang', '2025-05-20 11:00:00+07', 0.75),
+    ('d4e5f6a7-b8c9-4ad1-e2f3-a4b5c6d7e8f9', 'e6f7a8b9-c0d1-4e2f-e5f6-5a6b7c8d9e0f', 'Comedy Shows', 'Hải Dương', '2025-05-22 20:30:00+07', 0.8),
+    ('d4e5f6a7-b8c9-4ad1-e2f3-a4b5c6d7e8f9', 'f7a8b9c0-d1e2-4f3a-f7a8-6b7c8d9e0f1a', 'Exhibitions', 'Bạc Liêu', '2025-03-25 11:30:00+07', 0.4),
+    ('e5f6a7b8-c9d0-4ae1-f2f3-b4c5d6e7f8a9', 'a9b0c1d2-e3f4-4a5b-c6d7-8e9f0a1b2c3d', 'Concerts', 'Hà Nội', '2025-05-24 19:30:00+07', 0.85),
+    ('e5f6a7b8-c9d0-4ae1-f2f3-b4c5d6e7f8a9', 'b0c1d2e3-f4a5-4b6c-d7e8-9f0a1b2c3d4e', 'Workshops', 'Đà Nẵng', '2025-05-26 14:00:00+07', 0.65),
+    ('e5f6a7b8-c9d0-4ae1-f2f3-b4c5d6e7f8a9', 'c1d2e3f4-a5b6-4c7d-e8f9-0a1b2c3d4e5f', 'Festivals', 'Hải Phòng', '2025-05-28 16:30:00+07', 0.75),
+    ('f6a7b8c9-d0e1-4af2-f3f4-c5d6e7f8a9b0', 'd2e3f4a5-b6c7-4d8e-f9a0-1b2c3d4e5f6a', 'Theater', 'Cần Thơ', '2025-05-30 20:00:00+07', 0.9),
+    ('f6a7b8c9-d0e1-4af2-f3f4-c5d6e7f8a9b0', 'e3f4a5b6-c7d8-4e9f-a0b1-2c3d4e5f6a7b', 'Sports', 'Nha Trang', '2025-06-01 15:00:00+07', 0.8),
+    ('f6a7b8c9-d0e1-4af2-f3f4-c5d6e7f8a9b0', 'f4a5b6c7-d8e9-4f0a-b1c2-3d4e5f6a7b8c', 'Exhibitions', 'Huế', '2025-06-03 11:30:00+07', 0.7),
+    ('a7b8c9d0-e1f2-4af3-f4f5-d6e7f8a9b0c1', 'a5b6c7d8-e9f0-4a1b-c2d3-4e5f6a7b8c9d', 'Family Events', 'Vũng Tàu', '2025-06-05 10:00:00+07', 0.95),
+    ('a7b8c9d0-e1f2-4af3-f4f5-d6e7f8a9b0c1', 'b6c7d8e9-f0a1-4b2c-d3e4-5f6a7b8c9d0e', 'Comedy Shows', 'Đà Lạt', '2025-06-07 20:30:00+07', 0.85),
+    ('a7b8c9d0-e1f2-4af3-f4f5-d6e7f8a9b0c1', 'c7d8e9f0-a1b2-4c3d-e4f5-6a7b8c9d0e1f', 'Conferences', 'Thành phố Hồ Chí Minh', '2025-06-09 09:00:00+07', 0.75),
+    ('b8c9d0e1-f2f3-4af4-f5f6-e7f8a9b0c1d2', 'd8e9f0a1-b2c3-4d4e-f5a6-7b8c9d0e1f2a', 'Concerts', 'Hà Nội', '2025-06-11 19:00:00+07', 0.9),
+    ('b8c9d0e1-f2f3-4af4-f5f6-e7f8a9b0c1d2', 'e9f0a1b2-c3d4-4e5f-a6b7-8c9d0e1f2a3b', 'Workshops', 'Đà Nẵng', '2025-06-13 14:30:00+07', 0.7),
+    ('b8c9d0e1-f2f3-4af4-f5f6-e7f8a9b0c1d2', 'f0a1b2c3-d4e5-4f6a-b7c8-9d0e1f2a3b4c', 'Festivals', 'Hải Phòng', '2025-06-15 16:00:00+07', 0.8),
+    ('c9d0e1f2-f3f4-4af5-f6f7-e8f9a0b1c2d3', 'a1b2c3d4-e5f6-4a7b-c8d9-0e1f2a3b4c5d', 'Theater', 'Cần Thơ', '2025-06-17 19:30:00+07', 0.85),
+    ('c9d0e1f2-f3f4-4af5-f6f7-e8f9a0b1c2d3', 'b2c3d4e5-f6a7-4b8c-d9e0-1f2a3b4c5d6e', 'Sports', 'Nha Trang', '2025-06-19 15:30:00+07', 0.9),
+    ('c9d0e1f2-f3f4-4af5-f6f7-e8f9a0b1c2d3', 'c3d4e5f6-a7b8-4c9d-e0f1-2a3b4c5d6e7f', 'Exhibitions', 'Huế', '2025-06-21 11:00:00+07', 0.75),
+    ('d0e1f2f3-f4f5-4af6-f7f8-f9a0b1c2d3e4', 'd4e5f6a7-b8c9-4d0e-f1a2-3b4c5d6e7f8a', 'Family Events', 'Vũng Tàu', '2025-06-23 10:30:00+07', 0.95),
+    ('d0e1f2f3-f4f5-4af6-f7f8-f9a0b1c2d3e4', 'e5f6a7b8-c9d0-4e1f-a2b3-4c5d6e7f8a9b', 'Comedy Shows', 'Đà Lạt', '2025-06-25 20:00:00+07', 0.8),
+    ('d0e1f2f3-f4f5-4af6-f7f8-f9a0b1c2d3e4', 'f6a7b8c9-d0e1-4f2a-b3c4-5d6e7f8a9b0c', 'Conferences', 'Thành phố Hồ Chí Minh', '2025-06-27 09:30:00+07', 0.7),
+    ('e1f2f3f4-f5f6-4af7-f8f9-a0b1c2d3e4f5', 'a7b8c9d0-e1f2-4a3b-c4d5-6e7f8a9b0c1d', 'Concerts', 'Hà Nội', '2025-06-29 19:00:00+07', 0.9),
+    ('e1f2f3f4-f5f6-4af7-f8f9-a0b1c2d3e4f5', 'b8c9d0e1-f2f3-4b4c-d5e6-7f8a9b0c1d2e', 'Workshops', 'Đà Nẵng', '2025-07-01 14:00:00+07', 0.65),
+    ('e1f2f3f4-f5f6-4af7-f8f9-a0b1c2d3e4f5', 'c9d0e1f2-f3f4-4c5d-e6f7-8a9b0c1d2e3f', 'Festivals', 'Hải Phòng', '2025-07-03 16:30:00+07', 0.85),
+    ('e1f2f3f4-f5f6-4af7-f8f9-a0b1c2d3e4f5', 'd0e1f2f3-f4f5-4d6e-f7a8-9b0c1d2e3f4a', 'Theater', 'Cần Thơ', '2025-07-05 20:00:00+07', 0.9),
+    ('f2f3f4f5-f6f7-4af8-f9f0-b1c2d3e4f5a6', 'e1f2f3f4-f5f6-4e7f-a8b9-0c1d2e3f4a5b', 'Concerts', 'Nha Trang', '2025-07-07 19:30:00+07', 0.95),
+    ('f2f3f4f5-f6f7-4af8-f9f0-b1c2d3e4f5a6', 'f2f3f4f5-f6f7-4f8a-b9c0-1d2e3f4a5b6c', 'Workshops', 'Huế', '2025-07-09 14:00:00+07', 0.75),
+    ('f2f3f4f5-f6f7-4af8-f9f0-b1c2d3e4f5a6', 'f3f4f5f6-f7f8-4f9a-b0c1-2d3e4f5a6b7c', 'Festivals', 'Vũng Tàu', '2025-07-11 16:30:00+07', 0.85),
+    ('f2f3f4f5-f6f7-4af8-f9f0-b1c2d3e4f5a6', 'f4f5f6f7-f8f9-4f0a-b1c2-3d4e5f6a7b8c', 'Family Events', 'Đà Lạt', '2025-07-13 10:00:00+07', 0.9),
+    ('f3f4f5f6-f7f8-4af9-f0f1-c2d3e4f5a6b7', 'f5f6f7f8-f9f0-4f1a-b2c3-4d5e6f7a8b9c', 'Comedy Shows', 'Thành phố Hồ Chí Minh', '2025-07-15 20:30:00+07', 0.8),
+    ('f3f4f5f6-f7f8-4af9-f0f1-c2d3e4f5a6b7', 'f6f7f8f9-f0f1-4f2a-b3c4-5d6e7f8a9b0c', 'Conferences', 'Hà Nội', '2025-07-17 09:00:00+07', 0.7),
+    ('f3f4f5f6-f7f8-4af9-f0f1-c2d3e4f5a6b7', 'f7f8f9f0-f1f2-4f3a-b4c5-6d7e8f9a0b1c', 'Concerts', 'Đà Nẵng', '2025-07-19 19:00:00+07', 0.9),
+    ('f3f4f5f6-f7f8-4af9-f0f1-c2d3e4f5a6b7', 'f8f9f0f1-f2f3-4f4a-b5c6-7d8e9f0a1b2c', 'Workshops', 'Hải Phòng', '2025-07-21 14:30:00+07', 0.65),
+    ('f4f5f6f7-f8f9-4af0-f1f2-d3e4f5a6b7c8', 'f9f0f1f2-f3f4-4f5a-b6c7-8d9e0f1a2b3c', 'Theater', 'Cần Thơ', '2025-07-23 20:00:00+07', 0.85),
+    ('f4f5f6f7-f8f9-4af0-f1f2-d3e4f5a6b7c8', 'f0f1f2f3-f4f5-4f6a-b7c8-9d0e1f2a3b4c', 'Sports', 'Nha Trang', '2025-07-25 15:30:00+07', 0.9),
+    ('f4f5f6f7-f8f9-4af0-f1f2-d3e4f5a6b7c8', 'f1f2f3f4-f5f6-4f7a-b8c9-0d1e2f3a4b5c', 'Exhibitions', 'Huế', '2025-07-27 11:00:00+07', 0.75),
+    ('f4f5f6f7-f8f9-4af0-f1f2-d3e4f5a6b7c8', 'f2f3f4f5-f6f7-4f8a-b9c0-1d2e3f4a5b6c', 'Family Events', 'Vũng Tàu', '2025-07-29 10:30:00+07', 0.95),
+    ('f5f6f7f8-f9f0-4af1-f2f3-e4f5a6b7c8d9', 'f3f4f5f6-f7f8-4f9a-b0c1-2d3e4f5a6b7c', 'Comedy Shows', 'Đà Lạt', '2025-07-31 20:00:00+07', 0.8),
+    ('f5f6f7f8-f9f0-4af1-f2f3-e4f5a6b7c8d9', 'f4f5f6f7-f8f9-4f0a-b1c2-3d4e5f6a7b8c', 'Conferences', 'Thành phố Hồ Chí Minh', '2025-08-02 09:30:00+07', 0.7),
+    ('f5f6f7f8-f9f0-4af1-f2f3-e4f5a6b7c8d9', 'f5f6f7f8-f9f0-4f1a-b2c3-4d5e6f7a8b9c', 'Concerts', 'Hà Nội', '2025-08-04 19:00:00+07', 0.9),
+    ('f5f6f7f8-f9f0-4af1-f2f3-e4f5a6b7c8d9', 'f6f7f8f9-f0f1-4f2a-b3c4-5d6e7f8a9b0c', 'Workshops', 'Đà Nẵng', '2025-08-06 14:00:00+07', 0.65),
+    ('f6f7f8f9-f0f1-4af2-f3f4-f5a6b7c8d9e0', 'f7f8f9f0-f1f2-4f3a-b4c5-6d7e8f9a0b1c', 'Festivals', 'Hải Phòng', '2025-08-08 16:30:00+07', 0.85),
+    ('f6f7f8f9-f0f1-4af2-f3f4-f5a6b7c8d9e0', 'f8f9f0f1-f2f3-4f4a-b5c6-7d8e9f0a1b2c', 'Theater', 'Cần Thơ', '2025-08-10 20:00:00+07', 0.9),
+    ('f6f7f8f9-f0f1-4af2-f3f4-f5a6b7c8d9e0', 'f9f0f1f2-f3f4-4f5a-b6c7-8d9e0f1a2b3c', 'Sports', 'Nha Trang', '2025-08-12 15:30:00+07', 0.9),
+    ('f6f7f8f9-f0f1-4af2-f3f4-f5a6b7c8d9e0', 'f0f1f2f3-f4f5-4f6a-b7c8-9d0e1f2a3b4c', 'Exhibitions', 'Huế', '2025-08-14 11:00:00+07', 0.75),
+    ('f6f7f8f9-f0f1-4af2-f3f4-f5a6b7c8d9e0', 'f1f2f3f4-f5f6-4f7a-b8c9-0d1e2f3a4b5c', 'Family Events', 'Vũng Tàu', '2025-08-16 10:30:00+07', 0.95),
+    ('f7f8f9f0-f1f2-4af3-f4f5-a6b7c8d9e0f1', 'f2f3f4f5-f6f7-4f8a-b9c0-1d2e3f4a5b6c', 'Comedy Shows', 'Đà Lạt', '2025-08-18 20:00:00+07', 0.8),
+    ('f7f8f9f0-f1f2-4af3-f4f5-a6b7c8d9e0f1', 'f3f4f5f6-f7f8-4f9a-b0c1-2d3e4f5a6b7c', 'Conferences', 'Thành phố Hồ Chí Minh', '2025-08-20 09:30:00+07', 0.7),
+    ('f7f8f9f0-f1f2-4af3-f4f5-a6b7c8d9e0f1', 'f4f5f6f7-f8f9-4f0a-b1c2-3d4e5f6a7b8c', 'Concerts', 'Hà Nội', '2025-08-22 19:00:00+07', 0.9),
+    ('f7f8f9f0-f1f2-4af3-f4f5-a6b7c8d9e0f1', 'f5f6f7f8-f9f0-4f1a-b2c3-4d5e6f7a8b9c', 'Workshops', 'Đà Nẵng', '2025-08-24 14:00:00+07', 0.65),
+    ('f8f9f0f1-f2f3-4af4-f5f6-b7c8d9e0f1a2', 'f6f7f8f9-f0f1-4f2a-b3c4-5d6e7f8a9b0c', 'Festivals', 'Hải Phòng', '2025-08-26 16:30:00+07', 0.85),
+    ('f8f9f0f1-f2f3-4af4-f5f6-b7c8d9e0f1a2', 'f7f8f9f0-f1f2-4f3a-b4c5-6d7e8f9a0b1c', 'Theater', 'Cần Thơ', '2025-08-28 20:00:00+07', 0.9),
+    ('f8f9f0f1-f2f3-4af4-f5f6-b7c8d9e0f1a2', 'f8f9f0f1-f2f3-4f4a-b5c6-7d8e9f0a1b2c', 'Sports', 'Nha Trang', '2025-08-30 15:30:00+07', 0.9),
+    ('f8f9f0f1-f2f3-4af4-f5f6-b7c8d9e0f1a2', 'f9f0f1f2-f3f4-4f5a-b6c7-8d9e0f1a2b3c', 'Exhibitions', 'Huế', '2025-09-01 11:00:00+07', 0.75),
+    ('f9f0f1f2-f3f4-4af5-f6f7-c8d9e0f1a2b3', 'f0f1f2f3-f4f5-4f6a-b7c8-9d0e1f2a3b4c', 'Family Events', 'Vũng Tàu', '2025-09-03 10:30:00+07', 0.95),
+    ('f9f0f1f2-f3f4-4af5-f6f7-c8d9e0f1a2b3', 'f1f2f3f4-f5f6-4f7a-b8c9-0d1e2f3a4b5c', 'Comedy Shows', 'Đà Lạt', '2025-09-05 20:00:00+07', 0.8),
+    ('f9f0f1f2-f3f4-4af5-f6f7-c8d9e0f1a2b3', 'f2f3f4f5-f6f7-4f8a-b9c0-1d2e3f4a5b6c', 'Conferences', 'Thành phố Hồ Chí Minh', '2025-09-07 09:30:00+07', 0.7),
+    ('f9f0f1f2-f3f4-4af5-f6f7-c8d9e0f1a2b3', 'f3f4f5f6-f7f8-4f9a-b0c1-2d3e4f5a6b7c', 'Concerts', 'Hà Nội', '2025-09-09 19:00:00+07', 0.9),
+    ('f0f1f2f3-f4f5-4af6-f7f8-d9e0f1a2b3c4', 'f4f5f6f7-f8f9-4f0a-b1c2-3d4e5f6a7b8c', 'Workshops', 'Đà Nẵng', '2025-09-11 14:00:00+07', 0.65),
+    ('f0f1f2f3-f4f5-4af6-f7f8-d9e0f1a2b3c4', 'f5f6f7f8-f9f0-4f1a-b2c3-4d5e6f7a8b9c', 'Festivals', 'Hải Phòng', '2025-09-13 16:30:00+07', 0.85),
+    ('f0f1f2f3-f4f5-4af6-f7f8-d9e0f1a2b3c4', 'f6f7f8f9-f0f1-4f2a-b3c4-5d6e7f8a9b0c', 'Theater', 'Cần Thơ', '2025-09-15 20:00:00+07', 0.9),
+    ('f0f1f2f3-f4f5-4af6-f7f8-d9e0f1a2b3c4', 'f7f8f9f0-f1f2-4f3a-b4c5-6d7e8f9a0b1c', 'Sports', 'Nha Trang', '2025-09-17 15:30:00+07', 0.9),
+    ('f1f2f3f4-f5f6-4af7-f8f9-e0f1a2b3c4d5', 'f8f9f0f1-f2f3-4f4a-b5c6-7d8e9f0a1b2c', 'Exhibitions', 'Huế', '2025-09-19 11:00:00+07', 0.75),
+    ('f1f2f3f4-f5f6-4af7-f8f9-e0f1a2b3c4d5', 'f9f0f1f2-f3f4-4f5a-b6c7-8d9e0f1a2b3c', 'Family Events', 'Vũng Tàu', '2025-09-21 10:30:00+07', 0.95),
+    ('f1f2f3f4-f5f6-4af7-f8f9-e0f1a2b3c4d5', 'f0f1f2f3-f4f5-4f6a-b7c8-9d0e1f2a3b4c', 'Comedy Shows', 'Đà Lạt', '2025-09-23 20:00:00+07', 0.8),
+    ('f1f2f3f4-f5f6-4af7-f8f9-e0f1a2b3c4d5', 'f1f2f3f4-f5f6-4f7a-b8c9-0d1e2f3a4b5c', 'Conferences', 'Thành phố Hồ Chí Minh', '2025-09-25 09:30:00+07', 0.7);

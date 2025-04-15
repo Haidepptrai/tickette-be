@@ -17,17 +17,10 @@ namespace Tickette.API.Controllers
         }
 
         [HttpPost("ai-training")]
-        public IActionResult Predict()
+        public async Task<ActionResult> Predict()
         {
-            try
-            {
-                _predictionService.TrainModel();
-                return Ok("Good");
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            await _predictionService.TrainModel();
+            return Ok("Good");
         }
 
         [HttpPost("recommendations")]
@@ -37,7 +30,6 @@ namespace Tickette.API.Controllers
             {
                 var recommendations = await _recommendationService.GetRecommendationsAsync(userId);
                 return Ok(recommendations);
-                return Ok();
             }
             catch (Exception ex)
             {

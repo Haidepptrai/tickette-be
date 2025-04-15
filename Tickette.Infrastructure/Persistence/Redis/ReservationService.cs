@@ -12,11 +12,13 @@ public class ReservationService : IReservationService
     private readonly IConnectionMultiplexer _redis;
     private readonly RedisSettings _redisSettings;
     private readonly LockManager _lockManager;
+    private readonly ReservationDbSyncHandler _dbSyncHandler;
 
-    public ReservationService(IConnectionMultiplexer redis, IOptions<RedisSettings> redisSettings, LockManager lockManager)
+    public ReservationService(IConnectionMultiplexer redis, IOptions<RedisSettings> redisSettings, LockManager lockManager, ReservationDbSyncHandler dbSyncHandler)
     {
         _redis = redis;
         _lockManager = lockManager;
+        _dbSyncHandler = dbSyncHandler;
         _redisSettings = redisSettings.Value;
     }
 
@@ -39,7 +41,7 @@ public class ReservationService : IReservationService
             foreach (var seat in ticketReservationInfo.SeatsChosen)
             {
                 var bookedSeatKey = RedisKeys.GetBookedSeatKey(ticketReservationInfo.Id, seat.RowName, seat.SeatNumber);
-                var reservedSeatKey = RedisKeys.GetReservedSeatKey(ticketReservationInfo.Id, seat.RowName, seat.SeatNumber);
+                var reservedSeatKey = RedisKeys.GetReservedSeatKey(ticketReservationInfo.Id, userId, seat.RowName, seat.SeatNumber);
 
                 // Check for permanent booking
                 if (await db.KeyExistsAsync(bookedSeatKey))
@@ -57,8 +59,6 @@ public class ReservationService : IReservationService
                     new("userId", userId.ToString()),
                     new("reserved_at", DateTimeOffset.UtcNow.ToUnixTimeSeconds())
                 ]);
-
-                await db.KeyExpireAsync(reservedSeatKey, TimeSpan.FromMinutes(15));
             }
 
             // Decrease inventory
@@ -68,16 +68,11 @@ public class ReservationService : IReservationService
         {
             string reservationKey = RedisKeys.GetReservationKey(ticketReservationInfo.Id, userId);
 
-            // Check if reservation already exists
+            // Check if reservation already exists in Redis
             if (await db.KeyExistsAsync(reservationKey))
             {
-                // Remove the existing reservation
-                var success = await ReleaseReservationAsync(userId, ticketReservationInfo);
-
-                if (!success)
-                {
-                    return false;
-                }
+                // Remove the reservation from Redis
+                await ReleaseReservationAsync(userId, ticketReservationInfo);
             }
 
             long newInventory = await db.StringDecrementAsync(inventoryKey, ticketReservationInfo.Quantity);
@@ -93,9 +88,6 @@ public class ReservationService : IReservationService
                 new("user_id", userId.ToString()),
                 new("reserved_at", DateTimeOffset.UtcNow.ToUnixTimeSeconds())
             ]);
-
-            // Set expiration for reservation
-            await db.KeyExpireAsync(reservationKey, TimeSpan.FromMinutes(15));
         }
 
         return await transaction.ExecuteAsync();
@@ -107,12 +99,15 @@ public class ReservationService : IReservationService
     public async Task<bool> ValidateReservationAsync(Guid userId, TicketReservation ticketReservationInformation)
     {
         var db = _redis.GetDatabase(_redisSettings.DefaultDatabase);
+        var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+        const long reservationTimeoutSeconds = 1 * 60;
 
         if (ticketReservationInformation.SeatsChosen != null)
         {
             foreach (var seat in ticketReservationInformation.SeatsChosen)
             {
-                var reservedSeatKey = RedisKeys.GetReservedSeatKey(ticketReservationInformation.Id, seat.RowName, seat.SeatNumber);
+                var reservedSeatKey = RedisKeys.GetReservedSeatKey(ticketReservationInformation.Id, userId, seat.RowName, seat.SeatNumber);
 
                 // 1. Check if seat ticketReservationInformation key exists
                 if (!await db.KeyExistsAsync(reservedSeatKey))
@@ -123,9 +118,12 @@ public class ReservationService : IReservationService
                 if (storedUserId.IsNullOrEmpty || storedUserId.ToString() != userId.ToString())
                     return false;
 
-                // 3. Optional: Check if TTL is still valid (seat not close to expiration)
-                var ttl = await db.KeyTimeToLiveAsync(reservedSeatKey);
-                if (ttl.HasValue && ttl.Value.TotalSeconds <= 5)
+                // 3. TTL check
+                var reservedAtValue = await db.HashGetAsync(reservedSeatKey, "reserved_at");
+                if (reservedAtValue.IsNull || !long.TryParse(reservedAtValue.ToString(), out var reservedAt))
+                    return false;
+
+                if (nowUnix - reservedAt >= reservationTimeoutSeconds)
                     return false;
             }
         }
@@ -143,14 +141,16 @@ public class ReservationService : IReservationService
                 return false;
 
             // 3. TTL check
-            var ttl = await db.KeyTimeToLiveAsync(reservationKey);
-            if (ttl.HasValue && ttl.Value.TotalSeconds <= 5)
+            var reservedAtValue = await db.HashGetAsync(reservationKey, "reserved_at");
+            if (reservedAtValue.IsNull || !long.TryParse(reservedAtValue.ToString(), out var reservedAt))
+                return false;
+
+            if (nowUnix - reservedAt >= reservationTimeoutSeconds)
                 return false;
         }
 
         return true;
     }
-
 
     /// <summary>
     /// Releases a reservation and its seats
@@ -165,9 +165,13 @@ public class ReservationService : IReservationService
         {
             foreach (var seat in ticketReservationInfo.SeatsChosen)
             {
-                var reservedSeatKey = RedisKeys.GetReservedSeatKey(ticketReservationInfo.Id, seat.RowName, seat.SeatNumber);
+                var reservedSeatKey = RedisKeys.GetReservedSeatKey(ticketReservationInfo.Id, userId, seat.RowName, seat.SeatNumber);
                 await db.KeyDeleteAsync(reservedSeatKey);
             }
+
+            // Add back the quantity to the inventory
+            long quantity = ticketReservationInfo.Quantity;
+            await db.StringIncrementAsync(inventoryKey, quantity);
         }
         else
         {
@@ -197,7 +201,7 @@ public class ReservationService : IReservationService
         {
             foreach (var seat in ticketReservationInfo.SeatsChosen)
             {
-                var reservedSeatKey = RedisKeys.GetReservedSeatKey(ticketReservationInfo.Id, seat.RowName, seat.SeatNumber);
+                var reservedSeatKey = RedisKeys.GetReservedSeatKey(ticketReservationInfo.Id, userId, seat.RowName, seat.SeatNumber);
                 var bookedSeatKey = RedisKeys.GetBookedSeatKey(ticketReservationInfo.Id, seat.RowName, seat.SeatNumber);
 
                 // Delete temporary reservation key (if it exists)

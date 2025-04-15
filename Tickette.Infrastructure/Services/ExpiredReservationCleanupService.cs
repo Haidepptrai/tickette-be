@@ -1,9 +1,11 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using Tickette.Infrastructure.Helpers;
 using Tickette.Infrastructure.Persistence;
+using Tickette.Infrastructure.Persistence.Redis;
 
 namespace Tickette.Infrastructure.Services;
 
@@ -16,13 +18,16 @@ public class ExpiredReservationCleanupService : BackgroundService
     private readonly IConnectionMultiplexer _redis;
     private readonly RedisSettings _redisSettings;
     private readonly TimeSpan _checkInterval = TimeSpan.FromMinutes(1);
+    private readonly IServiceProvider _serviceProvider;
+
 
     public ExpiredReservationCleanupService(
         ILogger<ExpiredReservationCleanupService> logger,
-        IOptions<RedisSettings> redisSettings, IConnectionMultiplexer redis)
+        IOptions<RedisSettings> redisSettings, IConnectionMultiplexer redis, IServiceProvider serviceProvider)
     {
         _logger = logger;
         _redis = redis;
+        _serviceProvider = serviceProvider;
         _redisSettings = redisSettings.Value;
     }
 
@@ -86,7 +91,7 @@ public class ExpiredReservationCleanupService : BackgroundService
             long quantity = (long)quantityValue;
 
             // Check if reservation has expired (15 minutes = 900 seconds)
-            if (now - reservedAt > 900)
+            if (now - reservedAt > 60)
             {
                 // Parse the ticket ID from the key
                 // Format is "Tickette:reservation:{ticketId}:{userId}"
@@ -94,6 +99,7 @@ public class ExpiredReservationCleanupService : BackgroundService
                 if (parts.Length >= 4)
                 {
                     string ticketIdStr = parts[2];
+                    string userId = parts[3];
 
                     if (Guid.TryParse(ticketIdStr, out Guid ticketId))
                     {
@@ -114,6 +120,12 @@ public class ExpiredReservationCleanupService : BackgroundService
 
                         if (success)
                         {
+                            // Sync the reservation state in the database
+                            var scope = _serviceProvider.CreateScope();
+                            var reservationDbSync = scope.ServiceProvider.GetRequiredService<ReservationDbSyncHandler>();
+
+                            await reservationDbSync.ExpireReservationInDatabaseAsync(Guid.Parse(userId), ticketId);
+
                             processedCount++;
                             _logger.LogInformation(
                                 "Cleaned up expired reservation for ticket {TicketId}, restored {Quantity} to inventory",
@@ -129,56 +141,63 @@ public class ExpiredReservationCleanupService : BackgroundService
             _logger.LogInformation("Processed {Count} expired reservations", processedCount);
         }
     }
-    
+
     private async Task ProcessExpiredSeatReservationsAsync(CancellationToken stoppingToken)
     {
         var db = _redis.GetDatabase(_redisSettings.DefaultDatabase);
         var server = _redis.GetServer(_redis.GetEndPoints()[0]);
-        
+
         // Scan for reserved seat keys that might be expired but still exist in Redis
-        var reservedSeatKeyPattern = "Tickette:reserved_ticket:*";
+        var reservedSeatKeyPattern = "Tickette:seat_reservation:*";
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        
+
         int processedCount = 0;
-        
+
         // Use SCAN to find all reserved seat keys
         foreach (var key in server.Keys(pattern: reservedSeatKeyPattern))
         {
             if (stoppingToken.IsCancellationRequested)
                 break;
-                
+
             string keyStr = key.ToString();
-            
+
             // Check if the key exists (it might have been deleted between the SCAN and now)
             if (!await db.KeyExistsAsync(keyStr))
                 continue;
-                
+
             // Check if this seat reservation has expired
             var reservedAtValue = await db.HashGetAsync(keyStr, "reserved_at");
-            
+
             if (reservedAtValue.IsNull)
                 continue;
-                
+
             long reservedAt = (long)reservedAtValue;
-            
+
             // Check if seat reservation has expired (15 minutes = 900 seconds)
             if (now - reservedAt > 900)
             {
-                // Format is "Tickette:reserved_ticket:{ticketId}:seat:{rowName}:{seatNumber}"
+                // Format is "Tickette:seat_reservation:{ticketId}:{userId}:seat:{rowName}:{seatNumber}"
                 var parts = keyStr.Split(':');
-                if (parts.Length >= 6)
+                if (parts.Length >= 7)
                 {
                     string ticketIdStr = parts[2];
-                    string rowName = parts[4];
-                    string seatNumber = parts[5];
-                    
+                    string userId = parts[3];
+                    string rowName = parts[5];
+                    string seatNumber = parts[6];
+
                     if (Guid.TryParse(ticketIdStr, out Guid ticketId))
                     {
                         // Delete the seat reservation
                         bool success = await db.KeyDeleteAsync(keyStr);
-                        
+
                         if (success)
                         {
+
+                            // Sync the seat reservation state in the database
+                            var scope = _serviceProvider.CreateScope();
+                            var reservationDbSync = scope.ServiceProvider.GetRequiredService<ReservationDbSyncHandler>();
+                            await reservationDbSync.ExpireReservationInDatabaseAsync(Guid.Parse(userId), ticketId);
+
                             processedCount++;
                             _logger.LogInformation(
                                 "Cleaned up expired seat reservation for ticket {TicketId}, seat {RowName}{SeatNumber}",
@@ -188,7 +207,7 @@ public class ExpiredReservationCleanupService : BackgroundService
                 }
             }
         }
-        
+
         if (processedCount > 0)
         {
             _logger.LogInformation("Processed {Count} expired seat reservations", processedCount);

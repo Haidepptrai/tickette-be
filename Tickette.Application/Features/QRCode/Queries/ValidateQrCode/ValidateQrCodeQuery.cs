@@ -49,6 +49,7 @@ public class ValidateQrCodeQueryHandler : IQueryHandler<ValidateQrCodeQuery, Res
                 OrderItemId = query.OrderItemId,
                 SeatsOrdered = query.SeatsOrdered
             };
+
             var dataToVerify = _qrCodeService.SerializeData(toOrderData);
 
             // 2. Validate the QR Code Signature using QrCodeService

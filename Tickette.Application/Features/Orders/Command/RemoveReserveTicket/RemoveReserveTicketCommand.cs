@@ -31,10 +31,7 @@ public class RemoveReserveTicketCommandHandler : ICommandHandler<RemoveReserveTi
     {
         var message = JsonSerializer.Serialize(query);
 
-        var successSending = await _messageProducer.PublishAsync(RabbitMqRoutingKeys.TicketReservationCancelled, message);
-
-        if (!successSending)
-            throw new Exception("Failed to send message to the queue");
+        await _messageProducer.PublishAsync(RabbitMqRoutingKeys.TicketReservationCancelled, message);
 
         return Unit.Value;
     }

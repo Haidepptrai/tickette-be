@@ -23,6 +23,12 @@ public class Price : ValueObject
         Currency = currency;
     }
 
+    // Factory method for creating a Price object
+    public static Price Create(decimal amount, string currency = "USD")
+    {
+        return new Price(amount, currency);
+    }
+
     // For equality, compare Amount and Currency
     protected override IEnumerable<object> GetEqualityComponents()
     {

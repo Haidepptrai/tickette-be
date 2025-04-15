@@ -1,80 +1,107 @@
-﻿using Microsoft.ML;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.ML;
+using Microsoft.ML.Trainers;
+using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Prediction;
+using Tickette.Infrastructure.Data;
 using Tickette.Infrastructure.Prediction.Models;
 
 namespace Tickette.Infrastructure.Prediction;
 
 public class TrainingModelService : ITrainingModelService
 {
-    private readonly MLContext _mlContext = new();
-    private readonly string _modelPath = "recommendation_model.zip";
-    private readonly MockDataGenerator _mockDataGenerator;
+    private static readonly MLContext mlContext = new();
+    private readonly TrainingDbContext _dbContext;
+    private readonly IFileUploadService _fileUploadService;
 
-    public TrainingModelService()
+    public TrainingModelService(TrainingDbContext dbContext, IFileUploadService fileUploadService)
     {
-        _mockDataGenerator = new MockDataGenerator();
+        _dbContext = dbContext;
+        _fileUploadService = fileUploadService;
     }
 
-    public void TrainModel()
+    public async Task TrainModel()
     {
+        var data = await _dbContext.UserCategoryInteractions
+            .Select(uci => new UserEventInteractionViewModel()
+            {
+                UserId = uci.UserId.ToString(),
+                EventId = uci.EventId.ToString(),
+                EventType = uci.EventType,
+                Location = uci.Location,
+                EventDateTime = uci.EventDateTime,
+                Label = uci.Label
+            })
+            .AsNoTracking()
+            .ToListAsync();
+
+        var dataView = mlContext.Data.LoadFromEnumerable(data);
+
+        var options = new MatrixFactorizationTrainer.Options
+        {
+            MatrixColumnIndexColumnName = "UserIdEncoded",
+            MatrixRowIndexColumnName = "EventIdEncoded",
+            LabelColumnName = nameof(UserEventInteractionViewModel.Label),
+            NumberOfIterations = 50,
+            ApproximationRank = 100,
+            LossFunction = MatrixFactorizationTrainer.LossFunctionType.SquareLossOneClass,
+            Alpha = 0.01,
+            Lambda = 0.025
+        };
+
+        var pipeline = mlContext.Transforms.Conversion.MapValueToKey("UserIdEncoded", nameof(UserEventInteractionViewModel.UserId))
+            .Append(mlContext.Transforms.Conversion.MapValueToKey("EventIdEncoded", nameof(UserEventInteractionViewModel.EventId)))
+            .Append(mlContext.Transforms.SelectColumns("UserIdEncoded", "EventIdEncoded", nameof(UserEventInteractionViewModel.Label)))
+            .Append(mlContext.Recommendation().Trainers.MatrixFactorization(options));
+
+        var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
+        var model = pipeline.Fit(split.TrainSet);
+
+        var predictions = model.Transform(split.TestSet);
+        var metrics = mlContext.Regression.Evaluate(predictions, labelColumnName: nameof(UserEventInteractionViewModel.Label));
+
+        Console.WriteLine($"Regression Metrics:");
+        Console.WriteLine($"  RMSE:      {metrics.RootMeanSquaredError:F4}");
+        Console.WriteLine($"  MAE:       {metrics.MeanAbsoluteError:F4}");
+        Console.WriteLine($"  R-squared: {metrics.RSquared:P2}");
+        Console.WriteLine($"  Loss:      {metrics.LossFunction:F4}");
+
+        var path = GetModelPath();
+        mlContext.Model.Save(model, dataView.Schema, path);
+
+        var modelUrl = await _fileUploadService.UploadModelAsync(path, "models");
+        if (string.IsNullOrEmpty(modelUrl))
+        {
+            throw new ApplicationException("Failed to upload model to S3.");
+        }
+
+        //Save model URL to database
+        var modelLog = new ModelLogs
+        {
+            ModelName = modelUrl,
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        await _dbContext.ModelLogs.AddAsync(modelLog);
+        await _dbContext.SaveChangesAsync();
+
+        // Delete the local model file after uploading
         try
         {
-            // 1. Get training data (using mock data for now)
-            var trainingData = _mockDataGenerator.GenerateEventRatings();
-
-            // 2. Load data into IDataView
-            var dataView = _mlContext.Data.LoadFromEnumerable(trainingData);
-
-            // Split data into training and test sets (80/20 split)
-            var dataSplit = _mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
-
-            // 3. Define the training pipeline
-            var pipeline = _mlContext.Transforms.Conversion.MapValueToKey(
-                    outputColumnName: "UserIdEncoded",
-                    inputColumnName: nameof(EventRating.UserId))
-                .Append(_mlContext.Transforms.Conversion.MapValueToKey(
-                    outputColumnName: "EventIdEncoded",
-                    inputColumnName: nameof(EventRating.EventId)))
-                .Append(_mlContext.Recommendation().Trainers.MatrixFactorization(
-                    labelColumnName: nameof(EventRating.Label),
-                    matrixColumnIndexColumnName: "UserIdEncoded",
-                    matrixRowIndexColumnName: "EventIdEncoded"));
-
-            // 4. Train the model
-            Console.WriteLine("Training the model...");
-            var model = pipeline.Fit(dataSplit.TrainSet);
-
-            // 4.1 Evaluate model performance
-            var predictions = model.Transform(dataSplit.TestSet);
-            var metrics = _mlContext.Regression.Evaluate(predictions, labelColumnName: nameof(EventRating.Label));
-            
-            Console.WriteLine($"Model evaluation metrics:");
-            Console.WriteLine($"RMSE: {metrics.RootMeanSquaredError}");
-            Console.WriteLine($"R²: {metrics.RSquared}");
-            Console.WriteLine($"MAE: {metrics.MeanAbsoluteError}");
-
-            // 5. Save the model
-            _mlContext.Model.Save(model, null, _modelPath);
-            Console.WriteLine($"Model saved to {_modelPath}");
-
-            Console.WriteLine("Model training completed successfully!");
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error training model: {ex.Message}");
-            Console.WriteLine($"Stack trace: {ex.StackTrace}");
-            if (ex.InnerException != null)
-            {
-                Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
-            }
-            throw;
+            // Optionally log, but don’t block the app
+            await Console.Error.WriteLineAsync($"Warning: Failed to delete local model file: {ex.Message}");
         }
     }
 
-    public string GetModelPath() => _modelPath;
-}
-
-public class EventRatingPrediction
-{
-    public float Score { get; set; }
+    public string GetModelPath()
+    {
+        return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "model.zip");
+    }
 }

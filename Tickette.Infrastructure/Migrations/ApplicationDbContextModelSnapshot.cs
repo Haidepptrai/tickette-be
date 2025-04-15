@@ -277,45 +277,34 @@ namespace Tickette.Infrastructure.Migrations
 
             modelBuilder.Entity("Tickette.Domain.Entities.CommitteeMember", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<Guid>("CommitteeRoleId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("committee_role_id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
+                        .HasColumnName("user_id");
 
                     b.Property<Guid>("EventId")
                         .HasColumnType("uuid")
                         .HasColumnName("event_id");
 
-                    b.Property<DateTime>("JoinedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("joined_at")
-                        .HasDefaultValueSql("NOW()");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid>("CommitteeRoleId")
                         .HasColumnType("uuid")
-                        .HasColumnName("user_id");
+                        .HasColumnName("committee_role_id");
 
-                    b.HasKey("Id")
+                    b.Property<Guid?>("CommitteeRoleId1")
+                        .HasColumnType("uuid")
+                        .HasColumnName("committee_role_id1");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.HasKey("UserId", "EventId")
                         .HasName("pk_committee_members");
 
                     b.HasIndex("CommitteeRoleId")
                         .HasDatabaseName("ix_committee_members_committee_role_id");
+
+                    b.HasIndex("CommitteeRoleId1")
+                        .HasDatabaseName("ix_committee_members_committee_role_id1");
 
                     b.HasIndex("EventId")
                         .HasDatabaseName("ix_committee_members_event_id");
@@ -1160,11 +1149,16 @@ namespace Tickette.Infrastructure.Migrations
             modelBuilder.Entity("Tickette.Domain.Entities.CommitteeMember", b =>
                 {
                     b.HasOne("Tickette.Domain.Entities.CommitteeRole", "CommitteeRole")
-                        .WithMany("CommitteeMembers")
+                        .WithMany()
                         .HasForeignKey("CommitteeRoleId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_committee_members_committee_roles_committee_role_id");
+
+                    b.HasOne("Tickette.Domain.Entities.CommitteeRole", null)
+                        .WithMany("CommitteeMembers")
+                        .HasForeignKey("CommitteeRoleId1")
+                        .HasConstraintName("fk_committee_members_committee_roles_committee_role_id1");
 
                     b.HasOne("Tickette.Domain.Entities.Event", "Event")
                         .WithMany("CommitteeMembers")

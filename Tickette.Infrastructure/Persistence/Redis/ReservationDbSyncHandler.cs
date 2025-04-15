@@ -19,6 +19,7 @@ public class ReservationDbSyncHandler
             .Where(r => r.UserId == userId)
             .Include(r => r.Items)
             .ThenInclude(i => i.SeatAssignments)
+            .OrderByDescending(r => r.CreatedAt)
             .FirstOrDefaultAsync(r => r.Items.Any(i => i.TicketId == ticketId && r.Status == ReservationStatus.Temporary));
 
         if (reservation == null)

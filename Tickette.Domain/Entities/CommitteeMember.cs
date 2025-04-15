@@ -2,15 +2,13 @@
 
 namespace Tickette.Domain.Entities;
 
-public sealed class CommitteeMember : BaseEntity
+public sealed class CommitteeMember : BaseSoftDeleteEntity
 {
     public Guid UserId { get; private set; }
 
     public Guid EventId { get; private set; }
 
     public Guid CommitteeRoleId { get; private set; }
-
-    public DateTime JoinedAt { get; private set; }
 
     public User User { get; private set; }
 

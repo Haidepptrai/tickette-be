@@ -1,6 +1,6 @@
 ﻿using Tickette.Application.Features.Events.Common;
 
-namespace Tickette.API.Dto;
+namespace Tickette.API.DTOs;
 
 public class CreateEventCommandDto
 {
@@ -30,7 +30,7 @@ public class CreateEventCommandDto
 
     public required bool IsOffline { get; set; }
 
-    public required IFormFile BannerFile { get; set; }
+    public required IFormFile Banner { get; set; }
 
     public required EventDateInput[] EventDates { get; set; }
 }

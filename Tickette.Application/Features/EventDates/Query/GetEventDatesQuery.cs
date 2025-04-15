@@ -24,7 +24,7 @@ public class GetEventDatesQueryHandler : IQueryHandler<GetEventDatesQuery, IEnum
         var eventDate = await _context.EventDates
             .Include(ed => ed.Event)
             .Include(ed => ed.Tickets)
-            .Where(ed => ed.Id == request.EventId)
+            .Where(ed => ed.EventId == request.EventId)
             .Select(ed => ed.MapEventDateToDto())
             .AsNoTracking()
             .ToListAsync(cancellationToken);

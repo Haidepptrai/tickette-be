@@ -21,7 +21,7 @@ public static class TicketFactory
         IFileUploadService fileUploadService)
     {
         // Upload the ticket image and get the URL
-        var ticketImageUrl = ticketImageFile == null ? null : await fileUploadService.UploadFileAsync(ticketImageFile, "tickets");
+        var ticketImageUrl = ticketImageFile == null ? null : await fileUploadService.UploadImageAsync(ticketImageFile, "tickets");
 
         var ticketPrice = new Price(amount, currency);
 

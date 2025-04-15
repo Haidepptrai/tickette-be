@@ -2,7 +2,7 @@
 
 public record CommitteeMemberDto
 {
-    public Guid Id { get; init; }
+    public Guid UserId { get; init; }
 
     public string FullName { get; init; }
 

@@ -24,7 +24,6 @@ public class QrCodeService : IQrCodeService
         // 2. Generate a HMAC signature using the secret key
         var signature = GenerateSignature(jsonData);
 
-        // 
         var qrCodeWithSignatureData = new TicketQrCode
         {
             BuyerEmail = order.BuyerEmail,
@@ -36,7 +35,6 @@ public class QrCodeService : IQrCodeService
             Signature = signature,
         };
 
-        // 7. Convert bytes to Base64 string
         return qrCodeWithSignatureData;
     }
 

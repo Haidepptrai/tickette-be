@@ -6,6 +6,7 @@ using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Models.Email;
+using Tickette.Application.Factories;
 
 namespace Tickette.Application.Features.Auth.Command;
 
@@ -45,9 +46,11 @@ public class UserRegisterCommandHandler : ICommandHandler<UserRegisterCommand, G
                 Token = token
             };
 
-            var message = JsonSerializer.Serialize(emailConfirmModel);
+            var wrapper = EmailWrapperFactory.Create(EmailServiceKeys.EmailConfirm, emailConfirmModel);
 
-            await _messageProducer.PublishAsync(EmailServiceKeys.EmailConfirm, message);
+            var message = JsonSerializer.Serialize(wrapper);
+
+            await _messageProducer.PublishAsync(EmailServiceKeys.Email, message);
         }
 
         return result;

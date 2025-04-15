@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Tickette.Domain.Entities;
+using Tickette.Domain.Enums;
 
 namespace Tickette.Infrastructure.Data.Configurations;
 
@@ -66,6 +67,6 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
             .HasDatabaseName("IX_EventOwnerStripeId")
             .IsUnique(false);
 
-        builder.HasQueryFilter(e => e.DeletedAt == null);
+        builder.HasQueryFilter(e => e.DeletedAt == null && e.Status == ApprovalStatus.Approved);
     }
 }

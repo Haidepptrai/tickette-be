@@ -4,15 +4,15 @@ namespace Tickette.Domain.Entities;
 
 public class EventDate : BaseEntity
 {
-    public DateTime StartDate { get; set; }
+    public DateTime StartDate { get; private set; }
 
-    public DateTime EndDate { get; set; }
+    public DateTime EndDate { get; private set; }
 
-    public Guid EventId { get; set; }
+    public Guid EventId { get; private set; }
 
     public Event Event { get; set; }
 
-    public ICollection<Ticket> Tickets { get; set; }
+    public ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
 
     public EventSeatMap? SeatMap { get; set; }
 
@@ -39,4 +39,11 @@ public class EventDate : BaseEntity
     {
         SeatMap = seatMap;
     }
+
+    public void Update(DateTime startDate, DateTime endDate)
+    {
+        StartDate = startDate;
+        EndDate = endDate;
+    }
+
 }

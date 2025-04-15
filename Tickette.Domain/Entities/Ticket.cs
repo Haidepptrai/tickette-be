@@ -96,6 +96,44 @@ public sealed class Ticket : BaseEntity
             ticketImage);
     }
 
+    public void Update(
+        string name,
+        decimal amount,
+        string currency,
+        int totalTickets,
+        int minPerOrder,
+        int maxPerOrder,
+        DateTime saleStartTime,
+        DateTime saleEndTime,
+        string description,
+        string? ticketImageUrl = null)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Name cannot be empty.");
+
+        if (totalTickets <= 0)
+            throw new ArgumentException("Total tickets must be greater than zero.");
+
+        if (minPerOrder < 0 || maxPerOrder < minPerOrder)
+            throw new ArgumentException("Invalid ticket order limits.");
+
+        if (saleStartTime >= saleEndTime)
+            throw new ArgumentException($"Ticket {name} Error: Sale start time must be before sale end time.");
+
+        Name = name;
+        Price = Price.Create(amount, currency); // 🧠 Immutable value object reassignment
+        TotalTickets = totalTickets;
+        MinTicketsPerOrder = minPerOrder;
+        MaxTicketsPerOrder = maxPerOrder;
+        SaleStartTime = saleStartTime;
+        SaleEndTime = saleEndTime;
+        Description = description;
+
+        if (!string.IsNullOrWhiteSpace(ticketImageUrl))
+        {
+            Image = ticketImageUrl;
+        }
+    }
 
     public void ReduceTickets(int quantity)
     {

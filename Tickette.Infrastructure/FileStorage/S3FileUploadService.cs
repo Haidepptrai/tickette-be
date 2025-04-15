@@ -16,7 +16,7 @@ public class S3FileUploadService : IFileUploadService
         _bucketName = configuration["AWS:S3:BucketName"] ?? throw new ApplicationException("Missing AWS S3 Bucket Name");
     }
 
-    public async Task<string> UploadFileAsync(IFileUpload file, string folder)
+    public async Task<string> UploadImageAsync(IFileUpload file, string folder)
     {
         if (file.Length == 0)
         {
@@ -56,4 +56,44 @@ public class S3FileUploadService : IFileUploadService
             throw new ApplicationException("An error occurred while uploading the file: " + ex.Message, ex);
         }
     }
+
+    public async Task<string> UploadModelAsync(string filePath, string folder)
+    {
+        if (!File.Exists(filePath))
+        {
+            throw new FileNotFoundException("Model file not found at specified path.", filePath);
+        }
+
+        var fileName = Path.GetFileName(filePath);
+        var key = $"{folder}/{DateTime.UtcNow}_{fileName}"; // Ensure unique path
+
+        try
+        {
+            var putRequest = new PutObjectRequest
+            {
+                BucketName = _bucketName,
+                Key = key,
+                FilePath = filePath,
+                ContentType = "application/zip" // Or "application/octet-stream"
+            };
+
+            var response = await _s3Client.PutObjectAsync(putRequest);
+
+            if (response.HttpStatusCode == System.Net.HttpStatusCode.OK)
+            {
+                return $"https://{_bucketName}.s3.amazonaws.com/{key}";
+            }
+
+            throw new ApplicationException("Failed to upload model file to S3.");
+        }
+        catch (AmazonS3Exception ex)
+        {
+            throw new ApplicationException("S3 model upload failed: " + ex.Message, ex);
+        }
+        catch (Exception ex)
+        {
+            throw new ApplicationException("An error occurred while uploading the model file: " + ex.Message, ex);
+        }
+    }
+
 }

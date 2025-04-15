@@ -5,25 +5,25 @@ namespace Tickette.Domain.Entities;
 
 public sealed class Event : BaseEntity, IAuditable
 {
-    public Guid CategoryId { get; set; }
+    public Guid CategoryId { get; private set; }
 
-    public Guid CreatedById { get; set; }
+    public Guid CreatedById { get; private set; }
 
     public string Name { get; private set; }
 
-    public string LocationName { get; set; }
+    public string LocationName { get; private set; }
 
-    public string City { get; set; }
+    public string City { get; private set; }
 
-    public string District { get; set; }
+    public string District { get; private set; }
 
-    public string Ward { get; set; }
+    public string Ward { get; private set; }
 
-    public string StreetAddress { get; set; }
+    public string StreetAddress { get; private set; }
 
-    public string Description { get; set; }
+    public string Description { get; private set; }
 
-    public string Banner { get; set; }
+    public string Banner { get; private set; }
 
     public string EventSlug { get; private set; }
 
@@ -31,7 +31,7 @@ public sealed class Event : BaseEntity, IAuditable
 
     public string? Reason { get; private set; }
 
-    public string EventOwnerStripeId { get; init; }
+    public string EventOwnerStripeId { get; private set; }
 
     public bool IsOffline { get; private set; }
 
@@ -137,6 +137,74 @@ public sealed class Event : BaseEntity, IAuditable
             );
     }
 
+    public void UpdateEvent(
+        string name,
+        string locationName,
+        string city,
+        string district,
+        string ward,
+        string streetAddress,
+        string description,
+        string banner,
+        string eventOwnerStripeId,
+        bool isOffline,
+        Guid categoryId,
+        string committeeLogo,
+        string committeeName,
+        string committeeDescription
+        )
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Event name cannot be empty.", nameof(name));
+
+        if (isOffline)
+        {
+            if (string.IsNullOrWhiteSpace(locationName))
+                throw new ArgumentException("Location name cannot be empty for offline events.", nameof(locationName));
+
+            if (string.IsNullOrWhiteSpace(city))
+                throw new ArgumentException("City cannot be empty for offline events.", nameof(city));
+
+            if (string.IsNullOrWhiteSpace(district))
+                throw new ArgumentException("District cannot be empty for offline events.", nameof(district));
+
+            if (string.IsNullOrWhiteSpace(ward))
+                throw new ArgumentException("Ward cannot be empty for offline events.", nameof(ward));
+
+            if (string.IsNullOrWhiteSpace(streetAddress))
+                throw new ArgumentException("Street address cannot be empty for offline events.", nameof(streetAddress));
+        }
+
+        if (string.IsNullOrWhiteSpace(description))
+            throw new ArgumentException("Description cannot be empty.", nameof(description));
+
+        if (string.IsNullOrWhiteSpace(banner))
+            throw new ArgumentException("Banner URL cannot be empty.", nameof(banner));
+
+        if (string.IsNullOrWhiteSpace(eventOwnerStripeId))
+            throw new ArgumentException("Stripe account ID cannot be empty.", nameof(eventOwnerStripeId));
+
+        // Update base event details
+        Name = name;
+        LocationName = locationName;
+        City = city;
+        District = district;
+        Ward = ward;
+        StreetAddress = streetAddress;
+        Description = description;
+        Banner = banner;
+        EventOwnerStripeId = eventOwnerStripeId;
+        IsOffline = isOffline;
+        CategoryId = categoryId;
+
+        // Update committee
+        this.Committee.UpdateCommittee(committeeLogo, committeeName, committeeDescription);
+
+        // Regenerate slug if the name has changed
+        EventSlug = GenerateSlug(name);
+    }
+
+
     public void AddCommittee(string logo, string name, string description)
     {
         Committee = EventCommittee.CreateEventCommittee(logo, name, description);
@@ -160,6 +228,51 @@ public sealed class Event : BaseEntity, IAuditable
         Status = status;
         Reason = reason;
     }
+
+    public void UpdateEventDate(Guid eventDateId, DateTime startDate, DateTime endDate)
+    {
+        var eventDate = EventDates.FirstOrDefault(ed => ed.Id == eventDateId);
+        if (eventDate == null)
+            throw new InvalidOperationException("Event date not found.");
+        eventDate.Update(startDate, endDate);
+    }
+
+    public void UpdateEventDateTicket(
+        Guid eventDateId,
+        Guid ticketId,
+        string name,
+        decimal amount,
+        string currency,
+        int totalTickets,
+        int minPerOrder,
+        int maxPerOrder,
+        DateTime saleStartTime,
+        DateTime saleEndTime,
+        string description,
+        string? ticketImageUrl = null)
+    {
+        var eventDate = EventDates.FirstOrDefault(ed => ed.Id == eventDateId);
+        if (eventDate == null)
+            throw new InvalidOperationException("Event date not found.");
+
+        var ticket = eventDate.Tickets.FirstOrDefault(t => t.Id == ticketId);
+        if (ticket == null)
+            throw new InvalidOperationException("Ticket not found.");
+
+        ticket.Update(
+            name: name,
+            amount: amount,
+            currency: currency,
+            totalTickets: totalTickets,
+            minPerOrder: minPerOrder,
+            maxPerOrder: maxPerOrder,
+            saleStartTime: saleStartTime,
+            saleEndTime: saleEndTime,
+            description: description,
+            ticketImageUrl: ticketImageUrl
+        );
+    }
+
 
     private static string GenerateSlug(string name)
     {
