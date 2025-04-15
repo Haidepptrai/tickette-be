@@ -12,8 +12,8 @@ public static class RedisKeys
     public static string GetReservationKey(Guid ticketId, Guid userId) =>
         $"{Prefix}:reservation:{ticketId}:{userId}";
 
-    public static string GetReservedSeatKey(Guid ticketId, string rowName, string seatNumber) =>
-        $"{Prefix}:reserved_ticket:{ticketId}:seat:{rowName}:{seatNumber}";
+    public static string GetReservedSeatKey(Guid ticketId, Guid userId, string rowName, string seatNumber) =>
+        $"{Prefix}:seat_reservation:{ticketId}:{userId}:seat:{rowName}:{seatNumber}";
 
     public static string GetLockSeat(Guid ticketId, SeatOrder seat) =>
         $"lock:reserve:{ticketId}:{seat.RowName}{seat.SeatNumber}";

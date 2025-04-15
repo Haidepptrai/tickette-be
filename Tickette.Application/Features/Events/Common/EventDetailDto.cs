@@ -48,4 +48,6 @@ public class EventDetailDto
     public IEnumerable<CategoryDto>? Categories { get; init; }
 
     public CommitteeMemberDto? UserInEventInfo { get; init; }
+
+    public string? Reason { get; init; }
 }

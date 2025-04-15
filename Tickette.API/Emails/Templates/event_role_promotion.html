@@ -5,14 +5,76 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>🎉 Congratulations on Your Promotion! 🎉</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 0; margin: 0; }
-        .container { max-width: 600px; background: white; padding: 20px; margin: 20px auto; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
-        .content { padding: 20px; font-size: 16px; color: #333; line-height: 1.6; text-align: center; }
-        .button { display: inline-block; padding: 12px 20px; font-size: 16px; background: #28a745; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px; }
-        .button:hover { background: #218838; }
-        .footer { text-align: center; font-size: 12px; color: #777; padding: 15px; background: #f9f9f9; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
-        .unsubscribe { font-size: 12px; color: #777; margin-top: 10px; }
-        .unsubscribe a { color: #007bff; text-decoration: none; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .content {
+            padding: 30px 40px;
+        }
+
+            .content h2 {
+                color: #00B0BA;
+                margin-top: 0;
+            }
+
+        .highlight {
+            color: #FF7F50;
+            font-weight: bold;
+        }
+
+        .button {
+            display: inline-block;
+            background-color: #FF7F50;
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            margin: 20px 0;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+            .button:hover {
+                background-color: #ff6a36;
+            }
+
+        .user-info {
+            background-color: #f2f2f2;
+            border-left: 4px solid #00B0BA;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .social-links {
+            margin-top: 15px;
+        }
+
+            .social-links a {
+                color: #00B0BA;
+                margin: 0 10px;
+                text-decoration: none;
+            }
     </style>
 </head>
 <body>
@@ -21,17 +83,22 @@
         <!-- Header -->
         {{ Header }}
 
-
         <!-- Content -->
         <div class="content">
-            <h2>&#127881; Congratulations, {{UserName}}! &#127881;</h2>
-            <p>You’ve been promoted to the role of <strong>{{Role}}</strong> for the event:</p>
-            <h3>&#127881; {{EventName}} &#127881;</h3>
-            <p>We are thrilled to have you take on this new responsibility! Your promotion reflects your dedication and leadership skills. As a <strong>{{Role}}</strong>, you now have special permissions to manage and oversee the event.</p>
-            <p>Click the button below to access your event management panel:</p>
-            <a href="{{EventManagementLink}}" class="button">Manage Event</a>
-            <p>If the button does not work, copy and paste the following link into your browser:</p>
-            <p><a href="{{EventManagementLink}}" style="color: #007bff; word-wrap: break-word;">{{EventManagementLink}}</a></p>
+            <h2>Hello <span class="highlight">{{RecipientName}}</span>,</h2>
+
+            <p>We are pleased to inform you that you have been invited to participate in <span class="highlight">{{EventName}}</span> as a <span class="highlight">{{Role}}</span>!</p>
+
+            <div class="user-info">
+                <p><strong>Email:</strong> {{RecipientEmail}}</p>
+                <p><strong>Role:</strong> {{Role}}</p>
+            </div>
+
+            <p>To view the complete event details and confirm your participation, please click the button below:</p>
+
+            <div style="text-align: center;">
+                <a href="{{EventLink}}" class="button">View Event Details</a>
+            </div>
         </div>
 
         <!-- Footer -->

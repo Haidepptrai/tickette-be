@@ -5,6 +5,7 @@ using Tickette.Application.Exceptions;
 using Tickette.Application.Factories;
 using Tickette.Application.Features.Events.Common;
 using Tickette.Domain.Entities;
+using Tickette.Domain.Enums;
 
 namespace Tickette.Application.Features.Events.Commands.UpdateEvent;
 
@@ -55,6 +56,8 @@ public class UpdateEventCommandCommandHandler : ICommandHandler<UpdateEventComma
         if (eventToUpdate == null)
             throw new NotFoundException("Event", command.Id);
 
+        if (eventToUpdate.Status == ApprovalStatus.Approved || eventToUpdate.Status == ApprovalStatus.Pending)
+            throw new InvalidOperationException("Event cannot be updated after approval or while wait for review.");
 
         var bannerUrl = command.BannerFile != null
             ? await _fileUploadService.UploadImageAsync(command.BannerFile, "events")
@@ -64,7 +67,6 @@ public class UpdateEventCommandCommandHandler : ICommandHandler<UpdateEventComma
         var committeeUrl = command.CommitteeLogo != null
             ? await _fileUploadService.UploadImageAsync(command.CommitteeLogo, "committees")
             : command.CommitteeLogoUrl;
-
 
         eventToUpdate.UpdateEvent(
             name: command.Name,
@@ -91,7 +93,7 @@ public class UpdateEventCommandCommandHandler : ICommandHandler<UpdateEventComma
 
             if (existingDate != null)
             {
-                existingDate.Update(inputDate.StartDate, inputDate.EndDate);
+                eventToUpdate.UpdateEventDate(existingDate.Id, inputDate.StartDate, inputDate.EndDate);
 
                 var existingTickets = existingDate.Tickets.ToList();
 
@@ -105,7 +107,9 @@ public class UpdateEventCommandCommandHandler : ICommandHandler<UpdateEventComma
                             ? await _fileUploadService.UploadImageAsync(inputTicket.TicketImage, "tickets")
                             : null;
 
-                        existingTicket.Update(
+                        eventToUpdate.UpdateEventDateTicket(
+                            eventDateId: existingDate.Id,
+                            existingTicket.Id,
                             inputTicket.Name,
                             inputTicket.Amount,
                             inputTicket.Currency,
@@ -145,6 +149,7 @@ public class UpdateEventCommandCommandHandler : ICommandHandler<UpdateEventComma
                 foreach (var ticket in ticketsToRemove)
                 {
                     ticket.SoftDeleteEntity();
+                    _context.Tickets.Update(ticket);
                 }
             }
             else
@@ -178,7 +183,9 @@ public class UpdateEventCommandCommandHandler : ICommandHandler<UpdateEventComma
         foreach (var ed in eventDatesToRemove)
         {
             ed.SoftDeleteEntity();
+            _context.EventDates.Update(ed);
         }
+
         await _context.SaveChangesAsync(cancellationToken);
 
         return command.Id;

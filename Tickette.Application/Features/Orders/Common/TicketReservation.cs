@@ -5,7 +5,7 @@ namespace Tickette.Application.Features.Orders.Common;
 
 public record TicketReservation
 {
-    public Guid Id { get; init; }
+    public Guid Id { get; init; } // Ticket ID
 
     public int Quantity { get; init; }
 

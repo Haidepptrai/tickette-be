@@ -10,7 +10,7 @@ public static class CommitteeMemberMappers
     {
         var members = entities.Select(entity => new CommitteeMemberDto
         {
-            Id = entity.Id,
+            UserId = entity.UserId,
             Email = entity.User.Email!,
             Role = entity.CommitteeRole.Name,
             FullName = entity.User.FullName!

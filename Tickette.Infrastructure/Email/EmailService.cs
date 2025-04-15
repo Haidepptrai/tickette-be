@@ -7,6 +7,7 @@ using System.Net;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using Tickette.Application.Common;
 using Tickette.Application.Common.Interfaces.Email;
 using Tickette.Application.Common.Models;
 using Tickette.Application.Common.Models.Email;
@@ -62,17 +63,44 @@ public class EmailService : IEmailService
 
     public async Task<bool> SendConfirmEmail(ConfirmEmailModel model)
     {
+        var encodedToken = WebUtility.UrlEncode(model.Token);
+        model.VerificationLink = $"{_emailSettings.ClientUrl}/profile/email-confirmation?email={model.UserEmail}&token={encodedToken}";
+
+        return await SendTemplatedEmailAsync(
+            recipientName: model.UserEmail ?? "", // Optional
+            recipientEmail: model.UserEmail,
+            subject: "Confirm Your Email",
+            templateName: "confirm_email",
+            model: model
+        );
+    }
+
+    public async Task<bool> SendAnnounceAddedMemberEmail(AnnounceAddedMemberEmailModel model)
+    {
+        return await SendTemplatedEmailAsync(
+            recipientName: model.RecipientName,
+            recipientEmail: model.RecipientEmail,
+            subject: "You have been added as a staff!",
+            templateName: "event_role_promotion",
+            model: model
+        );
+    }
+
+    private async Task<bool> SendTemplatedEmailAsync<TModel>(
+        string recipientName,
+        string recipientEmail,
+        string subject,
+        string templateName,
+        TModel model)
+        where TModel : EmailTemplateModel
+    {
         var email = new MimeMessage();
         email.From.Add(new MailboxAddress(_emailSettings.SenderName, _emailSettings.SenderEmail));
-        email.To.Add(MailboxAddress.Parse(model.UserEmail));
-        email.Subject = "Confirm Your Email";
+        email.To.Add(new MailboxAddress(recipientName ?? string.Empty, recipientEmail));
+        email.Subject = subject;
 
-        var encodedToken = WebUtility.UrlEncode(model.Token);
-
-        model.VerificationLink = $"http://localhost:3000/profile/email-confirmation?email={model.UserEmail}&token={encodedToken}";
-
-        // Load email template
-        string emailBody = LoadEmailTemplate("confirm_email", model);
+        // Load template
+        string emailBody = LoadEmailTemplate(templateName, model);
 
         var bodyBuilder = new BodyBuilder { HtmlBody = emailBody };
         email.Body = bodyBuilder.ToMessageBody();

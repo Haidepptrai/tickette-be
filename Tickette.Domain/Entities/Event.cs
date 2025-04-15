@@ -229,6 +229,51 @@ public sealed class Event : BaseEntity, IAuditable
         Reason = reason;
     }
 
+    public void UpdateEventDate(Guid eventDateId, DateTime startDate, DateTime endDate)
+    {
+        var eventDate = EventDates.FirstOrDefault(ed => ed.Id == eventDateId);
+        if (eventDate == null)
+            throw new InvalidOperationException("Event date not found.");
+        eventDate.Update(startDate, endDate);
+    }
+
+    public void UpdateEventDateTicket(
+        Guid eventDateId,
+        Guid ticketId,
+        string name,
+        decimal amount,
+        string currency,
+        int totalTickets,
+        int minPerOrder,
+        int maxPerOrder,
+        DateTime saleStartTime,
+        DateTime saleEndTime,
+        string description,
+        string? ticketImageUrl = null)
+    {
+        var eventDate = EventDates.FirstOrDefault(ed => ed.Id == eventDateId);
+        if (eventDate == null)
+            throw new InvalidOperationException("Event date not found.");
+
+        var ticket = eventDate.Tickets.FirstOrDefault(t => t.Id == ticketId);
+        if (ticket == null)
+            throw new InvalidOperationException("Ticket not found.");
+
+        ticket.Update(
+            name: name,
+            amount: amount,
+            currency: currency,
+            totalTickets: totalTickets,
+            minPerOrder: minPerOrder,
+            maxPerOrder: maxPerOrder,
+            saleStartTime: saleStartTime,
+            saleEndTime: saleEndTime,
+            description: description,
+            ticketImageUrl: ticketImageUrl
+        );
+    }
+
+
     private static string GenerateSlug(string name)
     {
         if (string.IsNullOrEmpty(name))

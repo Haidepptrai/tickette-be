@@ -6,7 +6,6 @@ using Tickette.API.Helpers;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.Events.Commands.CreateEvent;
 using Tickette.Application.Features.Events.Commands.UpdateEvent;
-using Tickette.Application.Features.Events.Commands.UpdateEventStatus;
 using Tickette.Application.Features.Events.Common;
 using Tickette.Application.Features.Events.Common.Client;
 using Tickette.Application.Features.Events.Queries.Client.GetEventByUserId;
@@ -106,7 +105,7 @@ public class EventsController : BaseController
         // Extract the UserId from the JWT token
         var userId = GetUserId();
 
-        var bannerFile = new FormFileAdapter(commandDto.BannerFile);
+        var bannerFile = new FormFileAdapter(commandDto.Banner);
         var committeeLogo = new FormFileAdapter(commandDto.CommitteeLogo);
 
         var command = new CreateEventCommand(
@@ -153,11 +152,11 @@ public class EventsController : BaseController
             Id: commandDto.Id,
             UserId: Guid.Parse(userId),
             Name: commandDto.Name,
-            LocationName: commandDto.IsOffline ? commandDto.LocationName : string.Empty,
-            City: commandDto.IsOffline ? commandDto.City : string.Empty,
-            District: commandDto.IsOffline ? commandDto.District : string.Empty,
-            Ward: commandDto.IsOffline ? commandDto.Ward : string.Empty,
-            StreetAddress: commandDto.IsOffline ? commandDto.StreetAddress : string.Empty,
+            LocationName: commandDto.IsOffline ? commandDto.LocationName! : string.Empty,
+            City: commandDto.IsOffline ? commandDto.City! : string.Empty,
+            District: commandDto.IsOffline ? commandDto.District! : string.Empty,
+            Ward: commandDto.IsOffline ? commandDto.Ward! : string.Empty,
+            StreetAddress: commandDto.IsOffline ? commandDto.StreetAddress! : string.Empty,
             CategoryId: commandDto.CategoryId,
             Description: commandDto.Description,
             CommitteeLogo: committeeLogo,
@@ -197,15 +196,6 @@ public class EventsController : BaseController
 
         var response = ResponseHandler.PaginatedResponse(result.Items, paginationMeta, "Get events successfully");
         return Ok(response);
-    }
-
-    //Update Event Status
-    [HttpPatch("status")]
-    //[Authorize(Roles = Constant.APPLICATION_ROLE.Admin)]
-    public async Task<ResponseDto<Guid>> UpdateEventStatus(UpdateEventStatusCommand command, CancellationToken token)
-    {
-        var response = await _commandDispatcher.Dispatch<UpdateEventStatusCommand, Guid>(command, token);
-        return ResponseHandler.SuccessResponse(response, "Event status updated successfully");
     }
 
     [HttpPost("detail-statistic")]

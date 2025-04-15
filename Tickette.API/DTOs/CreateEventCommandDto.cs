@@ -30,7 +30,7 @@ public class CreateEventCommandDto
 
     public required bool IsOffline { get; set; }
 
-    public required IFormFile BannerFile { get; set; }
+    public required IFormFile Banner { get; set; }
 
     public required EventDateInput[] EventDates { get; set; }
 }

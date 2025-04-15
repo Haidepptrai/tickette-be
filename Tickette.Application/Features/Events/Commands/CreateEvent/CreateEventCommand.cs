@@ -89,16 +89,16 @@ public class CreateEventCommandHandler : ICommandHandler<CreateEventCommand, Gui
             newEventCreated.AddEventDates(eventDateEntity);
         }
 
-        var committeeRoleAdmin = _context.CommitteeRoles.FirstOrDefault(x => x.Name == Constant.COMMITTEE_MEMBER_ROLES.Admin);
+        var committeeRoleEventOwner = _context.CommitteeRoles.FirstOrDefault(x => x.Name == Constant.COMMITTEE_MEMBER_ROLES.EventOwner);
 
-        if (committeeRoleAdmin == null)
+        if (committeeRoleEventOwner == null)
         {
             throw new Exception("An error has occurred while assign you as admin. Please contact support if this error continue");
         }
 
-        var admin = CommitteeMember.Create(userCreatedResult.Data.user, committeeRoleAdmin, newEventCreated);
+        var eventOwner = CommitteeMember.Create(userCreatedResult.Data.user, committeeRoleEventOwner, newEventCreated);
 
-        newEventCreated.AddDefaultMembers(admin);
+        newEventCreated.AddDefaultMembers(eventOwner);
 
         _context.Events.Add(newEventCreated);
         await _context.SaveChangesAsync(cancellationToken);

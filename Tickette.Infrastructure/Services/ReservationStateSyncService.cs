@@ -28,7 +28,7 @@ public class ReservationStateSyncService
     /// <returns></returns>
     public async Task PersistReservationAsync(Guid userId, TicketReservation ticketReservation)
     {
-        var reservation = new Reservation(userId, DateTime.UtcNow.AddMinutes(15));
+        var reservation = new Reservation(userId, DateTime.UtcNow.AddMinutes(1));
 
         reservation.AddItem(
             ticketId: ticketReservation.Id,
@@ -61,25 +61,33 @@ public class ReservationStateSyncService
     /// </summary>
     public async Task<bool> ReleaseReservationFromDatabaseAsync(Guid userId, Guid ticketId)
     {
-        var reservation = await _dbContext.Reservations
-            .Where(r => r.UserId == userId)
+        var now = DateTime.UtcNow;
+
+        var reservations = await _dbContext.Reservations
+            .Where(r =>
+                r.UserId == userId &&
+                r.ExpiresAt > now &&
+                r.Status == ReservationStatus.Temporary &&
+                r.Items.Any(i => i.TicketId == ticketId)
+            )
             .Include(r => r.Items)
             .ThenInclude(i => i.SeatAssignments)
-            .OrderByDescending(i => i.CreatedAt)
-            .FirstOrDefaultAsync(r => r.Items.Any(i => i.TicketId == ticketId));
+            .ToListAsync();
 
-        if (reservation == null)
+        if (!reservations.Any())
             return false;
 
-        reservation.MarkCancelled(); // Sets status to "Cancelled"
-
-        // Restore ticket inventory
-        foreach (var item in reservation.Items.Where(i => i.TicketId == ticketId))
+        foreach (var reservation in reservations)
         {
-            var eventEntity = await _dbContext.Tickets.FindAsync(item.TicketId);
-            if (eventEntity != null)
+            reservation.MarkCancelled();
+
+            foreach (var item in reservation.Items.Where(i => i.TicketId == ticketId))
             {
-                eventEntity.IncreaseTickets(item.Quantity);
+                var ticketEntity = await _dbContext.Tickets.FindAsync(item.TicketId);
+                if (ticketEntity != null)
+                {
+                    ticketEntity.IncreaseTickets(item.Quantity);
+                }
             }
         }
 
@@ -101,15 +109,7 @@ public class ReservationStateSyncService
 
         reservation.MarkConfirmed();
 
-        // Reduce ticket inventory
-        foreach (var item in reservation.Items.Where(i => i.TicketId == ticketId))
-        {
-            var eventEntity = await _dbContext.Tickets.FindAsync(item.TicketId);
-            if (eventEntity != null)
-            {
-                eventEntity.ReduceTickets(item.Quantity);
-            }
-        }
+        // Note: No need to reduce ticket inventory here, as it was already reduced when the reservation was created.
 
         await _dbContext.SaveChangesAsync();
         return true;

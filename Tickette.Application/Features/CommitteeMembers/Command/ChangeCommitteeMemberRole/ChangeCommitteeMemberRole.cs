@@ -29,7 +29,7 @@ public class ChangeCommitteeMemberRoleCommandHandler : ICommandHandler<ChangeCom
     {
         // cm.Id == request.MemberId is a stupid move
         // I should change it to composite key
-        var entity = await _context.CommitteeMembers.FirstOrDefaultAsync(cm => cm.Id == request.MemberId && cm.EventId == request.EventId, cancellationToken);
+        var entity = await _context.CommitteeMembers.FirstOrDefaultAsync(cm => cm.UserId == request.MemberId && cm.EventId == request.EventId, cancellationToken);
 
         if (entity == null)
         {

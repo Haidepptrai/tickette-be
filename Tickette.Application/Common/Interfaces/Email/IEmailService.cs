@@ -16,4 +16,6 @@ public interface IEmailService
     bool ValidateUnsubscribeToken(string email, string token);
 
     Task<bool> SendConfirmEmail(ConfirmEmailModel model);
+
+    Task<bool> SendAnnounceAddedMemberEmail(AnnounceAddedMemberEmailModel model);
 }
