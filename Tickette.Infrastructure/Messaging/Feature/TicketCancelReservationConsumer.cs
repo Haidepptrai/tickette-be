@@ -2,10 +2,10 @@
 using Microsoft.Extensions.Hosting;
 using System.Text.Json;
 using Tickette.Application.Common.Constants;
+using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Features.Orders.Command.RemoveReserveTicket;
-using Tickette.Infrastructure.Services;
 
 namespace Tickette.Infrastructure.Messaging.Feature;
 
@@ -36,7 +36,7 @@ public class TicketCancelReservationConsumer : BackgroundService
 
                 using var scope = _serviceProvider.CreateScope();
                 var redisHandler = scope.ServiceProvider.GetRequiredService<IReservationService>();
-                var dbSyncHandler = scope.ServiceProvider.GetRequiredService<ReservationStateSyncService>();
+                var dbSyncHandler = scope.ServiceProvider.GetRequiredService<IReservationDbSyncService>();
 
                 foreach (var ticket in command.Tickets)
                 {

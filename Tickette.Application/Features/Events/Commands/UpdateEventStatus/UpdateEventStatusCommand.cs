@@ -2,9 +2,9 @@
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Redis;
+using Tickette.Application.Helpers;
 using Tickette.Domain.Entities;
 using Tickette.Domain.Enums;
-using Tickette.Infrastructure.Helpers;
 
 namespace Tickette.Application.Features.Events.Commands.UpdateEventStatus;
 

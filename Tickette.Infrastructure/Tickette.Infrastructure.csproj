@@ -58,4 +58,10 @@
     <ProjectReference Include="..\Tickette.Domain\Tickette.Domain.csproj" />
   </ItemGroup>
 
+	<ItemGroup>
+		<None Update="Persistence\Redis\Scripts\*.lua">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
 </Project>

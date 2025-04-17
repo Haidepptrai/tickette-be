@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Tickette.Domain.Entities;
 
 namespace Tickette.Application.Common.Interfaces;
@@ -40,4 +41,6 @@ public interface IApplicationDbContext
     DbSet<User> Users { get; set; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    DatabaseFacade Database { get; }
 }

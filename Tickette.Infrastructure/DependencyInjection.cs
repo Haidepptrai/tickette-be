@@ -258,10 +258,9 @@ public static class DependencyInjection
 
         builder.Services.AddHostedService<TicketReservationConsumer>();
         builder.Services.AddHostedService<TicketCancelReservationConsumer>();
-        builder.Services.AddHostedService<TicketConfirmationReservationConsumer>();
+        builder.Services.AddHostedService<OrderConfirmationConsumer>();
         builder.Services.AddHostedService<ConfirmCreateOrderEmailService>();
-        builder.Services.AddScoped<ReservationStateSyncService>();
-        builder.Services.AddScoped<ReservationDbSyncHandler>();
+        builder.Services.AddScoped<IReservationDbSyncService, ReservationDbSyncService>();
     }
 
     public static void AddRedisSettings(this IHostApplicationBuilder builder)

@@ -3,9 +3,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
-using Tickette.Infrastructure.Helpers;
+using Tickette.Application.Common.Interfaces;
+using Tickette.Application.Helpers;
 using Tickette.Infrastructure.Persistence;
-using Tickette.Infrastructure.Persistence.Redis;
 
 namespace Tickette.Infrastructure.Services;
 
@@ -122,9 +122,9 @@ public class ExpiredReservationCleanupService : BackgroundService
                         {
                             // Sync the reservation state in the database
                             var scope = _serviceProvider.CreateScope();
-                            var reservationDbSync = scope.ServiceProvider.GetRequiredService<ReservationDbSyncHandler>();
+                            var reservationDbSync = scope.ServiceProvider.GetRequiredService<IReservationDbSyncService>();
 
-                            await reservationDbSync.ExpireReservationInDatabaseAsync(Guid.Parse(userId), ticketId);
+                            await reservationDbSync.ReleaseReservationFromDatabaseAsync(Guid.Parse(userId), ticketId);
 
                             processedCount++;
                             _logger.LogInformation(
@@ -195,8 +195,8 @@ public class ExpiredReservationCleanupService : BackgroundService
 
                             // Sync the seat reservation state in the database
                             var scope = _serviceProvider.CreateScope();
-                            var reservationDbSync = scope.ServiceProvider.GetRequiredService<ReservationDbSyncHandler>();
-                            await reservationDbSync.ExpireReservationInDatabaseAsync(Guid.Parse(userId), ticketId);
+                            var reservationDbSync = scope.ServiceProvider.GetRequiredService<IReservationDbSyncService>();
+                            await reservationDbSync.ReleaseReservationFromDatabaseAsync(Guid.Parse(userId), ticketId);
 
                             processedCount++;
                             _logger.LogInformation(

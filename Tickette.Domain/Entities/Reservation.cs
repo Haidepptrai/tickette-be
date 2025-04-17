@@ -8,7 +8,7 @@ public class Reservation
     public Guid Id { get; private set; }
     public Guid UserId { get; private set; }
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
-    public DateTime? ExpiresAt { get; private set; }
+    public DateTime ExpiresAt { get; private set; }
 
     public ReservationStatus Status { get; private set; } = ReservationStatus.Temporary;
 
@@ -17,7 +17,7 @@ public class Reservation
 
     private Reservation() { }
 
-    public Reservation(Guid userId, DateTime? expiresAt = null)
+    public Reservation(Guid userId, DateTime expiresAt)
     {
         Id = Guid.NewGuid();
         UserId = userId;
@@ -32,6 +32,13 @@ public class Reservation
 
         var item = new ReservationItem(Id, ticketId, quantity, hasAssignedSeats);
         _items.Add(item);
+    }
+
+    public void RemoveItem(ReservationItem item)
+    {
+        if (item == null) throw new ArgumentNullException(nameof(item));
+        if (!_items.Remove(item))
+            throw new InvalidOperationException("Item not found in reservation.");
     }
 
     public void MarkConfirmed() => Status = ReservationStatus.Confirmed;

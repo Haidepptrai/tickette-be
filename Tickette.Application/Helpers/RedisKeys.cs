@@ -1,6 +1,6 @@
 ﻿using Tickette.Domain.Entities;
 
-namespace Tickette.Infrastructure.Helpers;
+namespace Tickette.Application.Helpers;
 
 public static class RedisKeys
 {

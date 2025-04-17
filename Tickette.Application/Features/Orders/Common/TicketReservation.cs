@@ -13,9 +13,9 @@ public record TicketReservation
 
     public string? SectionName { get; init; }
 
-    public IEnumerable<SeatOrder>? SeatsChosen { get; init; }
+    public ICollection<SeatOrder>? SeatsChosen { get; init; }
 
-    public TicketReservation(Guid id, int quantity, string? sectionName, IEnumerable<SeatOrder>? seatsChosen)
+    public TicketReservation(Guid id, int quantity, string? sectionName, ICollection<SeatOrder>? seatsChosen)
     {
         if (quantity <= 0)
         {
