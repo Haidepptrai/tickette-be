@@ -75,17 +75,25 @@ public class ReservationService : IReservationService
                     redisArgs.Add(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
                 }
 
-                var result = (long)await db.ScriptEvaluateAsync(
+                var result = await db.ScriptEvaluateAsync(
                     RedisLuaScripts.ReserveTicketWithSeats,
                     redisKeys.ToArray(),
                     redisArgs.ToArray());
 
-                if (result == -1)
+                if (result.Resp3Type == ResultType.Array)
+                {
+                    var conflictSeatKeys = ((RedisResult[])result)
+                        .Select(x => (string)x)
+                        .ToList();
+
+                    throw new SeatOrderedException("Some seats are already reserved " + conflictSeatKeys);
+                }
+
+                if ((long)result == -1)
                     throw new Exception("Inventory key not found.");
-                if (result == -2)
+                if ((long)result == -2)
                     throw new SeatOrderedException("Not enough inventory.");
-                if (result == -3)
-                    throw new SeatOrderedException("One or more seats already booked or reserved.");
+
             }
 
             else
@@ -117,10 +125,6 @@ public class ReservationService : IReservationService
             return await transaction.ExecuteAsync();
         }
         catch (RedisConnectionException)
-        {
-            return false;
-        }
-        catch (Exception)
         {
             return false;
         }
@@ -212,6 +216,7 @@ public class ReservationService : IReservationService
             {
                 var reservedSeatKey = RedisKeys.GetReservedSeatKey(ticketReservationInfo.Id, userId, seat.RowName, seat.SeatNumber);
                 await db.KeyDeleteAsync(reservedSeatKey);
+                await db.KeyDeleteAsync(reservationKey);
             }
 
             // Add back the quantity to the inventory

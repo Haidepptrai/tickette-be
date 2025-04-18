@@ -41,5 +41,4 @@ public class RabbitMQProducer : IMessageProducer
             // Retry logic can be added here
         }
     }
-
 }

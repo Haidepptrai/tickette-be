@@ -124,7 +124,7 @@ public class ExpiredReservationCleanupService : BackgroundService
                             var scope = _serviceProvider.CreateScope();
                             var reservationDbSync = scope.ServiceProvider.GetRequiredService<IReservationDbSyncService>();
 
-                            await reservationDbSync.ReleaseReservationFromDatabaseAsync(Guid.Parse(userId), ticketId);
+                            await reservationDbSync.ReleaseReservationFromDatabaseAsync(Guid.Parse(userId), ticketId, true);
 
                             processedCount++;
                             _logger.LogInformation(
@@ -174,7 +174,7 @@ public class ExpiredReservationCleanupService : BackgroundService
             long reservedAt = (long)reservedAtValue;
 
             // Check if seat reservation has expired (15 minutes = 900 seconds)
-            if (now - reservedAt > 900)
+            if (now - reservedAt > 60)
             {
                 // Format is "Tickette:seat_reservation:{ticketId}:{userId}:seat:{rowName}:{seatNumber}"
                 var parts = keyStr.Split(':');
@@ -196,7 +196,7 @@ public class ExpiredReservationCleanupService : BackgroundService
                             // Sync the seat reservation state in the database
                             var scope = _serviceProvider.CreateScope();
                             var reservationDbSync = scope.ServiceProvider.GetRequiredService<IReservationDbSyncService>();
-                            await reservationDbSync.ReleaseReservationFromDatabaseAsync(Guid.Parse(userId), ticketId);
+                            await reservationDbSync.ReleaseReservationFromDatabaseAsync(Guid.Parse(userId), ticketId, true);
 
                             processedCount++;
                             _logger.LogInformation(

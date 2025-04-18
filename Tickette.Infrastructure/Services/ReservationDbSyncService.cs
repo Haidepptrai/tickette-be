@@ -35,7 +35,7 @@ public class ReservationDbSyncService : IReservationDbSyncService
         {
             var existingReservation = await _dbContext.Reservations
                 .Include(r => r.Items)
-                .Where(r => r.UserId == userId && r.Status == ReservationStatus.Temporary)
+                .Where(r => r.UserId == userId && r.Status == ReservationStatus.Temporary && r.ExpiresAt <= DateTime.UtcNow)
                 .OrderByDescending(r => r.CreatedAt)
                 .FirstOrDefaultAsync();
 
@@ -62,7 +62,6 @@ public class ReservationDbSyncService : IReservationDbSyncService
                     }
                 }
             }
-
 
             // Create a new reservation
             var newReservation = new Reservation(userId, DateTime.UtcNow.AddMinutes(1));
@@ -108,16 +107,16 @@ public class ReservationDbSyncService : IReservationDbSyncService
     /// <summary>
     /// Removes a persisted reservation from the database and marks it as cancelled.
     /// </summary>
-    public async Task<bool> ReleaseReservationFromDatabaseAsync(Guid userId, Guid ticketId)
+    public async Task<bool> ReleaseReservationFromDatabaseAsync(Guid userId, Guid ticketId, bool isCleanUp)
     {
         var now = DateTime.UtcNow;
 
         var reservations = await _dbContext.Reservations
             .Where(r =>
                 r.UserId == userId &&
-                r.ExpiresAt <= now &&
-                r.Status == ReservationStatus.Temporary &&
-                r.Items.Any(i => i.TicketId == ticketId)
+                isCleanUp ? r.ExpiresAt <= now : r.ExpiresAt > now &&
+                                                r.Status == ReservationStatus.Temporary &&
+                                                r.Items.Any(i => i.TicketId == ticketId)
             )
             .Include(r => r.Items)
             .ThenInclude(i => i.SeatAssignments)

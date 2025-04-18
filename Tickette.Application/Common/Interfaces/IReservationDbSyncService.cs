@@ -16,8 +16,9 @@ public interface IReservationDbSyncService
     /// </summary>
     /// <param name="userId">The ID of the user who made the reservation.</param>
     /// <param name="ticketId">The ticket identifier to release.</param>
+    /// <param name="isCleanUp">Depend on this state, the check for ExpiresAt differently</param>
     /// <returns>True if any reservation was released; false otherwise.</returns>
-    Task<bool> ReleaseReservationFromDatabaseAsync(Guid userId, Guid ticketId);
+    Task<bool> ReleaseReservationFromDatabaseAsync(Guid userId, Guid ticketId, bool isCleanUp);
 
     /// <summary>
     /// Marks a reservation as confirmed in the database.

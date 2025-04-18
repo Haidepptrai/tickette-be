@@ -50,7 +50,7 @@ public class TicketCancelReservationConsumer : BackgroundService
                         }
 
                         // 2. Remove from DB (permanent reservation)
-                        var dbReleased = await dbSyncHandler.ReleaseReservationFromDatabaseAsync(command.UserId, ticket.Id);
+                        var dbReleased = await dbSyncHandler.ReleaseReservationFromDatabaseAsync(command.UserId, ticket.Id, false);
                         if (!dbReleased)
                         {
                             Console.WriteLine($"[Warning] Could not release DB for ticket {ticket.Id}");

@@ -27,12 +27,18 @@ if stock == nil then return -1 end
 if stock < diff then return -2 end
 
     -- Validate all seats
+local conflictSeats = {}
 for i = 1, seatCount do
-    local bookedKey = ARGV[4 + i]
-if redis.call('EXISTS', bookedKey) == 1 then
-return -3  -- One of the seats is already booked or reserved
+    local seatKey = ARGV[4 + i]
+    if redis.call('EXISTS', seatKey) == 1 then
+        table.insert(conflictSeats, seatKey)
     end
 end
+
+if #conflictSeats > 0 then
+    return conflictSeats
+end
+
 
     -- All checks passed, reserve seats + update inventory
 redis.call('DECRBY', KEYS[1], diff)
