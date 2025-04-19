@@ -3,8 +3,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
+using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.Interfaces;
-using Tickette.Application.Helpers;
 using Tickette.Infrastructure.Persistence;
 
 namespace Tickette.Infrastructure.Services;
@@ -192,6 +192,9 @@ public class ExpiredReservationCleanupService : BackgroundService
 
                         if (success)
                         {
+                            // Restore the inventory atomically in Redis
+                            string inventoryKey = RedisKeys.GetTicketQuantityKey(ticketId);
+                            await db.StringIncrementAsync(inventoryKey, 1);
 
                             // Sync the seat reservation state in the database
                             var scope = _serviceProvider.CreateScope();

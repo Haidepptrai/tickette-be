@@ -51,6 +51,7 @@
     <Folder Include="Authorization\Handlers\" />
     <Folder Include="Authorization\Requirements\" />
     <Folder Include="Authentication\" />
+    <Folder Include="Helpers\" />
   </ItemGroup>
 
   <ItemGroup>

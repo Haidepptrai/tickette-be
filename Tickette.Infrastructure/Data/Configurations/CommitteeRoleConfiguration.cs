@@ -12,14 +12,6 @@ public class CommitteeRoleConfiguration : IEntityTypeConfiguration<CommitteeRole
             .IsRequired()
             .HasMaxLength(100);
 
-        // Configure Permissions as Owned Entity
-        builder.OwnsMany(role => role.Permissions, permissions =>
-        {
-            permissions.WithOwner().HasForeignKey("CommitteeRoleId");
-            permissions.Property(p => p.Name).IsRequired().HasMaxLength(100);
-            permissions.ToTable("committee_role_permissions"); // Stored in a separate table
-        });
-
         // Indexes
         builder.HasIndex(role => role.Name)
             .IsUnique();

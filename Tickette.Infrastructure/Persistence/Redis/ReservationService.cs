@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Options;
 using StackExchange.Redis;
+using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Features.Orders.Common;
-using Tickette.Application.Helpers;
 using Tickette.Domain.Common.Exceptions;
 
 namespace Tickette.Infrastructure.Persistence.Redis;
@@ -41,7 +41,7 @@ public class ReservationService : IReservationService
                 var redisKeys = new List<RedisKey>
                 {
                     RedisKeys.GetTicketQuantityKey(ticketReservationInfo.Id),
-                    RedisKeys.GetReservationKey(ticketReservationInfo.Id, userId)
+                    RedisKeys.GetSeatsReservationKey(ticketReservationInfo.Id, userId)
                 };
 
                 var redisArgs = new List<RedisValue>
@@ -86,7 +86,22 @@ public class ReservationService : IReservationService
                         .Select(x => (string)x)
                         .ToList();
 
-                    throw new SeatOrderedException("Some seats are already reserved " + conflictSeatKeys);
+                    var readableSeatLabels = conflictSeatKeys
+                        .Select(k =>
+                        {
+                            var parts = k.Split(':');
+                            var row = parts[^2];       // second-to-last part → "C"
+                            var number = parts[^1];    // last part → "24"
+                            return $"{row}{number}";   // → "C24"
+                        })
+                        .Distinct()
+                        .OrderBy(x => x) // alphabetically, or you can custom sort
+                        .ToList(); ;
+
+                    var friendlyMessage = string.Join(", ", readableSeatLabels);
+
+                    throw new SeatOrderedException($"Some seats are already reserved: {friendlyMessage}");
+
                 }
 
                 if ((long)result == -1)
@@ -95,7 +110,6 @@ public class ReservationService : IReservationService
                     throw new SeatOrderedException("Not enough inventory.");
 
             }
-
             else
             {
                 string reservationKey = RedisKeys.GetReservationKey(ticketReservationInfo.Id, userId);
@@ -207,13 +221,13 @@ public class ReservationService : IReservationService
     public async Task<bool> ReleaseReservationAsync(Guid userId, TicketReservation ticketReservationInfo)
     {
         var db = _redis.GetDatabase(_redisSettings.DefaultDatabase);
-        var reservationKey = RedisKeys.GetReservationKey(ticketReservationInfo.Id, userId);
         var inventoryKey = RedisKeys.GetTicketQuantityKey(ticketReservationInfo.Id);
 
         if (ticketReservationInfo.SeatsChosen != null)
         {
             foreach (var seat in ticketReservationInfo.SeatsChosen)
             {
+                var reservationKey = RedisKeys.GetSeatsReservationKey(ticketReservationInfo.Id, userId);
                 var reservedSeatKey = RedisKeys.GetReservedSeatKey(ticketReservationInfo.Id, userId, seat.RowName, seat.SeatNumber);
                 await db.KeyDeleteAsync(reservedSeatKey);
                 await db.KeyDeleteAsync(reservationKey);
@@ -225,6 +239,7 @@ public class ReservationService : IReservationService
         }
         else
         {
+            var reservationKey = RedisKeys.GetReservationKey(ticketReservationInfo.Id, userId);
             RedisValue quantityValue = await db.HashGetAsync(reservationKey, "quantity");
 
             if (quantityValue.IsNull)

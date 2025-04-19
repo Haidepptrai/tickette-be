@@ -3,6 +3,7 @@ using Stripe;
 using Tickette.Application.Common;
 using Tickette.Application.Common.Interfaces.Stripe;
 using Tickette.Domain.Entities;
+using Tickette.Infrastructure.Helpers;
 
 namespace Tickette.Infrastructure.Services;
 
@@ -19,14 +20,14 @@ public class StripePaymentService : IPaymentService
         var service = new PaymentIntentService();
         var options = new PaymentIntentCreateOptions
         {
-            Amount = (long)Math.Round(payment.Amount * 100), // Convert to cents for Stripe
+            Amount = StripeCurrencyHelper.ToStripeAmount(payment.Amount, payment.Currency),
             Currency = payment.Currency,
             PaymentMethodTypes = new List<string> { "card" },
             TransferData = new PaymentIntentTransferDataOptions
             {
                 Destination = payment.EventOwnerStripeId
             },
-            ApplicationFeeAmount = 1000
+            ApplicationFeeAmount = 1
         };
 
         var paymentIntent = await service.CreateAsync(options);
@@ -65,7 +66,7 @@ public class StripePaymentService : IPaymentService
             // Prepare the update options
             var options = new PaymentIntentUpdateOptions
             {
-                Amount = (long)Math.Round(newAmount * 100), // To update the amount, it must be in cents
+                Amount = StripeCurrencyHelper.ToStripeAmount(newAmount, currentIntent.Currency),
                 Currency = currentIntent.Currency, // Use the same currency as the original intent
             };
 
@@ -96,5 +97,4 @@ public class StripePaymentService : IPaymentService
             throw new InvalidOperationException("An unexpected error occurred.", ex);
         }
     }
-
 }

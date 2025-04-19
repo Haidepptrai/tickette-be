@@ -1,5 +1,5 @@
 ﻿using RedLockNet;
-using Tickette.Application.Helpers;
+using Tickette.Application.Common.Constants;
 using Tickette.Domain.Entities;
 
 namespace Tickette.Infrastructure.Persistence.Redis;

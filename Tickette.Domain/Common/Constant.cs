@@ -20,20 +20,6 @@ public static class Constant
         public const string RedeemStaff = "RedeemStaff";
     }
 
-    public static class COMMITTEE_MEMBER_ROLES_PERMISSIONS
-    {
-        public const string Marketing = "Marketing";
-        public const string Orders = "Orders";
-        public const string SeatMap = "SeatMap";
-        public const string Members = "Members";
-        public const string CheckIn = "CheckIn";
-        public const string CheckOut = "CheckOut";
-        public const string Redeem = "Redeem";
-        public const string Edit = "Edit";
-        public const string Summary = "Summary";
-        public const string Voucher = "Voucher";
-    }
-
     public static class APPLICATION_ROLE
     {
         public const string Admin = "Admin";
@@ -41,6 +27,4 @@ public static class Constant
         public const string Manager = "Manager";
         public const string Moderator = "Moderator";
     }
-
-    public static string TICKET_RESERVATION_QUEUE = "reverse_ticket";
 }

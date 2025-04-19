@@ -114,7 +114,7 @@ public class ReservationDbSyncService : IReservationDbSyncService
         var reservations = await _dbContext.Reservations
             .Where(r =>
                 r.UserId == userId &&
-                isCleanUp ? r.ExpiresAt <= now : r.ExpiresAt > now &&
+                isCleanUp ? r.ExpiresAt > now : r.ExpiresAt > now &&
                                                 r.Status == ReservationStatus.Temporary &&
                                                 r.Items.Any(i => i.TicketId == ticketId)
             )

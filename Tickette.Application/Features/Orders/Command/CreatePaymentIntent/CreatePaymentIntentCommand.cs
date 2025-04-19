@@ -51,7 +51,7 @@ public class CreatePaymentIntentCommandHandler : ICommandHandler<CreatePaymentIn
                 throw new InvalidQuantityException();
             }
 
-            totalPrice += totalPrice + (ticketInfo.Price * ticket.Quantity);
+            totalPrice += ticketInfo.Price * ticket.Quantity;
         }
 
         if (totalPrice.Amount <= 0)
