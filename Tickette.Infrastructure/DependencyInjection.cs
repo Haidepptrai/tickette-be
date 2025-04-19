@@ -226,7 +226,7 @@ public static class DependencyInjection
             .AsImplementedInterfaces()
             .WithScopedLifetime());
 
-        builder.Services.TryAddScoped<IQrCodeService, QrCodeService>();
+
 
         // Register the custom handler and HttpContextAccessor
         builder.Services.AddScoped<IAuthorizationHandler, EventRoleHandler>();
@@ -261,6 +261,11 @@ public static class DependencyInjection
         builder.Services.AddHostedService<OrderConfirmationConsumer>();
         builder.Services.AddHostedService<ConfirmCreateOrderEmailService>();
         builder.Services.AddScoped<IReservationDbSyncService, ReservationDbSyncService>();
+    }
+
+    public static void AddScanQrService(this IHostApplicationBuilder builder)
+    {
+        builder.Services.TryAddScoped<IQrCodeService, QrCodeService>();
     }
 
     public static void AddRedisSettings(this IHostApplicationBuilder builder)

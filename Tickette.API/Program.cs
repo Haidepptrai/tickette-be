@@ -47,6 +47,7 @@ namespace Tickette.API
             builder.AddInMemoryCacheService();
             builder.AddStripeSettings();
             builder.AddS3Service();
+            builder.AddScanQrService();
             builder.AddMachineLearningModel();
             builder.AddEmailService();
             builder.AddSignalRService();

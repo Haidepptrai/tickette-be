@@ -6,12 +6,12 @@ using Tickette.Application.Features.Events.Common;
 
 namespace Tickette.Application.Features.Events.Queries.Admin.GetEventById;
 
-public record AdminGetEventByIdRequest
+public record AdminGetEventByIdQuery
 {
     public Guid Id { get; init; }
 }
 
-public class AdminGetEventByIdRequestHandler : IQueryHandler<AdminGetEventByIdRequest, EventDetailDto>
+public class AdminGetEventByIdRequestHandler : IQueryHandler<AdminGetEventByIdQuery, EventDetailDto>
 {
     private readonly IApplicationDbContext _context;
 
@@ -20,7 +20,7 @@ public class AdminGetEventByIdRequestHandler : IQueryHandler<AdminGetEventByIdRe
         _context = context;
     }
 
-    public async Task<EventDetailDto> Handle(AdminGetEventByIdRequest query, CancellationToken cancellation)
+    public async Task<EventDetailDto> Handle(AdminGetEventByIdQuery query, CancellationToken cancellation)
     {
         var result = await _context.Events
             .Include(ev => ev.Category)
@@ -29,6 +29,7 @@ public class AdminGetEventByIdRequestHandler : IQueryHandler<AdminGetEventByIdRe
             .ThenInclude(ed => ed.Tickets)
             .AsSplitQuery()
             .AsNoTracking()
+            .IgnoreQueryFilters()
             .SingleOrDefaultAsync(ev => ev.Id == query.Id, cancellation);
 
         if (result == null)

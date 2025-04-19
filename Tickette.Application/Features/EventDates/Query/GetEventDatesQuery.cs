@@ -27,6 +27,7 @@ public class GetEventDatesQueryHandler : IQueryHandler<GetEventDatesQuery, IEnum
             .Where(ed => ed.EventId == request.EventId)
             .Select(ed => ed.MapEventDateToDto())
             .AsNoTracking()
+            .IgnoreQueryFilters()
             .ToListAsync(cancellationToken);
 
         return eventDate;

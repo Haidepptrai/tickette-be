@@ -71,6 +71,8 @@ public static class EventMapper
         CommitteeDescription = entity.Committee.Description,
         CommitteeLogo = entity.Committee.Logo,
         Reason = entity.Reason,
+        StartDate = entity.EventDates.Min(ed => ed.StartDate),
+        EndDate = entity.EventDates.Max(ed => ed.EndDate),
         EventDates = entity.EventDates.Select(ev => new EventDateDto()
         {
             Id = ev.Id,

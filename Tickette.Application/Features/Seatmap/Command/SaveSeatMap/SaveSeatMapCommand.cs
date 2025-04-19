@@ -30,6 +30,7 @@ public class SaveSeatMapCommandHandler : ICommandHandler<SaveSeatMapCommand, Uni
 
         var eventDate = await _context.EventDates
             .Include(ed => ed.Event)
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(ed => ed.Id == request.EventDateId, cancellationToken);
 
         if (eventDate is null)

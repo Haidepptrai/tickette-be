@@ -35,6 +35,7 @@ public class GetAllEventsQueryHandler : IQueryHandler<AdminGetAllEventsQuery, Pa
             .Include(e => e.Committee)
             .Include(e => e.EventDates)
             .ThenInclude(ed => ed.Tickets)
+            .IgnoreQueryFilters()
             .AsNoTracking();
 
         // Apply filtering if a search term is provided
