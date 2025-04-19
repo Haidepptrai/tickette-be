@@ -8,6 +8,7 @@ using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Exceptions;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Common;
+using Tickette.Domain.Common.Exceptions;
 
 namespace Tickette.Application.Features.Orders.Command.ReserveTicket;
 
@@ -27,16 +28,20 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
     private readonly IMessageProducer _messageProducer;
     private readonly IApplicationDbContext _context;
     private readonly IReservationService _reservationService;
+    private readonly IReservationDbSyncService _reservationDbSyncService;
 
-    public ReserveTicketCommandHandler(IApplicationDbContext context, IReservationService reservationService, IMessageProducer messageProducer)
+    public ReserveTicketCommandHandler(IApplicationDbContext context, IReservationService reservationService, IMessageProducer messageProducer, IReservationDbSyncService reservationDbSyncService)
     {
         _context = context;
         _reservationService = reservationService;
         _messageProducer = messageProducer;
+        _reservationDbSyncService = reservationDbSyncService;
     }
 
     public async Task<Unit> Handle(ReserveTicketCommand request, CancellationToken cancellationToken)
     {
+        bool isSuccess = false;
+
         foreach (var ticket in request.Tickets)
         {
             // Is the ticket valid?
@@ -48,15 +53,30 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
 
             ticketEntity.ValidateTicket(ticket.Quantity);
 
-            await _reservationService.ReserveTicketsAsync(request.UserId, ticket);
+            // Check if the ticket is already reserved
+            isSuccess = await _reservationService.ReserveTicketsAsync(request.UserId, ticket);
+            // Sometimes Redis might fail to connect, so that if it fails, then we can add fallback
+            // by reserving the ticket in the database
+            if (!isSuccess)
+            {
+                var reserveToDatabase = await _reservationDbSyncService.PersistReservationAsync(request.UserId, ticket);
+                if (!reserveToDatabase)
+                {
+                    throw new TicketReservationException("Failed to reserve tickets. Please try again");
+                }
+
+            }
         }
 
-        var message = JsonSerializer.Serialize(request);
-        var successSending = await _messageProducer.PublishAsync(RabbitMqRoutingKeys.TicketReservationCreated, message);
-
-        if (!successSending)
+        // Only sync with database if Redis reservation was successful
+        if (isSuccess)
         {
-            throw new Exception("Failed to send message to the queue");
+            var message = JsonSerializer.Serialize(request);
+            await _messageProducer.PublishAsync(RabbitMqRoutingKeys.TicketReservationCreated, message);
+        }
+        else
+        {
+            throw new TicketReservationException("Failed to reserve tickets. Please try again");
         }
 
         return Unit.Value;

@@ -16,7 +16,7 @@ public class CommitteeMemberConfiguration : IEntityTypeConfiguration<CommitteeMe
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(cm => cm.CommitteeRole)
-            .WithMany()
+            .WithMany(u => u.CommitteeMembers)
             .HasForeignKey(cm => cm.CommitteeRoleId)
             .OnDelete(DeleteBehavior.Restrict);
 

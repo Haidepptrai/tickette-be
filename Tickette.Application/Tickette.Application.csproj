@@ -35,6 +35,7 @@
     <Folder Include="Features\Tickets\Query\" />
     <Folder Include="Factories\" />
     <Folder Include="Features\Users\Command\Admin\" />
+    <Folder Include="Helpers\" />
   </ItemGroup>
 
 </Project>

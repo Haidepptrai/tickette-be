@@ -3,7 +3,6 @@ using System.Text.Json;
 using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
-using Tickette.Application.Common.Interfaces.Email;
 using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Common.Models.Email;
@@ -30,15 +29,15 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
 {
     private readonly IApplicationDbContext _context;
     private readonly IReservationService _reservationService;
-    private readonly IEmailService _emailService;
     private readonly IMessageProducer _messageProducer;
+    private readonly IReservationDbSyncService _reservationDbSyncService;
 
-    public CreateOrderCommandHandler(IApplicationDbContext context, IEmailService emailService, IReservationService reservationService, IMessageProducer messageProducer)
+    public CreateOrderCommandHandler(IApplicationDbContext context, IReservationService reservationService, IMessageProducer messageProducer, IReservationDbSyncService reservationDbSyncService)
     {
         _context = context;
-        _emailService = emailService;
         _reservationService = reservationService;
         _messageProducer = messageProducer;
+        _reservationDbSyncService = reservationDbSyncService;
     }
 
     public async Task<CreateOrderResponse> Handle(CreateOrderCommand query, CancellationToken cancellation)
@@ -90,7 +89,13 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
             var exist = await _reservationService.ValidateReservationAsync(query.UserId, ticket);
 
             if (!exist)
-                throw new NotFoundTicketReservationException();
+            {
+                // Try to validate the reservation in Db
+                var isDbValidateSuccess = await _reservationDbSyncService.IsTicketReservedInDatabaseAsync(query.UserId, ticket.Id);
+
+                if (!isDbValidateSuccess)
+                    throw new NotFoundTicketReservationException();
+            }
         }
 
         // Send email

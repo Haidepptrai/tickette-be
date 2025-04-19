@@ -51,11 +51,18 @@
     <Folder Include="Authorization\Handlers\" />
     <Folder Include="Authorization\Requirements\" />
     <Folder Include="Authentication\" />
+    <Folder Include="Helpers\" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Tickette.Application\Tickette.Application.csproj" />
     <ProjectReference Include="..\Tickette.Domain\Tickette.Domain.csproj" />
   </ItemGroup>
+
+	<ItemGroup>
+		<None Update="Persistence\Redis\Scripts\*.lua">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 
 </Project>

@@ -2,11 +2,11 @@
 using Microsoft.Extensions.Hosting;
 using System.Text.Json;
 using Tickette.Application.Common.Constants;
+using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Features.Orders.Command.ReserveTicket;
 using Tickette.Domain.Common.Exceptions;
-using Tickette.Infrastructure.Services;
 
 namespace Tickette.Infrastructure.Messaging.Feature;
 
@@ -41,7 +41,7 @@ public class TicketReservationConsumer : BackgroundService
             using var scope = _serviceProvider.CreateScope();
 
             var redisHandler = scope.ServiceProvider.GetRequiredService<IReservationService>();
-            var persistenceService = scope.ServiceProvider.GetRequiredService<ReservationStateSyncService>();
+            var persistenceService = scope.ServiceProvider.GetRequiredService<IReservationDbSyncService>();
 
             foreach (var ticket in reservation.Tickets)
             {

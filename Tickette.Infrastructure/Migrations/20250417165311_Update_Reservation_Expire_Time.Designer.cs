@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Tickette.Infrastructure.Data;
@@ -11,9 +12,11 @@ using Tickette.Infrastructure.Data;
 namespace Tickette.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250417165311_Update_Reservation_Expire_Time")]
+    partial class Update_Reservation_Expire_Time
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -289,6 +292,10 @@ namespace Tickette.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("committee_role_id");
 
+                    b.Property<Guid?>("CommitteeRoleId1")
+                        .HasColumnType("uuid")
+                        .HasColumnName("committee_role_id1");
+
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
@@ -298,6 +305,9 @@ namespace Tickette.Infrastructure.Migrations
 
                     b.HasIndex("CommitteeRoleId")
                         .HasDatabaseName("ix_committee_members_committee_role_id");
+
+                    b.HasIndex("CommitteeRoleId1")
+                        .HasDatabaseName("ix_committee_members_committee_role_id1");
 
                     b.HasIndex("EventId")
                         .HasDatabaseName("ix_committee_members_event_id");
@@ -1142,11 +1152,16 @@ namespace Tickette.Infrastructure.Migrations
             modelBuilder.Entity("Tickette.Domain.Entities.CommitteeMember", b =>
                 {
                     b.HasOne("Tickette.Domain.Entities.CommitteeRole", "CommitteeRole")
-                        .WithMany("CommitteeMembers")
+                        .WithMany()
                         .HasForeignKey("CommitteeRoleId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_committee_members_committee_roles_committee_role_id");
+
+                    b.HasOne("Tickette.Domain.Entities.CommitteeRole", null)
+                        .WithMany("CommitteeMembers")
+                        .HasForeignKey("CommitteeRoleId1")
+                        .HasConstraintName("fk_committee_members_committee_roles_committee_role_id1");
 
                     b.HasOne("Tickette.Domain.Entities.Event", "Event")
                         .WithMany("CommitteeMembers")
@@ -1167,6 +1182,40 @@ namespace Tickette.Infrastructure.Migrations
                     b.Navigation("Event");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Tickette.Domain.Entities.CommitteeRole", b =>
+                {
+                    b.OwnsMany("Tickette.Domain.ValueObjects.CommitteeRolePermission", "Permissions", b1 =>
+                        {
+                            b1.Property<Guid>("CommitteeRoleId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("committee_role_id");
+
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer")
+                                .HasColumnName("id");
+
+                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<int>("Id"));
+
+                            b1.Property<string>("Name")
+                                .IsRequired()
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("name");
+
+                            b1.HasKey("CommitteeRoleId", "Id")
+                                .HasName("pk_committee_role_permissions");
+
+                            b1.ToTable("committee_role_permissions", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("CommitteeRoleId")
+                                .HasConstraintName("fk_committee_role_permissions_committee_roles_committee_role_id");
+                        });
+
+                    b.Navigation("Permissions");
                 });
 
             modelBuilder.Entity("Tickette.Domain.Entities.Coupon", b =>
