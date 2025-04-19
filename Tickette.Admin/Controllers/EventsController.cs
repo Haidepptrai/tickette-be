@@ -51,9 +51,9 @@ public class EventsController : ControllerBase
 
     // GET event by id
     [HttpPost("id")]
-    public async Task<ResponseDto<EventDetailDto>> GetEventById(AdminGetEventByIdRequest query, CancellationToken cancellationToken = default)
+    public async Task<ResponseDto<EventDetailDto>> GetEventById(AdminGetEventByIdQuery query, CancellationToken cancellationToken = default)
     {
-        var result = await _queryDispatcher.Dispatch<AdminGetEventByIdRequest, EventDetailDto>(query, cancellationToken);
+        var result = await _queryDispatcher.Dispatch<AdminGetEventByIdQuery, EventDetailDto>(query, cancellationToken);
         var response = ResponseHandler.SuccessResponse(result, "Get event by id successfully");
         return response;
     }

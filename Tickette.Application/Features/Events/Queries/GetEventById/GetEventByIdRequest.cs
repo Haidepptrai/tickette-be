@@ -33,6 +33,7 @@ public class GetEventByIdHandler : IQueryHandler<GetEventByIdRequest, EventDetai
                .ThenInclude(ed => ed.Tickets)
            .AsSplitQuery()
            .AsNoTracking()
+           .IgnoreQueryFilters()
            .SingleOrDefaultAsync(ev => ev.Id == query.Id, cancellation);
 
         if (result == null)

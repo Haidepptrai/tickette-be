@@ -33,6 +33,7 @@ namespace Tickette.Admin
             builder.AddEmailService();
             builder.AddSignalRService();
             builder.AddCorsService();
+            builder.AddScanQrService();
 
             //Add Swagger
             builder.Services.AddEndpointsApiExplorer();
