@@ -33,7 +33,7 @@ public class ConfirmCreateOrderEmailService : BackgroundService
                 if (emailPayload is null)
                 {
                     Console.WriteLine("error while sending email");
-                    return;
+                    return null;
                 }
 
                 await emailService.SendEmailAsync(emailPayload.BuyerEmail, "Order Process Successfully",
@@ -43,6 +43,7 @@ public class ConfirmCreateOrderEmailService : BackgroundService
             {
                 Console.WriteLine($"Error while sending email: {ex.Message}");
             }
+            return null;
         }, stoppingToken);
 
     }

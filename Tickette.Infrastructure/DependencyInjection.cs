@@ -20,6 +20,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using Tickette.Application.Common;
+using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Email;
@@ -44,7 +45,6 @@ using Tickette.Infrastructure.Persistence;
 using Tickette.Infrastructure.Persistence.Redis;
 using Tickette.Infrastructure.Prediction;
 using Tickette.Infrastructure.Services;
-using static Tickette.Domain.Common.Constant;
 
 namespace Tickette.Infrastructure;
 
@@ -189,26 +189,26 @@ public static class DependencyInjection
             // Admin and EventOwner inherit all lower role permissions
             var elevatedRoles = new[]
             {
-                COMMITTEE_MEMBER_ROLES.EventOwner,
-                COMMITTEE_MEMBER_ROLES.Admin
+                CommitteeMemberKeys.COMMITTEE_MEMBER_ROLES.EventOwner,
+                CommitteeMemberKeys.COMMITTEE_MEMBER_ROLES.Admin
             };
 
             // Define policies where lower roles + Admin + EventOwner are allowed
-            options.AddPolicy("CheckInAccess", policy =>
+            options.AddPolicy(CommitteeMemberKeys.CheckInAccess, policy =>
                 policy.Requirements.Add(new EventRoleRequirement(
-                    COMMITTEE_MEMBER_ROLES.CheckInStaff, elevatedRoles)));
+                    CommitteeMemberKeys.COMMITTEE_MEMBER_ROLES.CheckInStaff, elevatedRoles)));
 
-            options.AddPolicy("CheckOutAccess", policy =>
+            options.AddPolicy(CommitteeMemberKeys.CheckOutAccess, policy =>
                 policy.Requirements.Add(new EventRoleRequirement(
-                    COMMITTEE_MEMBER_ROLES.CheckOutStaff, elevatedRoles)));
+                    CommitteeMemberKeys.COMMITTEE_MEMBER_ROLES.CheckOutStaff, elevatedRoles)));
 
-            options.AddPolicy("RedeemAccess", policy =>
+            options.AddPolicy(CommitteeMemberKeys.RedeemAccess, policy =>
                 policy.Requirements.Add(new EventRoleRequirement(
-                    COMMITTEE_MEMBER_ROLES.RedeemStaff, elevatedRoles)));
+                    CommitteeMemberKeys.COMMITTEE_MEMBER_ROLES.RedeemStaff, elevatedRoles)));
 
-            options.AddPolicy("ManagerAccess", policy =>
+            options.AddPolicy(CommitteeMemberKeys.ManagerAccess, policy =>
                 policy.Requirements.Add(new EventRoleRequirement(
-                    COMMITTEE_MEMBER_ROLES.Manager, elevatedRoles)));
+                    CommitteeMemberKeys.COMMITTEE_MEMBER_ROLES.Manager, elevatedRoles)));
         });
 
         builder.Services.TryAddScoped<IQueryDispatcher, QueryDispatcher>();

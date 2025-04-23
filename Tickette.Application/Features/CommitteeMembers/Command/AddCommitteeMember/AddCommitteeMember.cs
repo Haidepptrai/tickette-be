@@ -55,7 +55,15 @@ public class AddCommitteeMemberCommandHandler : ICommandHandler<AddCommitteeMemb
             throw new Exception("Member already exists in this event");
         }
 
-        var entity = CommitteeMember.Create(user.Id, request.RoleId, request.EventId);
+        var eventInfo = await _context.Events
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(e => e.Id == request.EventId, cancellationToken);
+
+        if (eventInfo == null)
+            throw new NotFoundException("Event", request.EventId);
+
+        var entity = CommitteeMember.Create(user.Id, request.RoleId, eventInfo.Id);
 
         _context.CommitteeMembers.Add(entity);
 
@@ -63,8 +71,6 @@ public class AddCommitteeMemberCommandHandler : ICommandHandler<AddCommitteeMemb
 
         _cacheService.RemoveCacheValue(InMemoryCacheKey.CommitteeMemberOfEvent(request.EventId));
 
-        var eventInfo = _context.Events
-            .SingleOrDefault(e => e.Id == request.EventId);
 
         var roleInfo = _context.CommitteeRoles.SingleOrDefault(r => r.Id == request.RoleId);
 

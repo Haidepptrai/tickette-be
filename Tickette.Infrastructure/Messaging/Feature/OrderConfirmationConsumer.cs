@@ -31,7 +31,7 @@ public class OrderConfirmationConsumer : BackgroundService
                 if (command == null)
                 {
                     Console.WriteLine("[Warning] Failed to deserialize RemoveReserveTicketCommand");
-                    return;
+                    return null;
                 }
 
                 using var scope = _serviceProvider.CreateScope();
@@ -60,6 +60,7 @@ public class OrderConfirmationConsumer : BackgroundService
                 Console.WriteLine($"[Fatal] Error in TicketReservationCancelled consumer: {ex.Message}");
                 // Log and exit gracefully — don't rethrow
             }
+            return null;
 
         }, stoppingToken);
     }

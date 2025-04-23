@@ -138,10 +138,10 @@ public class AuditSaveChangesInterceptor : SaveChangesInterceptor
         return value is Guid guid ? guid : Guid.Empty;
     }
 
-    private (Guid?, string) GetCurrentUserInformation()
+    private (Guid?, string?) GetCurrentUserInformation()
     {
-        var userIdStr = _httpContextAccessor.HttpContext?.User?.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        var userEmail = _httpContextAccessor.HttpContext?.User?.FindFirstValue(JwtRegisteredClaimNames.Email);
+        var userIdStr = _httpContextAccessor.HttpContext?.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        var userEmail = _httpContextAccessor.HttpContext?.User.FindFirstValue(JwtRegisteredClaimNames.Email);
 
         if (string.IsNullOrEmpty(userIdStr) || string.IsNullOrEmpty(userEmail))
             return (null, null);

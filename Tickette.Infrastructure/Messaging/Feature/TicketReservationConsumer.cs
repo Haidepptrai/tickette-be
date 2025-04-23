@@ -34,9 +34,7 @@ public class TicketReservationConsumer : BackgroundService
             var reservation = JsonSerializer.Deserialize<ReserveTicketCommand>(message);
 
             if (reservation == null)
-            {
-                throw new InvalidOperationException("Failed to deserialize ReserveTicketCommand");
-            }
+                return "InvalidRequest";
 
             using var scope = _serviceProvider.CreateScope();
 
@@ -47,15 +45,27 @@ public class TicketReservationConsumer : BackgroundService
             {
                 try
                 {
+                    await redisHandler.ReserveTicketsAsync(reservation.UserId, ticket);
                     await persistenceService.PersistReservationAsync(reservation.UserId, ticket);
+                }
+                catch (SeatOrderedException ex)
+                {
+                    await redisHandler.ReleaseReservationAsync(reservation.UserId, ticket);
+                    return JsonSerializer.Serialize(RedisReservationResult.Fail(ex.Message, "SeatConflict"));
+                }
+                catch (TicketReservationException ex)
+                {
+                    await redisHandler.ReleaseReservationAsync(reservation.UserId, ticket);
+                    return JsonSerializer.Serialize(RedisReservationResult.Fail(ex.Message, "InventoryIssue"));
                 }
                 catch (Exception ex)
                 {
                     await redisHandler.ReleaseReservationAsync(reservation.UserId, ticket);
-                    Console.WriteLine($"[Rollback Error] Failed to release Redis for ticket {ticket.Id}: {ex.Message}");
-                    throw new TicketReservationException($"Failed to reserved for ticket {ticket.Id}, please try again");
+                    return JsonSerializer.Serialize(RedisReservationResult.Fail("Unexpected error occurred", "UnhandledException"));
                 }
             }
+
+            return JsonSerializer.Serialize(RedisReservationResult.Ok());
         }, stoppingToken);
     }
 }

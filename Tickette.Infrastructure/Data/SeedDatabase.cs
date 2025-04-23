@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Tickette.Application.Common.Constants;
 using Tickette.Domain.Entities;
 using static Tickette.Domain.Common.Constant;
 using Constant = Tickette.Domain.Common.Constant;
@@ -68,12 +69,12 @@ public static class SeedDatabase
         // Define roles with their permissions
         var predefinedRoles = new List<CommitteeRole>
         {
-            new CommitteeRole(COMMITTEE_MEMBER_ROLES.EventOwner),
-            new CommitteeRole(COMMITTEE_MEMBER_ROLES.Admin),
-            new CommitteeRole(COMMITTEE_MEMBER_ROLES.Manager),
-            new CommitteeRole(COMMITTEE_MEMBER_ROLES.CheckInStaff),
-            new CommitteeRole(COMMITTEE_MEMBER_ROLES.CheckOutStaff),
-            new CommitteeRole(COMMITTEE_MEMBER_ROLES.RedeemStaff)
+            new CommitteeRole(CommitteeMemberKeys.COMMITTEE_MEMBER_ROLES.EventOwner),
+            new CommitteeRole(CommitteeMemberKeys.COMMITTEE_MEMBER_ROLES.Admin),
+            new CommitteeRole(CommitteeMemberKeys.COMMITTEE_MEMBER_ROLES.Manager),
+            new CommitteeRole(CommitteeMemberKeys.COMMITTEE_MEMBER_ROLES.CheckInStaff),
+            new CommitteeRole(CommitteeMemberKeys.COMMITTEE_MEMBER_ROLES.CheckOutStaff),
+            new CommitteeRole(CommitteeMemberKeys.COMMITTEE_MEMBER_ROLES.RedeemStaff)
         };
 
 

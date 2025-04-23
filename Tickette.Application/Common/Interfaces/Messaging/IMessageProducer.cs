@@ -2,5 +2,5 @@
 
 public interface IMessageProducer
 {
-    Task<bool> PublishAsync(string queueName, string message);
+    Task<string?> PublishAsync(string queueName, string message, TimeSpan? replyTimeout = null);
 }

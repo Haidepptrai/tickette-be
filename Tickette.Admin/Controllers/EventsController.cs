@@ -11,6 +11,7 @@ using Tickette.Application.Features.Events.Queries.Admin.GetEventsStatistic;
 using Tickette.Application.Features.Events.Queries.Admin.SearchEventsByName;
 using Tickette.Application.Features.Events.Queries.Client.GetEventByUserId;
 using Tickette.Application.Wrappers;
+using Tickette.Domain.Common;
 
 namespace Tickette.Admin.Controllers;
 
@@ -33,6 +34,7 @@ public class EventsController : ControllerBase
         Summary = "Get All Events",
         Description = "Get all events with pagination"
     )]
+    [Authorize(Roles = $"{Constant.APPLICATION_ROLE.Admin},{Constant.APPLICATION_ROLE.Moderator}")]
     public async Task<ResponseDto<IEnumerable<AdminEventPreviewDto>>> GetAllEvents(AdminGetAllEventsQuery query, CancellationToken cancellationToken = default)
     {
         var result = await _queryDispatcher.Dispatch<AdminGetAllEventsQuery, PagedResult<AdminEventPreviewDto>>(query, cancellationToken);
@@ -51,6 +53,7 @@ public class EventsController : ControllerBase
 
     // GET event by id
     [HttpPost("id")]
+    [Authorize(Roles = $"{Constant.APPLICATION_ROLE.Admin},{Constant.APPLICATION_ROLE.Moderator}")]
     public async Task<ResponseDto<EventDetailDto>> GetEventById(AdminGetEventByIdQuery query, CancellationToken cancellationToken = default)
     {
         var result = await _queryDispatcher.Dispatch<AdminGetEventByIdQuery, EventDetailDto>(query, cancellationToken);
@@ -60,7 +63,7 @@ public class EventsController : ControllerBase
 
     // GET Event By User id
     [HttpPost("user")]
-    [Authorize]
+    [Authorize(Roles = $"{Constant.APPLICATION_ROLE.Admin},{Constant.APPLICATION_ROLE.Moderator}")]
     [SwaggerOperation(
         Summary = "Get Events By User Id",
         Description = "Get all events created by the user, user id in body for admin"
@@ -93,6 +96,7 @@ public class EventsController : ControllerBase
         Summary = "Search Events",
         Description = "Search events by title"
     )]
+    [Authorize]
     public async Task<ResponseDto<IEnumerable<Application.Features.Events.Common.Admin.AdminEventPreviewDto>>> SearchEvents(SearchEventsByNameQuery query, CancellationToken cancellationToken = default)
     {
         var result = await _queryDispatcher.Dispatch<SearchEventsByNameQuery, PagedResult<Application.Features.Events.Common.Admin.AdminEventPreviewDto>>(query, cancellationToken);
@@ -104,7 +108,7 @@ public class EventsController : ControllerBase
 
     //Update Event Status
     [HttpPost("status")]
-    //[Authorize(Roles = Constant.APPLICATION_ROLE.Admin)]
+    [Authorize(Roles = Constant.APPLICATION_ROLE.Admin)]
     public async Task<ResponseDto<Guid>> UpdateEventStatus(UpdateEventStatusCommand command, CancellationToken token)
     {
         var response = await _commandDispatcher.Dispatch<UpdateEventStatusCommand, Guid>(command, token);
@@ -113,6 +117,7 @@ public class EventsController : ControllerBase
 
     [HttpPost("statistic")]
     [SwaggerOperation(Summary = "Get all statistic counting of events", Description = "Get all counting of events for admin dashboard, include pending, approved, denied, upcoming (next 7 days). All event statistic within one month")]
+    [Authorize]
     public async Task<ResponseDto<EventsStatisticDto>> GetEventStatistic(CancellationToken token)
     {
         var query = new GetEventsStatisticQuery();

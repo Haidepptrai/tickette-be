@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.Dashboard.Queries.GetDashboardStatistics;
 using Tickette.Application.Features.Dashboard.Queries.GetRevenueStatistics;
 using Tickette.Application.Features.Events.Common.Admin;
 using Tickette.Application.Features.Events.Queries.Admin.GetEventsStatistic;
 using Tickette.Application.Wrappers;
+using Tickette.Domain.Common;
 
 namespace Tickette.Admin.Controllers
 {
@@ -20,6 +22,7 @@ namespace Tickette.Admin.Controllers
         }
 
         [HttpGet("summary")]
+        [Authorize(Roles = $"{Constant.APPLICATION_ROLE.Admin},{Constant.APPLICATION_ROLE.Moderator}")]
         public async Task<ResponseDto<DashboardSummaryDto>> GetDashboardSummary(CancellationToken cancellationToken)
         {
             var query = new GetDashboardSummaryQuery();
@@ -29,6 +32,7 @@ namespace Tickette.Admin.Controllers
         }
 
         [HttpGet("revenue")]
+        [Authorize(Roles = $"{Constant.APPLICATION_ROLE.Admin},{Constant.APPLICATION_ROLE.Moderator}")]
         public async Task<ResponseDto<RevenueStatisticsDto>> GetRevenueStatistics([FromQuery] GetRevenueStatisticsQuery query, CancellationToken cancellationToken)
         {
             var result = await _queryDispatcher.Dispatch<GetRevenueStatisticsQuery, RevenueStatisticsDto>(query, cancellationToken);
@@ -37,6 +41,7 @@ namespace Tickette.Admin.Controllers
         }
 
         [HttpGet("events")]
+        [Authorize(Roles = $"{Constant.APPLICATION_ROLE.Admin},{Constant.APPLICATION_ROLE.Moderator}")]
         public async Task<ResponseDto<EventsStatisticDto>> GetEventStatistics(CancellationToken cancellationToken)
         {
             var query = new GetEventsStatisticQuery();
