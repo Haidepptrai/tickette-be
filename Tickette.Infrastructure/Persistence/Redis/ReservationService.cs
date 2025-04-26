@@ -56,7 +56,8 @@ public class ReservationService : IReservationService
                 foreach (var seat in ticketReservationInfo.SeatsChosen)
                 {
                     var bookedKey = RedisKeys.GetBookedSeatKey(ticketReservationInfo.Id, seat.RowName, seat.SeatNumber);
-                    var reservedKey = RedisKeys.GetReservedSeatKey(ticketReservationInfo.Id, userId, seat.RowName, seat.SeatNumber);
+                    var reservedKey = RedisKeys.GetReservedSeatKey(ticketReservationInfo.Id, userId, seat.RowName,
+                        seat.SeatNumber);
 
                     redisArgs.Add(bookedKey);
                     redisArgs.Add(reservedKey);
@@ -65,7 +66,8 @@ public class ReservationService : IReservationService
                 // Add seat reservation write commands (HSET for each reserved seat key)
                 foreach (var seat in ticketReservationInfo.SeatsChosen)
                 {
-                    var reservedSeatKey = RedisKeys.GetReservedSeatKey(ticketReservationInfo.Id, userId, seat.RowName, seat.SeatNumber);
+                    var reservedSeatKey = RedisKeys.GetReservedSeatKey(ticketReservationInfo.Id, userId, seat.RowName,
+                        seat.SeatNumber);
                     redisArgs.Add(reservedSeatKey);
                     redisArgs.Add("userId");
                     redisArgs.Add(userId.ToString());
@@ -90,13 +92,14 @@ public class ReservationService : IReservationService
                         .Select(k =>
                         {
                             var parts = k.Split(':');
-                            var row = parts[^2];       // second-to-last part → "C"
-                            var number = parts[^1];    // last part → "24"
-                            return $"{row}{number}";   // → "C24"
+                            var row = parts[^2]; // second-to-last part → "C"
+                            var number = parts[^1]; // last part → "24"
+                            return $"{row}{number}"; // → "C24"
                         })
                         .Distinct()
                         .OrderBy(x => x) // alphabetically, or you can custom sort
-                        .ToList(); ;
+                        .ToList();
+                    ;
 
                     var friendlyMessage = string.Join(", ", readableSeatLabels);
 
@@ -132,7 +135,7 @@ public class ReservationService : IReservationService
                 if (result == -1)
                     throw new Exception("Inventory key not found");
                 if (result == -2)
-                    return false;
+                    throw new TicketReservationException("No ticket left to buy-in");
             }
 
 

@@ -1,5 +1,6 @@
 ﻿using Tickette.Application.Exceptions;
 using Tickette.Domain.Common;
+using Tickette.Domain.Common.Exceptions;
 using Tickette.Domain.ValueObjects;
 
 namespace Tickette.Domain.Entities;
@@ -149,6 +150,9 @@ public sealed class Ticket : BaseEntity
 
     public void ValidateTicket(int quantity)
     {
+        if (DateTime.UtcNow > SaleStartTime)
+            throw new NotAtSaleStartTime();
+
         if (quantity <= 0 || quantity < MinTicketsPerOrder || quantity > MaxTicketsPerOrder)
             throw new InvalidQuantityException();
     }

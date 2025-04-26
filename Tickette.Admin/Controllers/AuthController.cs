@@ -6,6 +6,7 @@ using Tickette.Application.DTOs.Auth;
 using Tickette.Application.Features.Auth.Command;
 using Tickette.Application.Features.Auth.Command.Login;
 using Tickette.Application.Wrappers;
+using Tickette.Domain.Common;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -47,6 +48,7 @@ namespace Tickette.Admin.Controllers
         }
 
         [HttpDelete("{userId:guid}")]
+        [Authorize(Roles = Constant.APPLICATION_ROLE.Admin)]
         public async Task<IActionResult> DeleteUser(Guid userId)
         {
             var result = await _identityServices.DeleteUserAsync(userId);

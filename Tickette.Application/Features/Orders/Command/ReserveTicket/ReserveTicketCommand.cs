@@ -9,6 +9,7 @@ using Tickette.Application.Exceptions;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Common;
 using Tickette.Domain.Common.Exceptions;
+using Tickette.Infrastructure.Messaging;
 
 namespace Tickette.Application.Features.Orders.Command.ReserveTicket;
 
@@ -40,8 +41,6 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
 
     public async Task<Unit> Handle(ReserveTicketCommand request, CancellationToken cancellationToken)
     {
-        bool isSuccess = false;
-
         foreach (var ticket in request.Tickets)
         {
             // Is the ticket valid?
@@ -52,32 +51,24 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
             }
 
             ticketEntity.ValidateTicket(ticket.Quantity);
-
-            // Check if the ticket is already reserved
-            isSuccess = await _reservationService.ReserveTicketsAsync(request.UserId, ticket);
-            // Sometimes Redis might fail to connect, so that if it fails, then we can add fallback
-            // by reserving the ticket in the database
-            if (!isSuccess)
-            {
-                var reserveToDatabase = await _reservationDbSyncService.PersistReservationAsync(request.UserId, ticket);
-                if (!reserveToDatabase)
-                {
-                    throw new TicketReservationException("Failed to reserve tickets. Please try again");
-                }
-
-            }
         }
 
-        // Only sync with database if Redis reservation was successful
-        if (isSuccess)
-        {
-            var message = JsonSerializer.Serialize(request);
-            await _messageProducer.PublishAsync(RabbitMqRoutingKeys.TicketReservationCreated, message);
-        }
-        else
-        {
-            throw new TicketReservationException("Failed to reserve tickets. Please try again");
-        }
+        var message = JsonSerializer.Serialize(request);
+
+        // Wait for response from consumer
+        var result = await _messageProducer.PublishAsync(
+            RabbitMqRoutingKeys.TicketReservationCreated,
+            message,
+            TimeSpan.FromSeconds(5)
+        );
+
+        if (result is null)
+            throw new TicketReservationException("Timed out waiting for reservation confirmation.");
+
+        var response = JsonSerializer.Deserialize<RedisReservationResult>(result);
+
+        if (response is null || !response.Success)
+            throw new TicketReservationException(response?.Message ?? "Unknown error");
 
         return Unit.Value;
     }

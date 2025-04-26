@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.AuditLogs.Common;
 using Tickette.Application.Features.AuditLogs.Query;
 using Tickette.Application.Wrappers;
+using Tickette.Domain.Common;
 
 namespace Tickette.Admin.Controllers
 {
@@ -18,6 +20,7 @@ namespace Tickette.Admin.Controllers
         }
 
         [HttpPost("event")]
+        [Authorize(Roles = Constant.APPLICATION_ROLE.Admin)]
         public async Task<ActionResult<ResponseDto<EventAuditLogDto>>> GetEventAuditLogs([FromBody] GetEventAuditLogsQuery request, CancellationToken cancellationToken)
         {
             var result = await _queryDispatcher.Dispatch<GetEventAuditLogsQuery, PagedResult<EventAuditLogDto>>(request, cancellationToken);

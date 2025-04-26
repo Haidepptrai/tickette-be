@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Features.Users.Common;
@@ -23,6 +24,7 @@ namespace Tickette.Admin.Controllers
         }
 
         [HttpPost("all")]
+        [Authorize(Roles = $"{Constant.APPLICATION_ROLE.Admin},{Constant.APPLICATION_ROLE.Moderator}")]
         public async Task<ActionResult<ResponseDto<PreviewUserResponse>>> GetAllUsers([FromBody] GetAllUsersQuery request, CancellationToken cancellationToken)
         {
             if (request.PageNumber < 1 || request.PageSize < 1)
@@ -39,6 +41,7 @@ namespace Tickette.Admin.Controllers
 
         // Get user by ID, Update user, Delete user, etc.
         [HttpPost("id")]
+        [Authorize(Roles = $"{Constant.APPLICATION_ROLE.Admin},{Constant.APPLICATION_ROLE.Moderator}")]
         public async Task<ActionResult<ResponseDto<GetUserByIdResponse>>> GetUserById([FromBody] GetUserByIdRequest body, CancellationToken cancellationToken)
         {
             var request = new AdminGetUserByIdQuery(body.UserId);
@@ -48,6 +51,7 @@ namespace Tickette.Admin.Controllers
         }
 
         [HttpPost("assign-role")]
+        [Authorize(Roles = $"{Constant.APPLICATION_ROLE.Admin}")]
         public async Task<IActionResult> AssignRole([FromBody] AssignRoleRequest request)
         {
             var result = await _identityServices.AssignToRoleAsync(request.UserId, request.RoleId);

@@ -57,6 +57,14 @@ public class ExceptionHandlingMiddleware
         {
             await HandleExceptionAsync(context, 409, ex.Message);
         }
+        catch (TicketReservationException ex)
+        {
+            await HandleExceptionAsync(context, 409, ex.Message);
+        }
+        catch (NotAtSaleStartTime ex)
+        {
+            await HandleExceptionAsync(context, 409, ex.Message);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, ex.Message);

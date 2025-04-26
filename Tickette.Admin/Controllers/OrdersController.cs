@@ -4,6 +4,8 @@ using Swashbuckle.AspNetCore.Annotations;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Application.Features.Orders.Query.ReviewOrders;
+using Tickette.Application.Features.QRCode.Common;
+using Tickette.Application.Features.QRCode.Queries.AdminCheckQrCodeFraud;
 using Tickette.Application.Wrappers;
 using Tickette.Domain.Common;
 
@@ -35,6 +37,15 @@ namespace Tickette.Admin.Controllers
 
             var response = ResponseHandler.PaginatedResponse(result.Items, meta, "Orders retrieved successfully");
             return Ok(response);
+        }
+
+        [HttpPost("qr-code-check")]
+        [SwaggerOperation("Check QR code fraud")]
+        [Authorize(Roles = Constant.APPLICATION_ROLE.Admin)]
+        public async Task<ActionResult<ResponseDto<DataRetrievedFromQrCode>>> CheckQrCode([FromBody] AdminCheckQrCodeFraudQuery query, CancellationToken cancellation)
+        {
+            var result = await _queryDispatcher.Dispatch<AdminCheckQrCodeFraudQuery, ResponseDto<DataRetrievedFromQrCode>>(query, cancellation);
+            return Ok(result);
         }
     }
 }

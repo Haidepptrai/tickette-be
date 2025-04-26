@@ -47,7 +47,7 @@ public class ReservationDbSyncService : IReservationDbSyncService
                 if (itemToRemove != null)
                 {
                     // Restore inventory
-                    var ticketInventory = await _dbContext.Tickets.FindAsync(ticketReservation.Id);
+                    var ticketInventory = await _dbContext.Tickets.SingleOrDefaultAsync(t => t.Id == ticketReservation.Id);
                     if (ticketInventory != null)
                     {
                         ticketInventory.IncreaseTickets(itemToRemove.Quantity);
@@ -82,7 +82,10 @@ public class ReservationDbSyncService : IReservationDbSyncService
             }
 
             // Decrease ticket inventory
-            var tickets = await _dbContext.Tickets.FindAsync(ticketReservation.Id);
+            var tickets = await _dbContext.Tickets
+                .FromSqlRaw("SELECT * FROM \"tickets\" WHERE \"id\" = {0} FOR UPDATE", ticketReservation.Id)
+                .SingleOrDefaultAsync(t => t.Id == ticketReservation.Id);
+
             if (tickets == null)
             {
                 throw new NotFoundException("Ticket", ticketReservation.Id);
@@ -111,13 +114,29 @@ public class ReservationDbSyncService : IReservationDbSyncService
     {
         var now = DateTime.UtcNow;
 
-        var reservations = await _dbContext.Reservations
-            .Where(r =>
-                r.UserId == userId &&
-                isCleanUp ? r.ExpiresAt > now : r.ExpiresAt > now &&
-                                                r.Status == ReservationStatus.Temporary &&
-                                                r.Items.Any(i => i.TicketId == ticketId)
-            )
+        IQueryable<Reservation> query;
+
+        if (isCleanUp)
+        {
+            // Clean up EXPIRED reservations only
+            query = _dbContext.Reservations
+                .Where(r =>
+                    r.UserId == userId &&
+                    r.ExpiresAt <= now &&
+                    r.Items.Any(i => i.TicketId == ticketId));
+        }
+        else
+        {
+            // Manual release of ACTIVE, TEMPORARY reservations
+            query = _dbContext.Reservations
+                .Where(r =>
+                    r.UserId == userId &&
+                    r.ExpiresAt > now &&
+                    r.Status == ReservationStatus.Temporary &&
+                    r.Items.Any(i => i.TicketId == ticketId));
+        }
+
+        var reservations = await query
             .Include(r => r.Items)
             .ThenInclude(i => i.SeatAssignments)
             .ToListAsync();
@@ -131,7 +150,10 @@ public class ReservationDbSyncService : IReservationDbSyncService
 
             foreach (var item in reservation.Items.Where(i => i.TicketId == ticketId))
             {
-                var ticketEntity = await _dbContext.Tickets.FindAsync(item.TicketId);
+                var ticketEntity = await _dbContext.Tickets
+                    .FromSqlRaw("SELECT * FROM \"tickets\" WHERE \"id\" = {0} FOR UPDATE", item.TicketId)
+                    .SingleOrDefaultAsync();
+
                 if (ticketEntity != null)
                 {
                     ticketEntity.IncreaseTickets(item.Quantity);

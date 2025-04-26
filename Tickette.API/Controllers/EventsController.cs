@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Tickette.API.DTOs;
 using Tickette.API.Helpers;
+using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.Events.Commands.CreateEvent;
 using Tickette.Application.Features.Events.Commands.UpdateEvent;
@@ -10,6 +11,8 @@ using Tickette.Application.Features.Events.Common;
 using Tickette.Application.Features.Events.Common.Client;
 using Tickette.Application.Features.Events.Queries.Client.GetEventByUserId;
 using Tickette.Application.Features.Events.Queries.Client.GetEventDetailStatistic;
+using Tickette.Application.Features.Events.Queries.Client.GetEventSalesDashboard;
+using Tickette.Application.Features.Events.Queries.Client.GetRecentPurchases;
 using Tickette.Application.Features.Events.Queries.Client.GetSeatsOrderedInfo;
 using Tickette.Application.Features.Events.Queries.GetAllEvents;
 using Tickette.Application.Features.Events.Queries.GetEventByCategory;
@@ -132,7 +135,7 @@ public class EventsController : BaseController
     }
 
     [HttpPost("update")]
-    [Authorize]
+    [Authorize(Policy = CommitteeMemberKeys.ManagerAccess)]
     [SwaggerOperation(
         Summary = "Update Event",
         Description = "Update an existing Event, default will have approval status is 0"
@@ -214,5 +217,43 @@ public class EventsController : BaseController
         var result = await _queryDispatcher.Dispatch<GetSeatsOrderedInfoQuery, IEnumerable<SeatsOrderedInfoDto>>(query, cancellationToken);
         var response = ResponseHandler.SuccessResponse(result, "Get seats ordered info successfully");
         return response;
+    }
+
+    [HttpPost("sales-dashboard")]
+    //[Authorize(Policy = CommitteeMemberKeys.ManagerAccess)]
+    [SwaggerOperation(
+        Summary = "Get Event Sales Dashboard",
+        Description = "Get sales data for an event including total revenue, tickets sold, and sales by ticket type with filtering by time range"
+    )]
+    public async Task<ActionResult<ResponseDto<EventSalesDashboardDto>>> GetEventSalesDashboard(
+        GetEventSalesDashboardQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _queryDispatcher.Dispatch<GetEventSalesDashboardQuery, EventSalesDashboardDto>(query, cancellationToken);
+        var response = ResponseHandler.SuccessResponse(result, "Get event sales dashboard successfully");
+        return Ok(response);
+    }
+
+    [HttpPost("recent-purchases")]
+    [Authorize(Policy = CommitteeMemberKeys.ManagerAccess)]
+    [SwaggerOperation(
+        Summary = "Get Recent Purchases for Event",
+        Description = "Get list of recent purchases for an event with pagination and optional email search"
+    )]
+    public async Task<ActionResult<ResponseDto<IEnumerable<RecentPurchaseDto>>>> GetRecentPurchases(
+        GetRecentPurchasesQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _queryDispatcher.Dispatch<GetRecentPurchasesQuery, PagedResult<RecentPurchaseDto>>(query, cancellationToken);
+        
+        var paginationMeta = new PaginationMeta(
+            result.PageNumber,
+            result.PageSize,
+            result.TotalCount,
+            result.TotalPages
+        );
+        
+        var response = ResponseHandler.PaginatedResponse(result.Items, paginationMeta, "Get recent purchases successfully");
+        return Ok(response);
     }
 }

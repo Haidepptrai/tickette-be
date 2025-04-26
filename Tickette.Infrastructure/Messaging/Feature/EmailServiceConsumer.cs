@@ -30,7 +30,7 @@ public class EmailServiceConsumer : BackgroundService
 
                 var wrapper = JsonSerializer.Deserialize<EmailWrapper>(message);
                 if (wrapper == null || string.IsNullOrWhiteSpace(wrapper.Type))
-                    return;
+                    return null;
 
                 switch (wrapper.Type)
                 {
@@ -56,6 +56,8 @@ public class EmailServiceConsumer : BackgroundService
                 // Log the exception
                 Console.WriteLine($"Error while sending email: {ex.Message}");
             }
+
+            return null;
         }, stoppingToken);
     }
 }

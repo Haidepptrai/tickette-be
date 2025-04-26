@@ -1,4 +1,5 @@
-﻿using Tickette.Application.Common.CQRS;
+﻿using Tickette.Application.Common.Constants;
+using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Factories;
 using Tickette.Application.Features.Events.Common;
@@ -89,7 +90,7 @@ public class CreateEventCommandHandler : ICommandHandler<CreateEventCommand, Gui
             newEventCreated.AddEventDates(eventDateEntity);
         }
 
-        var committeeRoleEventOwner = _context.CommitteeRoles.FirstOrDefault(x => x.Name == Constant.COMMITTEE_MEMBER_ROLES.EventOwner);
+        var committeeRoleEventOwner = _context.CommitteeRoles.FirstOrDefault(x => x.Name == CommitteeMemberKeys.COMMITTEE_MEMBER_ROLES.EventOwner);
 
         if (committeeRoleEventOwner == null)
         {

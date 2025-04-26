@@ -93,7 +93,7 @@ public class EventRoleHandler : AuthorizationHandler<EventRoleRequirement>
                 request.Body.Position = 0; // Reset stream position for middleware
 
                 using var bodyJson = JsonDocument.Parse(bodyContent);
-                if (bodyJson.RootElement.TryGetProperty("event_id", out var bodyEventId))
+                if (bodyJson.RootElement.TryGetProperty("eventId", out var bodyEventId))
                 {
                     return bodyEventId.GetString();
                 }

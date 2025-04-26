@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
+using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.CommitteeMembers.Command.AddCommitteeMember;
 using Tickette.Application.Features.CommitteeMembers.Command.ChangeCommitteeMemberRole;
@@ -25,8 +28,9 @@ namespace Tickette.API.Controllers
             _queryDispatcher = queryDispatcher;
         }
 
-        // GET: api/committeeMembers
         [HttpPost("members")]
+        [SwaggerOperation("Get all committee members of event")]
+        [Authorize(Policy = CommitteeMemberKeys.ManagerAccess)]
         public async Task<ResponseDto<GetAllCommitteeMemberOfEventResponse>> GetCommitteeMembersByEvent(GetAllCommitteeMemberOfEventQuery query, CancellationToken cancellation)
         {
             var result = await _queryDispatcher.Dispatch<GetAllCommitteeMemberOfEventQuery, GetAllCommitteeMemberOfEventResponse>(query, cancellation);
@@ -35,8 +39,9 @@ namespace Tickette.API.Controllers
         }
 
 
-        // POST: api/committeeMembers
         [HttpPost("add-member")]
+        [SwaggerOperation(Summary = "Add new committee member to event", Description = "Will sent an email for member after add")]
+        [Authorize(Policy = CommitteeMemberKeys.ManagerAccess)]
         public async Task<ResponseDto<CommitteeMemberDto>> AddNewMemberToEvent([FromBody] AddCommitteeMemberCommand command, CancellationToken cancellation)
         {
             var result = await _commandDispatcher.Dispatch<AddCommitteeMemberCommand, CommitteeMemberDto>(command, cancellation);
@@ -44,9 +49,9 @@ namespace Tickette.API.Controllers
             return ResponseHandler.SuccessResponse(result, "Add member to event successfully");
         }
 
-        // PUT: api/committeeMembers/5
         // Update member role
         [HttpPost("update-role")]
+        [Authorize(Policy = CommitteeMemberKeys.ManagerAccess)]
         public async Task<ResponseDto<Unit>> ChangeMemberRole([FromBody] ChangeCommitteeMemberRoleCommand command, CancellationToken cancellation)
         {
             var result = await _commandDispatcher.Dispatch<ChangeCommitteeMemberRoleCommand, Unit>(command, cancellation);
@@ -54,8 +59,8 @@ namespace Tickette.API.Controllers
             return ResponseHandler.SuccessResponse(result, "Update member role successfully");
         }
 
-        // DELETE:
         [HttpDelete]
+        [Authorize(Policy = CommitteeMemberKeys.ManagerAccess)]
         public async Task<ResponseDto<Unit>> RemoveMemberFromEvent([FromBody] RemoveCommitteeMemberCommand command, CancellationToken cancellation)
         {
             var result = await _commandDispatcher.Dispatch<RemoveCommitteeMemberCommand, Unit>(command, cancellation);

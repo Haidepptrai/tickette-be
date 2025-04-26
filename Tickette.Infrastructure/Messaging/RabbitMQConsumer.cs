@@ -17,14 +17,12 @@ public class RabbitMQConsumer : IMessageConsumer
         _logger = logger;
     }
 
-    public async Task ConsumeAsync(string queueName, Func<string, Task> onMessageReceived, CancellationToken cancellationToken)
+    public async Task ConsumeAsync(string queueName, Func<string, Task<string>> onMessageReceived, CancellationToken cancellationToken)
     {
         try
         {
-            // Create a channel for consuming messages
             var channel = await _rabbitMQConnection.CreateChannelAsync();
 
-            // Declare the queue
             await channel.QueueDeclareAsync(queue: queueName,
                 durable: true,
                 exclusive: false,
@@ -32,40 +30,68 @@ public class RabbitMQConsumer : IMessageConsumer
                 arguments: null,
                 cancellationToken: cancellationToken);
 
-            // Create an async consumer
             var consumer = new AsyncEventingBasicConsumer(channel);
+
             consumer.ReceivedAsync += async (_, ea) =>
             {
-                try
+                const int maxAttempts = 3;
+                string? response = null;
+
+                for (int attempt = 1; attempt <= maxAttempts; attempt++)
                 {
-                    // Extract the message body
-                    var body = ea.Body.ToArray();
-                    var message = Encoding.UTF8.GetString(body);
+                    try
+                    {
+                        var body = ea.Body.ToArray();
+                        var message = Encoding.UTF8.GetString(body);
 
-                    // Process the message
-                    await onMessageReceived(message);
+                        // Call your handler and get the result
+                        response = await onMessageReceived(message);
 
-                    // Acknowledge the message after successful processing
-                    await channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken);
+                        await channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken);
+                        break; // Success
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Attempt {Attempt} failed while processing message.", attempt);
+
+                        if (attempt == maxAttempts)
+                        {
+                            _logger.LogWarning("Max retry attempts reached. Requeuing message.");
+                            await channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: true, cancellationToken);
+                            return;
+                        }
+
+                        var backoff = TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                        await Task.Delay(backoff, cancellationToken);
+                    }
                 }
-                catch (Exception ex)
+
+                // Handle RPC response
+                if (!string.IsNullOrWhiteSpace(ea.BasicProperties?.ReplyTo) && !string.IsNullOrWhiteSpace(ea.BasicProperties.CorrelationId) && response is not null)
                 {
-                    // Log the error and reject the message (optionally requeue it)
-                    _logger.LogError(ex, "Error processing message.");
-                    await channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: true, cancellationToken);
+                    var props = new BasicProperties
+                    {
+                        CorrelationId = ea.BasicProperties.CorrelationId
+                    };
+
+                    ReadOnlyMemory<byte> replyBody = Encoding.UTF8.GetBytes(response);
+                    await channel.BasicPublishAsync(
+                        exchange: "",
+                        routingKey: ea.BasicProperties.ReplyTo,
+                        mandatory: false,
+                        body: replyBody,
+                        basicProperties: props, cancellationToken: cancellationToken);
                 }
             };
 
-            // Start consuming messages
             await channel.BasicConsumeAsync(queue: queueName,
-                autoAck: false, // Manual acknowledgment
+                autoAck: false,
                 consumer: consumer,
                 cancellationToken: cancellationToken);
 
-            // Keep the consumer running until cancellation is requested
             while (!cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(1000, cancellationToken); // Add a delay to avoid tight looping
+                await Task.Delay(1000, cancellationToken);
             }
         }
         catch (Exception ex)
