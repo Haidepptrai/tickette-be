@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Tickette.API.Helpers;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.Users.Command.Client.ChangeUserImage;
+using Tickette.Application.Features.Users.Command.Client.ChangeUserInformation;
 using Tickette.Application.Features.Users.Common;
 using Tickette.Application.Features.Users.Query.Client.GetUserById;
 using Tickette.Application.Wrappers;
@@ -52,6 +53,17 @@ namespace Tickette.API.Controllers
             var query = new ChangeUserImageCommand(Guid.Parse(userId), imageTransferred);
             var result = await _commandDispatcher.Dispatch<ChangeUserImageCommand, string>(query, cancellationToken);
             return ResponseHandler.SuccessResponse(result, "Change user image successfully");
+        }
+
+        [HttpPost("change-information")]
+        [SwaggerOperation(Summary = "Change user information")]
+        public async Task<ActionResult<ResponseDto<Unit>>> ChangeUserInformation(ChangeUserInformationCommand command, CancellationToken cancellationToken)
+        {
+            var userId = GetUserId();
+            command.UserId = Guid.Parse(userId);
+
+            var result = await _commandDispatcher.Dispatch<ChangeUserInformationCommand, Unit>(command, cancellationToken);
+            return ResponseHandler.SuccessResponse(result, "Change user information successfully");
         }
     }
 }

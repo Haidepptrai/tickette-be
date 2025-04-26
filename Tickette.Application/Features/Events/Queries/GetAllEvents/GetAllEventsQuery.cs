@@ -12,6 +12,8 @@ public record GetAllEventsQuery
     public int PageNumber { get; init; } = 1;
 
     public int PageSize { get; init; } = 10;
+
+    public string? Search { get; init; } = null;
 };
 
 public class GetAllEventsQueryHandler : IQueryHandler<GetAllEventsQuery, PagedResult<EventPreviewDto>>
@@ -33,7 +35,15 @@ public class GetAllEventsQueryHandler : IQueryHandler<GetAllEventsQuery, PagedRe
                 .Include(e => e.Category)
                 .Include(e => e.Committee)
                 .Include(e => e.EventDates)
-                .ThenInclude(ed => ed.Tickets);
+                .ThenInclude(ed => ed.Tickets)
+                .AsNoTracking();
+
+            // Apply filtering if a search term is provided
+            if (!string.IsNullOrWhiteSpace(request.Search))
+            {
+                var loweredSearch = request.Search.ToLower();
+                query = query.Where(e => e.Name.ToLower().Contains(loweredSearch));
+            }
 
             // Apply pagination
             var totalCount = await query.CountAsync(cancellationToken);
