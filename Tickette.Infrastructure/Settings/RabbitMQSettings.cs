@@ -1,4 +1,4 @@
-﻿namespace Tickette.Infrastructure.Messaging;
+﻿namespace Tickette.Infrastructure.Settings;
 
 public class RabbitMQSettings
 {

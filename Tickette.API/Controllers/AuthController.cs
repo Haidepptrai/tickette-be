@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.DTOs.Auth;
@@ -19,15 +20,20 @@ namespace Tickette.API.Controllers
     {
         private readonly IIdentityServices _identityServices;
         private readonly ICommandDispatcher _commandDispatcher;
+        private readonly IApplicationDbContext _context;
+        private readonly ITokenService _tokenService;
 
-        public AuthController(IIdentityServices identityServices, ICommandDispatcher commandDispatcher)
+        public AuthController(IIdentityServices identityServices, ICommandDispatcher commandDispatcher, IApplicationDbContext context, ITokenService tokenService)
         {
             _identityServices = identityServices;
             _commandDispatcher = commandDispatcher;
+            _context = context;
+            _tokenService = tokenService;
         }
 
         [HttpPost("register")]
-        public async Task<ActionResult<ResponseDto<Guid>>> Register([FromBody] UserRegisterCommand request, CancellationToken cancellationToken)
+        public async Task<ActionResult<ResponseDto<Guid>>> Register([FromBody] UserRegisterCommand request,
+            CancellationToken cancellationToken)
         {
             var result = await _commandDispatcher.Dispatch<UserRegisterCommand, Guid>(request, cancellationToken);
 
@@ -35,7 +41,8 @@ namespace Tickette.API.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult<ResponseDto<TokenRetrieval>>> Login([FromBody] LoginCommand command, CancellationToken token = default)
+        public async Task<ActionResult<ResponseDto<TokenRetrieval>>> Login([FromBody] LoginCommand command,
+            CancellationToken token = default)
         {
             var result = await _commandDispatcher.Dispatch<LoginCommand, TokenRetrieval>(command, token);
 
@@ -58,9 +65,12 @@ namespace Tickette.API.Controllers
 
         // POST api/auth/login-google
         [HttpPost("sync-google-user")]
-        public async Task<ActionResult<ResponseDto<TokenRetrieval>>> SyncGoogleUser([FromBody] LoginWithGoogleCommand request)
+        public async Task<ActionResult<ResponseDto<TokenRetrieval>>> SyncGoogleUser(
+            [FromBody] LoginWithGoogleCommand request)
         {
-            var result = await _commandDispatcher.Dispatch<LoginWithGoogleCommand, TokenRetrieval>(request, CancellationToken.None);
+            var result =
+                await _commandDispatcher.Dispatch<LoginWithGoogleCommand, TokenRetrieval>(request,
+                    CancellationToken.None);
 
             return Ok(ResponseHandler.SuccessResponse(result, "Google user synced successfully."));
         }
@@ -76,6 +86,47 @@ namespace Tickette.API.Controllers
             }
 
             return Ok(ResponseHandler.SuccessResponse(result, "Email confirmed successfully."));
+        }
+
+        [HttpPost("multiple-register")]
+        public async Task<ActionResult<ResponseDto<Guid>>> MultipleRegister(
+            [FromBody] List<UserRegisterCommand> request, CancellationToken cancellationToken)
+        {
+            var result = new List<Guid>();
+            foreach (var user in request)
+            {
+                var res = await _commandDispatcher.Dispatch<UserRegisterCommand, Guid>(user, cancellationToken);
+                result.Add(res);
+            }
+
+            return Ok(ResponseHandler.SuccessResponse(result, "Users Created Successfully"));
+        }
+
+        [HttpPost("multiple-login")]
+        public async Task<ActionResult<ResponseDto<List<string>>>> Login([FromBody] List<LoginCommand> command,
+            CancellationToken cancellationToken = default)
+        {
+            var users = await _context.Users
+                .ToListAsync(cancellationToken);
+
+            var result = new List<string>();
+            foreach (var user in users)
+            {
+                var token = await _tokenService.GenerateToken(user);
+                result.Add(token);
+            }
+
+            return Ok(ResponseHandler.SuccessResponse(result, "Login Successfully"));
+        }
+
+        [HttpPost("multiple-account")]
+        public async Task<ActionResult<ResponseDto<List<LoginCommand>>>> MultipleAccount(CancellationToken token = default)
+        {
+            var result = await _context.Users
+                .Select(u => new LoginCommand(u.Email, "string"))
+                .ToListAsync(token);
+
+            return Ok(ResponseHandler.SuccessResponse(result, "Login Successfully"));
         }
     }
 }

@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using System.Text.Json;
 using Tickette.Application.Common;
 using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.CQRS;
@@ -25,14 +24,17 @@ public class AddCommitteeMemberCommandHandler : ICommandHandler<AddCommitteeMemb
 {
     private readonly IApplicationDbContext _context;
     private readonly ICacheService _cacheService;
-    private readonly IMessageProducer _messageProducer;
+    private readonly IMessageRequestClient _messageRequestClient;
     private readonly EmailSettings _emailSettings;
 
-    public AddCommitteeMemberCommandHandler(IApplicationDbContext context, ICacheService cacheService, IMessageProducer messageProducer, IOptions<EmailSettings> emailSettings)
+    public AddCommitteeMemberCommandHandler(
+        IApplicationDbContext context,
+        ICacheService cacheService,
+        IOptions<EmailSettings> emailSettings, IMessageRequestClient messageRequestClient)
     {
         _context = context;
         _cacheService = cacheService;
-        _messageProducer = messageProducer;
+        _messageRequestClient = messageRequestClient;
         _emailSettings = emailSettings.Value;
     }
 
@@ -83,8 +85,7 @@ public class AddCommitteeMemberCommandHandler : ICommandHandler<AddCommitteeMemb
         );
 
         var wrapper = EmailWrapperFactory.Create(EmailServiceKeys.AnnounceAddedMember, email);
-        var message = JsonSerializer.Serialize(wrapper);
-        await _messageProducer.PublishAsync(EmailServiceKeys.Email, message);
+        await _messageRequestClient.FireAndForgetAsync(wrapper, cancellationToken);
 
         var result = new CommitteeMemberDto
         {

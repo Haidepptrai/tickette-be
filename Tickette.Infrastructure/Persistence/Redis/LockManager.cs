@@ -13,36 +13,27 @@ public sealed class LockManager
         _lockFactory = lockFactory;
     }
 
-    public async Task<List<IRedLock>> AcquireSeatLocksAsync(
-        Guid ticketId,
-        IEnumerable<SeatOrder> seats
-        )
+    public async Task<List<IRedLock>> AcquireSeatLocksAsync(Guid ticketId, IEnumerable<SeatOrder> seats)
     {
         var acquiredLocks = new List<IRedLock>();
 
-        try
+        foreach (var seat in seats)
         {
-            foreach (var seat in seats)
+            var lockKey = RedisKeys.GetLockedSeat(ticketId, seat);
+            var seatLock = await _lockFactory.CreateLockAsync(lockKey, TimeSpan.FromSeconds(5));
+
+            if (!seatLock.IsAcquired)
             {
-                var lockKey = RedisKeys.GetLockSeat(ticketId, seat);
-                var seatLock = await _lockFactory.CreateLockAsync(lockKey, TimeSpan.FromSeconds(5));
+                // Clean up previously acquired locks before throwing
+                foreach (var l in acquiredLocks)
+                    l.Dispose();
 
-                if (!seatLock.IsAcquired)
-                {
-                    throw new InvalidOperationException($"Failed to lock seat: {seat}");
-                }
-
-                acquiredLocks.Add(seatLock);
+                throw new InvalidOperationException($"Failed to lock seat: {seat}");
             }
 
-            return acquiredLocks;
+            acquiredLocks.Add(seatLock);
         }
-        finally
-        {
-            foreach (var seatLock in acquiredLocks)
-            {
-                seatLock.Dispose();
-            }
-        }
+
+        return acquiredLocks; // caller must Dispose()
     }
 }

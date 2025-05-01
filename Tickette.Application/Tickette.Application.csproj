@@ -35,7 +35,10 @@
     <Folder Include="Features\Tickets\Query\" />
     <Folder Include="Factories\" />
     <Folder Include="Features\Users\Command\Admin\" />
-    <Folder Include="Helpers\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Common\Constants\MessageQueueKeys.cs" />
   </ItemGroup>
 
 </Project>

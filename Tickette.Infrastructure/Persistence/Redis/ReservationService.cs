@@ -1,9 +1,12 @@
 ﻿using Microsoft.Extensions.Options;
+using Polly;
+using RedLockNet;
 using StackExchange.Redis;
 using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Common.Exceptions;
+using Tickette.Domain.Entities;
 
 namespace Tickette.Infrastructure.Persistence.Redis;
 
@@ -19,132 +22,137 @@ public class ReservationService : IReservationService
         _lockManager = lockManager;
         _redisSettings = redisSettings.Value;
     }
+    private static readonly IAsyncPolicy _retryPolicy = Policy
+        .Handle<RedisException>()
+        .Or<TimeoutException>()
+        .WaitAndRetryAsync(
+            retryCount: 3,
+            sleepDurationProvider: attempt => TimeSpan.FromMilliseconds(200 * Math.Pow(2, attempt)), // Exponential backoff
+            onRetry: (exception, timeSpan, retryCount, context) =>
+            {
+                // Optional: log each retry
+            });
 
     /// <summary>
     /// Reserves tickets with seat information
     /// </summary>
-    /// <param name="ticketReservationInfo">Reservation information</param>
+    /// <param name="tickets">Reservation information</param>
     /// <param name="userId">User unique ID who make ticketReservationInfo</param>
     /// <returns>True if ticketReservationInfo was successful</returns>
-    public async Task<bool> ReserveTicketsAsync(Guid userId, TicketReservation ticketReservationInfo)
+    public async Task<bool> ReserveTicketsAsync(Guid userId, ICollection<TicketReservation> tickets)
     {
-        try
+        return await _retryPolicy.ExecuteAsync(async () =>
         {
             var db = _redis.GetDatabase(_redisSettings.DefaultDatabase);
-            var transaction = db.CreateTransaction();
-            string inventoryKey = RedisKeys.GetTicketQuantityKey(ticketReservationInfo.Id);
 
-            if (ticketReservationInfo.SeatsChosen != null)
+            List<IRedLock>? seatLocks = null;
+
+            try
             {
-                await _lockManager.AcquireSeatLocksAsync(ticketReservationInfo.Id, ticketReservationInfo.SeatsChosen);
-
-                var redisKeys = new List<RedisKey>
+                // Only acquire seat locks if needed
+                if (tickets.Any(t => t.SeatsChosen?.Any() == true))
                 {
-                    RedisKeys.GetTicketQuantityKey(ticketReservationInfo.Id),
-                    RedisKeys.GetSeatsReservationKey(ticketReservationInfo.Id, userId)
-                };
-
-                var redisArgs = new List<RedisValue>
-                {
-                    ticketReservationInfo.Quantity,
-                    userId.ToString(),
-                    DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                    ticketReservationInfo.SeatsChosen.Count * 2 // total seat validations (booked + reserved)
-                };
-
-                // Add booked + reserved seat keys for validation
-                foreach (var seat in ticketReservationInfo.SeatsChosen)
-                {
-                    var bookedKey = RedisKeys.GetBookedSeatKey(ticketReservationInfo.Id, seat.RowName, seat.SeatNumber);
-                    var reservedKey = RedisKeys.GetReservedSeatKey(ticketReservationInfo.Id, userId, seat.RowName,
-                        seat.SeatNumber);
-
-                    redisArgs.Add(bookedKey);
-                    redisArgs.Add(reservedKey);
+                    seatLocks = await PreSeatsReservationAsync(tickets, _lockManager);
                 }
 
-                // Add seat reservation write commands (HSET for each reserved seat key)
-                foreach (var seat in ticketReservationInfo.SeatsChosen)
+                foreach (var ticket in tickets)
                 {
-                    var reservedSeatKey = RedisKeys.GetReservedSeatKey(ticketReservationInfo.Id, userId, seat.RowName,
-                        seat.SeatNumber);
-                    redisArgs.Add(reservedSeatKey);
-                    redisArgs.Add("userId");
-                    redisArgs.Add(userId.ToString());
+                    string inventoryKey = RedisKeys.GetTicketQuantityKey(ticket.Id);
 
-                    redisArgs.Add(reservedSeatKey);
-                    redisArgs.Add("reserved_at");
-                    redisArgs.Add(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
-                }
+                    if (ticket.SeatsChosen != null && ticket.SeatsChosen.Any())
+                    {
+                        var userReservationKey = RedisKeys.GetUserTicketReservationKey(ticket.Id, userId);
+                        var reservedSeatsKey = RedisKeys.GetTicketReservedSeatsKey(ticket.Id);
+                        var reservedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
-                var result = await db.ScriptEvaluateAsync(
-                    RedisLuaScripts.ReserveTicketWithSeats,
-                    redisKeys.ToArray(),
-                    redisArgs.ToArray());
+                        // 1. Build seat label list: "B20,C15"
+                        var seatLabels = ticket.SeatsChosen
+                            .Select(seat => $"{seat.RowName}:{seat.SeatNumber}")
+                            .Distinct()
+                            .ToList();
 
-                if (result.Resp3Type == ResultType.Array)
-                {
-                    var conflictSeatKeys = ((RedisResult[])result)
-                        .Select(x => (string)x)
-                        .ToList();
+                        var reservedSeats = await db.SetMembersAsync(reservedSeatsKey);
+                        var alreadyReservedSeats = seatLabels.Intersect(reservedSeats.Select(r => r.ToString())).ToList();
 
-                    var readableSeatLabels = conflictSeatKeys
-                        .Select(k =>
+                        // Abort if any seat is already reserved
+                        if (alreadyReservedSeats.Any())
                         {
-                            var parts = k.Split(':');
-                            var row = parts[^2]; // second-to-last part → "C"
-                            var number = parts[^1]; // last part → "24"
-                            return $"{row}{number}"; // → "C24"
-                        })
-                        .Distinct()
-                        .OrderBy(x => x) // alphabetically, or you can custom sort
-                        .ToList();
-                    ;
+                            throw new SeatOrderedException($"Seat {string.Join(", ", alreadyReservedSeats)} has been taken");
+                        }
 
-                    var friendlyMessage = string.Join(", ", readableSeatLabels);
+                        var seatListStr = string.Join(",", seatLabels);
 
-                    throw new SeatOrderedException($"Some seats are already reserved: {friendlyMessage}");
+                        // 2. Store user’s reservation metadata
+                        var reservationMeta = new HashEntry[]
+                        {
+                            new("quantity", ticket.Quantity),
+                            new("reserved_at", reservedAt),
+                            new("seats", seatListStr)
+                        };
 
+                        await db.HashSetAsync(userReservationKey, reservationMeta);
+
+                        await db.StringDecrementAsync(inventoryKey, seatLabels.Count());
+
+                        // 3. Add each seat to the ticket’s reserved set
+                        var redisSeats = seatLabels.Select(s => (RedisValue)s).ToArray();
+                        await db.SetAddAsync(reservedSeatsKey, redisSeats);
+                    }
+                    else
+                    {
+                        var redisKeys = new List<RedisKey>();
+                        var redisArgs = new List<RedisValue>
+                        {
+                            userId.ToString(),
+                            DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                        };
+
+                        string reservationKey = RedisKeys.GetReservationKey(ticket.Id, userId);
+                        redisKeys.Add(inventoryKey);
+                        redisKeys.Add(reservationKey);
+                        redisArgs.Add(ticket.Quantity);
+
+                        var result = await db.ScriptEvaluateAsync(
+                            RedisLuaScripts.ReserveTicket, // Batched Lua script
+                            redisKeys.ToArray(),
+                            redisArgs.ToArray());
+
+                        if (result.Resp2Type == ResultType.Array)
+                        {
+                            var resultArray = (RedisResult[])result;
+                            var errorCode = (int)(long)resultArray[0];
+                            var errorIndex = (int)(long)resultArray[1];
+
+                            switch (errorCode)
+                            {
+                                case -1:
+                                    throw new Exception($"Inventory key missing for ticket at index {errorIndex}");
+                                case -2:
+                                    throw new TicketReservationException(
+                                        $"Not enough inventory for ticket at index {errorIndex}");
+                            }
+                        }
+
+                        if ((long)result != 1)
+                        {
+                            throw new Exception("Unknown Redis error while reserving tickets without seats.");
+                        }
+
+                    }
                 }
 
-                if ((long)result == -1)
-                    throw new Exception("Inventory key not found.");
-                if ((long)result == -2)
-                    throw new SeatOrderedException("Not enough inventory.");
-
+                return true;
             }
-            else
+            finally
             {
-                string reservationKey = RedisKeys.GetReservationKey(ticketReservationInfo.Id, userId);
-
-                var luaScript = RedisLuaScripts.ReserveTicket;
-
-                var result = (long)await db.ScriptEvaluateAsync(luaScript,
-                    keys: new RedisKey[]
-                    {
-                        inventoryKey,
-                        reservationKey
-                    },
-                    values: new RedisValue[]
-                    {
-                        ticketReservationInfo.Quantity,
-                        userId.ToString(),
-                        DateTimeOffset.UtcNow.ToUnixTimeSeconds()
-                    });
-
-                if (result == -1)
-                    throw new Exception("Inventory key not found");
-                if (result == -2)
-                    throw new TicketReservationException("No ticket left to buy-in");
+                // Always release seat locks if acquired
+                if (seatLocks != null)
+                {
+                    foreach (var l in seatLocks)
+                        l.Dispose();
+                }
             }
-
-
-            return await transaction.ExecuteAsync();
-        }
-        catch (RedisConnectionException)
-        {
-            return false;
-        }
+        });
     }
 
     /// <summary>
@@ -152,8 +160,9 @@ public class ReservationService : IReservationService
     /// </summary>
     public async Task<bool> ValidateReservationAsync(Guid userId, TicketReservation ticketReservationInformation)
     {
-        try
+        return await _retryPolicy.ExecuteAsync(async () =>
         {
+
             var db = _redis.GetDatabase(_redisSettings.DefaultDatabase);
             var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
@@ -163,24 +172,32 @@ public class ReservationService : IReservationService
             {
                 foreach (var seat in ticketReservationInformation.SeatsChosen)
                 {
-                    var reservedSeatKey = RedisKeys.GetReservedSeatKey(ticketReservationInformation.Id, userId,
-                        seat.RowName, seat.SeatNumber);
+                    // 1. Get user-specific reservation key
+                    var reservationKey = RedisKeys.GetUserTicketReservationKey(ticketReservationInformation.Id, userId);
 
-                    // 1. Check if seat ticketReservationInformation key exists
-                    if (!await db.KeyExistsAsync(reservedSeatKey))
+                    // 2. Fetch full metadata hash
+                    var hash = await db.HashGetAllAsync(reservationKey);
+                    if (hash.Length == 0)
                         return false;
 
-                    // 2. Check if this seat is held by *this user*
-                    var storedUserId = await db.HashGetAsync(reservedSeatKey, "userId");
-                    if (storedUserId.IsNullOrEmpty || storedUserId.ToString() != userId.ToString())
+                    var hashDict = hash.ToDictionary(x => x.Name.ToString(), x => x.Value.ToString());
+
+                    // 3. Basic field checks
+                    if (!hashDict.TryGetValue("reserved_at", out var reservedAtRaw) ||
+                        !long.TryParse(reservedAtRaw, out var reservedAt) ||
+                        nowUnix - reservedAt >= reservationTimeoutSeconds)
                         return false;
 
-                    // 3. TTL check
-                    var reservedAtValue = await db.HashGetAsync(reservedSeatKey, "reserved_at");
-                    if (reservedAtValue.IsNull || !long.TryParse(reservedAtValue.ToString(), out var reservedAt))
+                    if (!hashDict.TryGetValue("seats", out var seatStr) || string.IsNullOrWhiteSpace(seatStr))
                         return false;
 
-                    if (nowUnix - reservedAt >= reservationTimeoutSeconds)
+                    var reservedSeats = seatStr.Split(',').Select(s => s.Trim().ToUpperInvariant()).ToHashSet();
+                    var requestedSeats = ticketReservationInformation.SeatsChosen
+                        .Select(s => $"{s.RowName}{s.SeatNumber}".ToUpperInvariant())
+                        .ToHashSet();
+
+                    // 4. Ensure requested seats are all in the reserved list
+                    if (!requestedSeats.SetEquals(reservedSeats))
                         return false;
                 }
             }
@@ -207,15 +224,7 @@ public class ReservationService : IReservationService
             }
 
             return true;
-        }
-        catch (RedisConnectionException)
-        {
-            return false;
-        }
-        catch (Exception)
-        {
-            return false;
-        }
+        });
     }
 
     /// <summary>
@@ -226,18 +235,29 @@ public class ReservationService : IReservationService
         var db = _redis.GetDatabase(_redisSettings.DefaultDatabase);
         var inventoryKey = RedisKeys.GetTicketQuantityKey(ticketReservationInfo.Id);
 
-        if (ticketReservationInfo.SeatsChosen != null)
+        if (ticketReservationInfo.SeatsChosen != null && ticketReservationInfo.SeatsChosen.Any())
         {
-            foreach (var seat in ticketReservationInfo.SeatsChosen)
+            var reservationKey = RedisKeys.GetUserTicketReservationKey(ticketReservationInfo.Id, userId);
+            var reservedSeatsKey = RedisKeys.GetTicketReservedSeatsKey(ticketReservationInfo.Id);
+
+            // 1. Get seats from reservation hash
+            var seatField = await db.HashGetAsync(reservationKey, "seats");
+            var reservedSeats = seatField.IsNullOrEmpty
+                ? []
+                : seatField.ToString().Split(',').Select(s => s.Trim()).ToArray();
+
+            // 2. Remove seat labels from the global reserved set
+            if (reservedSeats.Length > 0)
             {
-                var reservationKey = RedisKeys.GetSeatsReservationKey(ticketReservationInfo.Id, userId);
-                var reservedSeatKey = RedisKeys.GetReservedSeatKey(ticketReservationInfo.Id, userId, seat.RowName, seat.SeatNumber);
-                await db.KeyDeleteAsync(reservedSeatKey);
-                await db.KeyDeleteAsync(reservationKey);
+                var redisSeats = reservedSeats.Select(s => (RedisValue)s).ToArray();
+                await db.SetRemoveAsync(reservedSeatsKey, redisSeats);
             }
 
-            // Add back the quantity to the inventory
-            long quantity = ticketReservationInfo.Quantity;
+            // 3. Delete user reservation metadata
+            await db.KeyDeleteAsync(reservationKey);
+
+            var quantity = ticketReservationInfo.Quantity;
+            // 4. Restore ticket quantity
             await db.StringIncrementAsync(inventoryKey, quantity);
         }
         else
@@ -269,11 +289,8 @@ public class ReservationService : IReservationService
         {
             foreach (var seat in ticketReservationInfo.SeatsChosen)
             {
-                var reservedSeatKey = RedisKeys.GetReservedSeatKey(ticketReservationInfo.Id, userId, seat.RowName, seat.SeatNumber);
                 var bookedSeatKey = RedisKeys.GetBookedSeatKey(ticketReservationInfo.Id, seat.RowName, seat.SeatNumber);
 
-                // Delete temporary reservation key (if it exists)
-                await db.KeyDeleteAsync(reservedSeatKey);
 
                 // Set permanent booked key
                 await db.StringSetAsync(bookedSeatKey, userId.ToString());
@@ -288,4 +305,62 @@ public class ReservationService : IReservationService
 
         return true;
     }
+
+    /// <summary>
+    /// Attempts to acquire all seat locks across multiple tickets before processing reservation.
+    /// </summary>
+    /// <param name="tickets">List of ticket reservations with seat selections.</param>
+    /// <param name="lockManager">LockManage parameters since static function cannot use directly.</param>
+    /// <returns>List of acquired IRedLock instances. Caller is responsible for disposing them.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if any seat is already locked.</exception>
+    public static async Task<List<IRedLock>?> PreSeatsReservationAsync(
+        ICollection<TicketReservation> tickets,
+        LockManager lockManager)
+    {
+        var acquiredLocks = new List<IRedLock>();
+
+        // Flatten all seat+ticket combinations for sorting
+        var seatTargets = new List<(Guid TicketId, SeatOrder Seat)>();
+
+        foreach (var ticket in tickets)
+        {
+            if (ticket.SeatsChosen != null && ticket.SeatsChosen.Any())
+            {
+                foreach (var seat in ticket.SeatsChosen)
+                {
+                    seatTargets.Add((ticket.Id, seat));
+                }
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        // Sort by lock key to prevent deadlocks
+        seatTargets = seatTargets
+            .OrderBy(x => RedisKeys.GetLockedSeat(x.TicketId, x.Seat))
+            .ToList();
+
+        try
+        {
+            foreach (var (ticketId, seat) in seatTargets)
+            {
+                var locks = await lockManager.AcquireSeatLocksAsync(ticketId, new[] { seat });
+
+                // Add only the acquired one (since it's one seat per call here)
+                acquiredLocks.AddRange(locks);
+            }
+
+            return acquiredLocks;
+        }
+        catch
+        {
+            foreach (var l in acquiredLocks)
+                l.Dispose();
+
+            throw new SeatOrderedException("Seat already taken");
+        }
+    }
+
 }

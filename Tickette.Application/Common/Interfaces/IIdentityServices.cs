@@ -29,8 +29,6 @@ public interface IIdentityServices
 
     Task<IEnumerable<RoleResponse>> GetRoleAllRoles();
 
-    Task<User?> FindUserByEmailAsync(string email);
-
     Task<AuthResult<bool>> ChangeUserImageAsync(Guid userId, string image);
 
     Task<string> GenerateEmailConfirmationTokenAsync(Guid userId);

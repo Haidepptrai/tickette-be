@@ -1,6 +1,6 @@
 ﻿namespace Tickette.Application.Common.Constants;
 
-public static class RabbitMqRoutingKeys
+public static class MessageQueueKeys
 {
     public const string TicketReservationCreated = "ticket-reservation-created";
 

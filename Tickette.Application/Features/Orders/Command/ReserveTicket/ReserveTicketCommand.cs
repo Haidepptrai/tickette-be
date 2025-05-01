@@ -1,15 +1,14 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
-using Tickette.Application.Common.Constants;
+using Microsoft.Extensions.Caching.Memory;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Messaging;
-using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Exceptions;
 using Tickette.Application.Features.Orders.Common;
+using Tickette.Application.Wrappers;
 using Tickette.Domain.Common;
 using Tickette.Domain.Common.Exceptions;
-using Tickette.Infrastructure.Messaging;
+using Tickette.Domain.Entities;
 
 namespace Tickette.Application.Features.Orders.Command.ReserveTicket;
 
@@ -26,49 +25,52 @@ public record ReserveTicketCommand
 
 public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand, Unit>
 {
-    private readonly IMessageProducer _messageProducer;
+    private readonly IMessageRequestClient _requestClient;
     private readonly IApplicationDbContext _context;
-    private readonly IReservationService _reservationService;
-    private readonly IReservationDbSyncService _reservationDbSyncService;
+    private IMemoryCache _memoryCache;
 
-    public ReserveTicketCommandHandler(IApplicationDbContext context, IReservationService reservationService, IMessageProducer messageProducer, IReservationDbSyncService reservationDbSyncService)
+    public ReserveTicketCommandHandler(
+        IApplicationDbContext context,
+         IMessageRequestClient requestClient, IMemoryCache memoryCache)
     {
         _context = context;
-        _reservationService = reservationService;
-        _messageProducer = messageProducer;
-        _reservationDbSyncService = reservationDbSyncService;
+        _requestClient = requestClient;
+        _memoryCache = memoryCache;
     }
 
     public async Task<Unit> Handle(ReserveTicketCommand request, CancellationToken cancellationToken)
     {
         foreach (var ticket in request.Tickets)
         {
-            // Is the ticket valid?
-            var ticketEntity = await _context.Tickets.SingleOrDefaultAsync(t => t.Id == ticket.Id, cancellationToken);
-            if (ticketEntity == null)
+            if (_memoryCache.TryGetValue<Ticket>(ticket.Id, out var cachedTicket))
+            {
+                // Cached: validate directly
+                cachedTicket?.ValidateTicket(ticket.Quantity);
+                continue; // Skip DB hit
+            }
+
+            // Cache miss: hit the DB
+            var ticketEntity = await _context.Tickets
+                .SingleOrDefaultAsync(t => t.Id == ticket.Id, cancellationToken);
+
+            if (ticketEntity is null)
             {
                 throw new NotFoundException("Ticket", ticket.Id);
             }
 
+            // Validate and then cache
             ticketEntity.ValidateTicket(ticket.Quantity);
+
+            _memoryCache.Set(ticket.Id, ticketEntity, TimeSpan.FromMinutes(5));
         }
 
-        var message = JsonSerializer.Serialize(request);
-
         // Wait for response from consumer
-        var result = await _messageProducer.PublishAsync(
-            RabbitMqRoutingKeys.TicketReservationCreated,
-            message,
-            TimeSpan.FromSeconds(5)
-        );
+        var response = await _requestClient.PublishAsync<ReserveTicketCommand, RedisReservationResult>(
+            request,
+            cancellationToken);
 
-        if (result is null)
-            throw new TicketReservationException("Timed out waiting for reservation confirmation.");
-
-        var response = JsonSerializer.Deserialize<RedisReservationResult>(result);
-
-        if (response is null || !response.Success)
-            throw new TicketReservationException(response?.Message ?? "Unknown error");
+        if (!response.Success)
+            throw new TicketReservationException(response.Message ?? "Unknown error");
 
         return Unit.Value;
     }

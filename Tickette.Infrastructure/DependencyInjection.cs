@@ -1,5 +1,6 @@
 ﻿using Amazon;
 using Amazon.S3;
+using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -28,6 +29,7 @@ using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Interfaces.Prediction;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Common.Interfaces.Stripe;
+using Tickette.Application.Features.Orders.Command;
 using Tickette.Domain.Entities;
 using Tickette.Infrastructure.Authentication;
 using Tickette.Infrastructure.Authorization.Handlers;
@@ -36,15 +38,16 @@ using Tickette.Infrastructure.CQRS;
 using Tickette.Infrastructure.Data;
 using Tickette.Infrastructure.Data.Interceptors;
 using Tickette.Infrastructure.Email;
+using Tickette.Infrastructure.Extensions;
 using Tickette.Infrastructure.FileStorage;
 using Tickette.Infrastructure.Hubs;
 using Tickette.Infrastructure.Identity;
 using Tickette.Infrastructure.Messaging;
-using Tickette.Infrastructure.Messaging.Feature;
 using Tickette.Infrastructure.Persistence;
 using Tickette.Infrastructure.Persistence.Redis;
 using Tickette.Infrastructure.Prediction;
 using Tickette.Infrastructure.Services;
+using Tickette.Infrastructure.Settings;
 
 namespace Tickette.Infrastructure;
 
@@ -250,17 +253,24 @@ public static class DependencyInjection
     {
         var rabbitMQSettings = new RabbitMQSettings();
         builder.Configuration.GetSection("RabbitMQ").Bind(rabbitMQSettings);
-
         builder.Services.AddSingleton(rabbitMQSettings);
-        builder.Services.AddSingleton<IRabbitMQConnection, RabbitMQConnection>();
-        builder.Services.AddSingleton<IMessageProducer, RabbitMQProducer>();
-        builder.Services.AddSingleton<IMessageConsumer, RabbitMQConsumer>();
 
-        builder.Services.AddHostedService<TicketReservationConsumer>();
-        builder.Services.AddHostedService<TicketCancelReservationConsumer>();
-        builder.Services.AddHostedService<OrderConfirmationConsumer>();
-        builder.Services.AddHostedService<ConfirmCreateOrderEmailService>();
+        builder.Services.AddScoped<IMessageRequestClient, MassTransitMessageRequestClient>();
         builder.Services.AddScoped<IReservationDbSyncService, ReservationDbSyncService>();
+
+        // MassTransit setup
+        builder.Services.AddMassTransit(x =>
+        {
+            MassTransitConfiguration.ConfigureConsumers(x);
+
+            x.AddRequestClient<TestCommand>(); // producers only needed in API
+
+            x.UsingRabbitMq((context, cfg) =>
+            {
+                var settings = context.GetRequiredService<RabbitMQSettings>();
+                MassTransitConfiguration.ConfigureRabbitMq(context, cfg, settings);
+            });
+        });
     }
 
     public static void AddScanQrService(this IHostApplicationBuilder builder)
@@ -411,7 +421,6 @@ public static class DependencyInjection
             .GetSection("EmailSettings");
 
         builder.Services.Configure<EmailSettings>(emailSettings);
-        builder.Services.AddHostedService<EmailServiceConsumer>();
         builder.Services.TryAddScoped<IEmailService, EmailService>();
     }
 

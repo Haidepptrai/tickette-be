@@ -135,7 +135,7 @@ public class ChatSupportHub : Hub
 
     public void UserLeaveQueue()
     {
-        var success = _agentManagementService.RemoveUserFromQueue(Context.ConnectionId);
+        _agentManagementService.RemoveUserFromQueue(Context.ConnectionId);
     }
 
     // Set agent is busy, invoke in front-end when group chat > 3

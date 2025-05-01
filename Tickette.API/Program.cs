@@ -20,7 +20,7 @@ namespace Tickette.API
             builder.Configuration
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .AddUserSecrets<Program>() // 👈 This is critical
+                .AddUserSecrets<Program>()
                 .AddEnvironmentVariables();
 
             // Add services to the container.
