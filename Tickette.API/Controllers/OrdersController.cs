@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Tickette.Application.Common.CQRS;
+using Tickette.Application.Features.Orders.Command;
 using Tickette.Application.Features.Orders.Command.CreateOrder;
 using Tickette.Application.Features.Orders.Command.RemoveReserveTicket;
 using Tickette.Application.Features.Orders.Command.ReserveTicket;
@@ -29,6 +30,13 @@ public class OrdersController : BaseController
         _queryDispatcher = queryDispatcher;
     }
 
+    [HttpPost("test")]
+    public async Task<ActionResult<string>> Test(CancellationToken cancellationToken)
+    {
+        await _commandDispatcher.Dispatch<TestCommand, Unit>(new TestCommand(), cancellationToken);
+
+        return Ok("Test command executed successfully");
+    }
     [HttpPost("my-orders")]
     [Authorize]
     public async Task<ActionResult<ResponseDto<List<OrderedTicketGroupListDto>>>> Get([FromBody] ReviewOrdersQuery query, CancellationToken cancellation)

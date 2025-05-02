@@ -18,4 +18,9 @@ public sealed class EventSeatMap
     {
         return new EventSeatMap(sections, tickets);
     }
+
+    public IEnumerable<EventSeat> GetAllSeats()
+    {
+        return Tickets?.Where(t => t.Seats != null).SelectMany(t => t.Seats!) ?? [];
+    }
 }

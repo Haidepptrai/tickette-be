@@ -245,14 +245,14 @@ public class EventsController : BaseController
         CancellationToken cancellationToken = default)
     {
         var result = await _queryDispatcher.Dispatch<GetRecentPurchasesQuery, PagedResult<RecentPurchaseDto>>(query, cancellationToken);
-        
+
         var paginationMeta = new PaginationMeta(
             result.PageNumber,
             result.PageSize,
             result.TotalCount,
             result.TotalPages
         );
-        
+
         var response = ResponseHandler.PaginatedResponse(result.Items, paginationMeta, "Get recent purchases successfully");
         return Ok(response);
     }

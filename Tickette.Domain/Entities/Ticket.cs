@@ -150,7 +150,7 @@ public sealed class Ticket : BaseEntity
 
     public void ValidateTicket(int quantity)
     {
-        if (DateTime.UtcNow > SaleStartTime)
+        if (DateTime.UtcNow < SaleStartTime)
             throw new NotAtSaleStartTime();
 
         if (quantity <= 0 || quantity < MinTicketsPerOrder || quantity > MaxTicketsPerOrder)

@@ -1,7 +1,8 @@
-﻿namespace Tickette.Infrastructure.Messaging;
+﻿namespace Tickette.Application.Wrappers;
 
 public class RedisReservationResult
 {
+    public Guid? CorrelationId { get; set; }
     public bool Success { get; set; }
     public string? ErrorCode { get; set; } // Optional: "SeatConflict", "InventoryMissing", etc.
     public string? Message { get; set; }   // Human-readable explanation

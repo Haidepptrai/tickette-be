@@ -14,16 +14,17 @@ public static class RedisKeys
     public static string GetReservationKey(Guid ticketId, Guid userId) =>
         $"{Prefix}:reservation:{ticketId}:{userId}";
 
-    // This key is used to store the reservation info for how many quantity reduce
-    // for reservation with seats
-    public static string GetSeatsReservationKey(Guid ticketId, Guid userId) =>
-        $"{Prefix}:seat_reservation_info:{ticketId}:{userId}";
+    // This key will store user’s full reservation metadata
+    public static string GetUserTicketReservationKey(Guid ticketId, Guid userId) =>
+        $"{Prefix}:seat_reservation:{ticketId}:{userId}";
 
-    public static string GetReservedSeatKey(Guid ticketId, Guid userId, string rowName, string seatNumber) =>
-        $"{Prefix}:seat_reservation:{ticketId}:{userId}:seat:{rowName}:{seatNumber}";
+    // Tracks all currently reserved seat labels for a specific ticket
+    public static string GetTicketReservedSeatsKey(Guid ticketId) =>
+        $"{Prefix}:ticket_reserved_seats:{ticketId}";
 
-    public static string GetLockSeat(Guid ticketId, SeatOrder seat) =>
-        $"lock:reserve:{ticketId}:{seat.RowName}{seat.SeatNumber}";
+    // This key is used to store the lock for a specific seat
+    public static string GetLockedSeat(Guid ticketId, SeatOrder seat) =>
+        $"{Prefix}:lock:reserve:{ticketId}:{seat.RowName}{seat.SeatNumber}";
 
     public static string GetBookedSeatKey(Guid ticketId, string row, string seat) =>
         $"booked:{ticketId}:seat:{row}-{seat}";

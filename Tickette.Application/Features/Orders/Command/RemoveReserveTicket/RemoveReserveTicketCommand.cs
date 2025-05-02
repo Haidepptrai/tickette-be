@@ -1,6 +1,4 @@
-﻿using System.Text.Json;
-using Tickette.Application.Common.Constants;
-using Tickette.Application.Common.CQRS;
+﻿using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Common;
@@ -20,19 +18,16 @@ public record RemoveReserveTicketCommand
 
 public class RemoveReserveTicketCommandHandler : ICommandHandler<RemoveReserveTicketCommand, Unit>
 {
-    private readonly IMessageProducer _messageProducer;
+    private readonly IMessageRequestClient _messageRequestClient;
 
-    public RemoveReserveTicketCommandHandler(IMessageProducer messageProducer)
+    public RemoveReserveTicketCommandHandler(IMessageRequestClient messageRequestClient)
     {
-        _messageProducer = messageProducer;
+        _messageRequestClient = messageRequestClient;
     }
 
     public async Task<Unit> Handle(RemoveReserveTicketCommand query, CancellationToken cancellation)
     {
-        var message = JsonSerializer.Serialize(query);
-
-        await _messageProducer.PublishAsync(RabbitMqRoutingKeys.TicketReservationCancelled, message);
-
+        await _messageRequestClient.FireAndForgetAsync(query, cancellation);
         return Unit.Value;
     }
 }

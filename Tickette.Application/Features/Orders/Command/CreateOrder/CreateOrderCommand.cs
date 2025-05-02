@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
 using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
@@ -7,6 +6,7 @@ using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Common.Models.Email;
 using Tickette.Application.Exceptions;
+using Tickette.Application.Factories;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Entities;
 using Tickette.Domain.ValueObjects;
@@ -29,15 +29,19 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
 {
     private readonly IApplicationDbContext _context;
     private readonly IReservationService _reservationService;
-    private readonly IMessageProducer _messageProducer;
+    private readonly IMessageRequestClient _messageRequestClient;
     private readonly IReservationDbSyncService _reservationDbSyncService;
 
-    public CreateOrderCommandHandler(IApplicationDbContext context, IReservationService reservationService, IMessageProducer messageProducer, IReservationDbSyncService reservationDbSyncService)
+    public CreateOrderCommandHandler(
+        IApplicationDbContext context,
+        IReservationService reservationService,
+        IReservationDbSyncService reservationDbSyncService,
+        IMessageRequestClient messageRequestClient)
     {
         _context = context;
         _reservationService = reservationService;
-        _messageProducer = messageProducer;
         _reservationDbSyncService = reservationDbSyncService;
+        _messageRequestClient = messageRequestClient;
     }
 
     public async Task<CreateOrderResponse> Handle(CreateOrderCommand query, CancellationToken cancellation)
@@ -138,12 +142,12 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
             $"/tickets/download/{order.Id}"
         );
 
-        var emailMessageJson = JsonSerializer.Serialize(emailMessage);
-        await _messageProducer.PublishAsync(EmailServiceKeys.EmailConfirmCreateOrder, emailMessageJson);
+        var emailWrapper = EmailWrapperFactory.Create(EmailServiceKeys.EmailConfirmCreateOrder, emailMessage);
+
+        await _messageRequestClient.FireAndForgetAsync(emailWrapper, cancellation);
 
         // Publish message to RabbitMQ to set reservation to confirm
-        var message = JsonSerializer.Serialize(query);
-        await _messageProducer.PublishAsync(RabbitMqRoutingKeys.TicketReservationConfirmed, message);
+        await _messageRequestClient.FireAndForgetAsync(query, cancellation);
 
         return response;
     }

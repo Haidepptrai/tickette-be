@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
 using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
@@ -24,12 +23,12 @@ public record UserRegisterCommand
 public class UserRegisterCommandHandler : ICommandHandler<UserRegisterCommand, Guid>
 {
     private readonly IIdentityServices _identityServices;
-    private readonly IMessageProducer _messageProducer;
+    private readonly IMessageRequestClient _messageRequestClient;
 
-    public UserRegisterCommandHandler(IIdentityServices identityServices, IMessageProducer messageProducer)
+    public UserRegisterCommandHandler(IIdentityServices identityServices, IMessageRequestClient messageRequestClient)
     {
         _identityServices = identityServices;
-        _messageProducer = messageProducer;
+        _messageRequestClient = messageRequestClient;
     }
 
     public async Task<Guid> Handle(UserRegisterCommand command, CancellationToken cancellationToken)
@@ -48,9 +47,7 @@ public class UserRegisterCommandHandler : ICommandHandler<UserRegisterCommand, G
 
             var wrapper = EmailWrapperFactory.Create(EmailServiceKeys.EmailConfirm, emailConfirmModel);
 
-            var message = JsonSerializer.Serialize(wrapper);
-
-            await _messageProducer.PublishAsync(EmailServiceKeys.Email, message);
+            //await _messageRequestClient.FireAndForgetAsync(wrapper, cancellationToken);
         }
 
         return result;

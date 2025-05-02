@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using Tickette.Application.Common.Constants;
-using Tickette.Application.Common.Interfaces;
 using Tickette.Infrastructure.Persistence;
 
 namespace Tickette.Infrastructure.Services;
@@ -122,9 +121,9 @@ public class ExpiredReservationCleanupService : BackgroundService
                         {
                             // Sync the reservation state in the database
                             var scope = _serviceProvider.CreateScope();
-                            var reservationDbSync = scope.ServiceProvider.GetRequiredService<IReservationDbSyncService>();
+                            //var reservationDbSync = scope.ServiceProvider.GetRequiredService<IReservationDbSyncService>();
 
-                            await reservationDbSync.ReleaseReservationFromDatabaseAsync(Guid.Parse(userId), ticketId, true);
+                            //await reservationDbSync.ReleaseReservationFromDatabaseAsync(Guid.Parse(userId), ticketId, true);
 
                             processedCount++;
                             _logger.LogInformation(
@@ -151,8 +150,6 @@ public class ExpiredReservationCleanupService : BackgroundService
         var reservedSeatKeyPattern = "Tickette:seat_reservation:*";
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
-        int processedCount = 0;
-
         // Use SCAN to find all reserved seat keys
         foreach (var key in server.Keys(pattern: reservedSeatKeyPattern))
         {
@@ -176,44 +173,32 @@ public class ExpiredReservationCleanupService : BackgroundService
             // Check if seat reservation has expired (15 minutes = 900 seconds)
             if (now - reservedAt > 60)
             {
-                // Format is "Tickette:seat_reservation:{ticketId}:{userId}:seat:{rowName}:{seatNumber}"
+                // Format is "Tickette:seat_reservation:{ticketId}:{userId}"
                 var parts = keyStr.Split(':');
-                if (parts.Length >= 7)
+                if (parts.Length >= 4)
                 {
                     string ticketIdStr = parts[2];
-                    string userId = parts[3];
-                    string rowName = parts[5];
-                    string seatNumber = parts[6];
-
+                    var seatsReserved = await db.HashGetAsync(keyStr, "seats");
+                    var seatsReservedStr = seatsReserved.ToString().Split(',');
+                    string reservedSeatsKey = RedisKeys.GetTicketReservedSeatsKey(Guid.Parse(ticketIdStr));
                     if (Guid.TryParse(ticketIdStr, out Guid ticketId))
                     {
-                        // Delete the seat reservation
                         bool success = await db.KeyDeleteAsync(keyStr);
+                        string inventoryKey = RedisKeys.GetTicketQuantityKey(ticketId);
 
                         if (success)
                         {
-                            // Restore the inventory atomically in Redis
-                            string inventoryKey = RedisKeys.GetTicketQuantityKey(ticketId);
-                            await db.StringIncrementAsync(inventoryKey, 1);
-
-                            // Sync the seat reservation state in the database
-                            var scope = _serviceProvider.CreateScope();
-                            var reservationDbSync = scope.ServiceProvider.GetRequiredService<IReservationDbSyncService>();
-                            await reservationDbSync.ReleaseReservationFromDatabaseAsync(Guid.Parse(userId), ticketId, true);
-
-                            processedCount++;
-                            _logger.LogInformation(
-                                "Cleaned up expired seat reservation for ticket {TicketId}, seat {RowName}{SeatNumber}",
-                                ticketId, rowName, seatNumber);
+                            // Remove each specified seat from the Redis set
+                            foreach (var seat in seatsReservedStr)
+                            {
+                                await db.SetRemoveAsync(reservedSeatsKey, seat);
+                                await db.StringIncrementAsync(inventoryKey);
+                            }
                         }
+
                     }
                 }
             }
-        }
-
-        if (processedCount > 0)
-        {
-            _logger.LogInformation("Processed {Count} expired seat reservations", processedCount);
         }
     }
 }

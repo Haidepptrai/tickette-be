@@ -1,56 +1,70 @@
--- reserve_ticket_with_seats.lua
+-- reserve_multiple_tickets_with_seats.lua
 
-    -- KEYS[1] = inventory key
-    -- KEYS[2] = reservation key
-    -- Remaining KEYS: dynamic seat keys
-    -- ARGV[1] = new quantity
-    -- ARGV[2] = user ID
-    -- ARGV[3] = reserved_at timestamp
-    -- ARGV[4] = seat count (N)
-    -- ARGV[5..(5+N-1)] = seat keys to check (reserved + booked)
-    -- ARGV[(5+N)..] = flattened key-value pairs to write
+-- KEYS = inventory/reservation keys + all seat keys
+-- ARGV = [userId, timestamp, ticketCount,
+--         seatCount1, qty1, seatKeys1..., writeArgs1...,
+--         seatCount2, qty2, seatKeys2..., writeArgs2..., ...]
 
-local stock = tonumber(redis.call('GET', KEYS[1]))
-local newQty = tonumber(ARGV[1])
-local userId = ARGV[2]
-local timestamp = ARGV[3]
-local seatCount = tonumber(ARGV[4])
-local oldQty = 0
+local userId = ARGV[1]
+local timestamp = ARGV[2]
+local ticketCount = tonumber(ARGV[3])
 
-    -- Read old reservation quantity
-if redis.call('EXISTS', KEYS[2]) == 1 then
-    oldQty = tonumber(redis.call('HGET', KEYS[2], 'quantity')) or 0
-end
-
-local diff = newQty - oldQty
-if stock == nil then return -1 end
-if stock < diff then return -2 end
-
-    -- Validate all seats
+local index = 4
 local conflictSeats = {}
-for i = 1, seatCount do
-    local seatKey = ARGV[4 + i]
-    if redis.call('EXISTS', seatKey) == 1 then
-        table.insert(conflictSeats, seatKey)
+
+for i = 1, ticketCount do
+    local invKey = KEYS[i * 2 - 1]
+    local resKey = KEYS[i * 2]
+    local seatCount = tonumber(ARGV[index])
+    local newQty = tonumber(ARGV[index + 1])
+    local oldQty = 0
+
+    index = index + 2
+
+    -- Read old quantity
+    if redis.call('EXISTS', resKey) == 1 then
+        oldQty = tonumber(redis.call('HGET', resKey, 'quantity')) or 0
+    end
+
+    local diff = newQty - oldQty
+    local stock = tonumber(redis.call('GET', invKey))
+
+    if stock == nil then return {-1, i} end
+    if stock < diff then return {-2, i} end
+
+    -- Check seat conflicts
+    for j = 1, seatCount do
+        local seatKey = ARGV[index]
+        if redis.call('EXISTS', seatKey) == 1 then
+            table.insert(conflictSeats, seatKey)
+        end
+        index = index + 1
+    end
+
+    -- HSET reservation
+    redis.call('HSET', resKey,
+        'quantity', newQty,
+        'user_id', userId,
+        'reserved_at', timestamp
+    )
+
+    -- Update inventory
+    redis.call('DECRBY', invKey, diff)
+
+    -- HSET for seat reservations (3 at a time: key, field, value)
+    local writeCount = tonumber(ARGV[index])
+    index = index + 1
+    for w = 1, writeCount do
+        local seatHKey = ARGV[index]
+        local field = ARGV[index + 1]
+        local value = ARGV[index + 2]
+        redis.call('HSET', seatHKey, field, value)
+        index = index + 3
     end
 end
 
 if #conflictSeats > 0 then
     return conflictSeats
-end
-
-
-    -- All checks passed, reserve seats + update inventory
-redis.call('DECRBY', KEYS[1], diff)
-redis.call('HSET', KEYS[2], 'quantity', newQty, 'user_id', userId, 'reserved_at', timestamp)
-
-    -- Set seat reservations
-local offset = 4 + seatCount
-for i = offset + 1, #ARGV, 3 do
-    local key = ARGV[i]
-local field = ARGV[i + 1]
-local value = ARGV[i + 2]
-redis.call('HSET', key, field, value)
 end
 
 return 1
