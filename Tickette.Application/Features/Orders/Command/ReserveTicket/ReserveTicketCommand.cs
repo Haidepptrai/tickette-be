@@ -15,6 +15,8 @@ namespace Tickette.Application.Features.Orders.Command.ReserveTicket;
 public record ReserveTicketCommand
 {
     public Guid UserId { get; set; }
+    public Guid EventDateId { get; set; }
+    public bool HasSeatMap { get; set; }
     public required ICollection<TicketReservation> Tickets { get; init; }
 
     public void UpdateUserId(Guid userId)
@@ -27,7 +29,7 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
 {
     private readonly IMessageRequestClient _requestClient;
     private readonly IApplicationDbContext _context;
-    private IMemoryCache _memoryCache;
+    private readonly IMemoryCache _memoryCache;
 
     public ReserveTicketCommandHandler(
         IApplicationDbContext context,
@@ -40,34 +42,45 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
 
     public async Task<Unit> Handle(ReserveTicketCommand request, CancellationToken cancellationToken)
     {
+        EventDate? eventDate = null;
+
+        // Load EventDate only if needed
+        if (request.HasSeatMap)
+        {
+            eventDate = await _context.EventDates
+                .SingleOrDefaultAsync(e => e.Id == request.EventDateId, cancellationToken);
+
+            if (eventDate is null)
+                throw new NotFoundException("EventDate", request.EventDateId);
+        }
+
         foreach (var ticket in request.Tickets)
         {
             if (_memoryCache.TryGetValue<Ticket>(ticket.Id, out var cachedTicket))
             {
-                // Cached: validate directly
+                if (request.HasSeatMap)
+                {
+                    eventDate!.ValidateSelection(eventDate.SeatMap!, ticket.SeatsChosen!);
+                }
                 cachedTicket?.ValidateTicket(ticket.Quantity);
-                continue; // Skip DB hit
+
+                continue;
             }
 
-            // Cache miss: hit the DB
             var ticketEntity = await _context.Tickets
+                .Include(t => t.EventDate) // optional, only if needed later
                 .SingleOrDefaultAsync(t => t.Id == ticket.Id, cancellationToken);
 
             if (ticketEntity is null)
-            {
                 throw new NotFoundException("Ticket", ticket.Id);
-            }
 
-            // Validate and then cache
-            ticketEntity.ValidateTicket(ticket.Quantity);
+            eventDate!.ValidateSelection(eventDate.SeatMap!, ticket.SeatsChosen!);
 
             _memoryCache.Set(ticket.Id, ticketEntity, TimeSpan.FromMinutes(5));
         }
 
-        // Wait for response from consumer
         var response = await _requestClient.PublishAsync<ReserveTicketCommand, RedisReservationResult>(
-            request,
-            cancellationToken);
+            request, cancellationToken);
 
         if (!response.Success)
             throw new TicketReservationException(response.Message ?? "Unknown error");
