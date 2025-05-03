@@ -34,17 +34,11 @@ namespace Tickette.Admin.Controllers
         }
 
         [HttpPost("refresh-token")]
-        [Authorize]
-        public async Task<ResponseDto<object>> RefreshToken([FromBody] string refreshToken)
+        public async Task<ResponseDto<TokenRetrieval>> RefreshToken([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
         {
-            var result = await _identityServices.RefreshTokenAsync(refreshToken);
+            var result = await _identityServices.RefreshTokenAsync(request.RefreshToken, cancellationToken);
 
-            if (!result.Succeeded)
-            {
-                return ResponseHandler.ErrorResponse<object>(result);
-            }
-
-            return ResponseHandler.SuccessResponse<object>(result.Data, "Token refreshed successfully.");
+            return ResponseHandler.SuccessResponse(result, "Token refreshed successfully.");
         }
 
         [HttpDelete("{userId:guid}")]

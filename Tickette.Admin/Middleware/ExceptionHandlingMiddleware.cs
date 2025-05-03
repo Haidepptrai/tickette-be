@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Security.Authentication;
+using System.Text.Json;
 using Tickette.Application.Exceptions;
 using Tickette.Application.Wrappers;
 using Tickette.Domain.Common;
@@ -56,6 +57,10 @@ public class ExceptionHandlingMiddleware
         catch (SeatOrderedException ex)
         {
             await HandleExceptionAsync(context, 409, ex.Message);
+        }
+        catch (AuthenticationException ex)
+        {
+            await HandleExceptionAsync(context, 400, ex.Message);
         }
         catch (Exception ex)
         {

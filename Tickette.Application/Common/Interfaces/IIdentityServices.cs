@@ -11,9 +11,11 @@ public interface IIdentityServices
 {
     Task<TokenRetrieval> LoginAsync(string userEmail, string password, CancellationToken cancellation);
 
+    Task<bool> LogoutAsync(Guid userId, string refreshToken, CancellationToken cancellationToken);
+
     Task<Guid> CreateUserAsync(string fullName, string userEmail, string password);
 
-    Task<AuthResult<TokenRetrieval>> RefreshTokenAsync(string refreshToken);
+    Task<TokenRetrieval> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken);
 
     Task<bool> AssignToRoleAsync(Guid userId, IEnumerable<Guid>? roleId);
 

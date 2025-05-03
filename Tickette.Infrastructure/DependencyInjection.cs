@@ -105,7 +105,8 @@ public static class DependencyInjection
                     ValidIssuer = builder.Configuration["Jwt:Issuer"],
                     ValidAudience = builder.Configuration["Jwt:Audience"],
                     IssuerSigningKey = new SymmetricSecurityKey(key),
-                    RoleClaimType = ClaimTypes.Role
+                    RoleClaimType = ClaimTypes.Role,
+                    ClockSkew = TimeSpan.Zero // short-lived tokens
                 };
 
                 // Disable claim type remapping

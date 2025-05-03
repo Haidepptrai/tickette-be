@@ -82,10 +82,9 @@ public class IdentityServices : IIdentityServices
         // Generate tokens
         var accessToken = await _tokenService.GenerateToken(user);
         var refreshToken = _tokenService.GenerateRefreshToken();
-        var refreshTokenExpiryTime = DateTime.UtcNow.AddMonths(1);
 
         // Save refresh token with cancellation support
-        await AddOrUpdateRefreshTokenAsync(user.Id, refreshToken, refreshTokenExpiryTime, cancellation);
+        await AddOrUpdateRefreshTokenAsync(user.Id, refreshToken, cancellation);
 
         var resultReturn = new TokenRetrieval
         {
@@ -98,45 +97,74 @@ public class IdentityServices : IIdentityServices
         return resultReturn;
     }
 
-    public async Task<AuthResult<TokenRetrieval>> RefreshTokenAsync(string refreshToken)
+    public async Task<bool> LogoutAsync(Guid userId, string refreshToken, CancellationToken cancellationToken)
     {
         // Validate refresh token
         var user = await _userManager.Users
             .Include(u => u.RefreshTokens)
-            .SingleOrDefaultAsync(u => u.RefreshTokens.Any(rt => rt.Token == refreshToken));
+            .SingleOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
         if (user == null)
         {
-            return AuthResult<TokenRetrieval>.Failure(["Invalid refresh token."]);
+            throw new AuthenticationException("User not found.");
         }
 
-        var token = user.RefreshTokens.SingleOrDefault(rt => rt.Token == refreshToken);
-        if (token == null || token.ExpiryTime <= DateTime.UtcNow)
+        // Remove the refresh token
+        var oldRefreshToken = user.RefreshTokens.SingleOrDefault(rt => rt.Token == refreshToken);
+
+        if (oldRefreshToken != null)
         {
-            return AuthResult<TokenRetrieval>.Failure(["Invalid or expired refresh token."]);
+            _context.RefreshTokens.Remove(oldRefreshToken);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        return true;
+    }
+
+    public async Task<TokenRetrieval> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken)
+    {
+        // Validate refresh token
+        var user = await _userManager.Users
+            .Include(u => u.RefreshTokens)
+            .SingleOrDefaultAsync(u => u.RefreshTokens.Any(rt => rt.Token == refreshToken), cancellationToken);
+
+        if (user == null)
+        {
+            throw new AuthenticationException("Invalid refresh token.");
+        }
+
+        var oldRefreshToken = user.RefreshTokens.SingleOrDefault(rt => rt.Token == refreshToken);
+        if (oldRefreshToken == null)
+        {
+            throw new AuthenticationException("Invalid refresh token.");
+        }
+
+        if (DateTime.UtcNow > oldRefreshToken.ExpiryTime)
+        {
+            // Remove the old refresh token
+            _context.RefreshTokens.Remove(oldRefreshToken);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            throw new AuthenticationException("Expired refresh token.");
+
         }
 
         // Generate new tokens
         var newAccessToken = await _tokenService.GenerateToken(user);
-        var newRefreshToken = _tokenService.GenerateRefreshToken();
-        var newExpiryTime = DateTime.UtcNow.AddMonths(1);
-
-        user.RefreshTokens.Remove(token);
-        user.AddRefreshToken(newRefreshToken, newExpiryTime);
 
         // Update user in database
         var updateResult = await _userManager.UpdateAsync(user);
         if (!updateResult.Succeeded)
         {
-            return AuthResult<TokenRetrieval>.Failure(updateResult.Errors.Select(e => e.Description));
+            throw new InvalidOperationException("Unknown Exception");
         }
 
-        return AuthResult<TokenRetrieval>.Success(new TokenRetrieval
+        return new TokenRetrieval
         {
             UserId = user.Id,
             AccessToken = newAccessToken,
-            RefreshToken = newRefreshToken
-        });
+            RefreshToken = "",
+        };
     }
 
     public async Task<bool> AssignToRoleAsync(Guid userId, IEnumerable<Guid>? roleIds)
@@ -296,8 +324,6 @@ public class IdentityServices : IIdentityServices
         );
     }
 
-
-
     public async Task<TokenRetrieval> SyncGoogleUserAsync(LoginWithGoogleCommand request)
     {
         // Check if the user exists in the database
@@ -325,10 +351,9 @@ public class IdentityServices : IIdentityServices
         // Generate tokens for the user
         var accessToken = await _tokenService.GenerateToken(user);
         var refreshToken = _tokenService.GenerateRefreshToken();
-        var refreshTokenExpiryTime = DateTime.UtcNow.AddMonths(1);
 
         // Save the refresh token to the database
-        await AddOrUpdateRefreshTokenAsync(user.Id, refreshToken, refreshTokenExpiryTime, CancellationToken.None);
+        await AddOrUpdateRefreshTokenAsync(user.Id, refreshToken, CancellationToken.None);
 
         var result = new TokenRetrieval
         {
@@ -354,16 +379,18 @@ public class IdentityServices : IIdentityServices
         return roles;
     }
 
-    private async Task AddOrUpdateRefreshTokenAsync(Guid userId, string token, DateTime expiryTime, CancellationToken cancellationToken)
+    private async Task AddOrUpdateRefreshTokenAsync(Guid userId, string refreshToken, CancellationToken cancellationToken)
     {
         // Remove expired tokens directly from the database
         _context.RefreshTokens.RemoveRange(
-            _context.RefreshTokens.Where(rt => rt.UserId == userId && rt.ExpiryTime <= DateTime.UtcNow)
+            _context.RefreshTokens.Where(rt => rt.UserId == userId && rt.ExpiryTime < DateTime.UtcNow)
         );
 
+        var refreshTokenExpiryTime = DateTime.UtcNow.AddMonths(1);
+
         // Add the new refresh token
-        var refreshToken = new RefreshToken(token, expiryTime) { UserId = userId };
-        _context.RefreshTokens.Add(refreshToken);
+        var refreshTokenEntity = new RefreshToken(refreshToken, refreshTokenExpiryTime) { UserId = userId };
+        _context.RefreshTokens.Add(refreshTokenEntity);
 
         // Save changes with cancellation support
         await _context.SaveChangesAsync(cancellationToken);

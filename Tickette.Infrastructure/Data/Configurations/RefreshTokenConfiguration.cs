@@ -8,7 +8,7 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
 {
     public void Configure(EntityTypeBuilder<RefreshToken> builder)
     {
-        // Set Token as required and unique
+        // Set RefreshToken as required and unique
         builder.Property(rt => rt.Token)
             .IsRequired()
             .HasMaxLength(500);
