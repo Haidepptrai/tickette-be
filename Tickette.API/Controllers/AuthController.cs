@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
@@ -7,6 +6,7 @@ using Tickette.Application.DTOs.Auth;
 using Tickette.Application.Features.Auth.Command;
 using Tickette.Application.Features.Auth.Command.ConfirmEmail;
 using Tickette.Application.Features.Auth.Command.Login;
+using Tickette.Application.Features.Auth.Command.Logout;
 using Tickette.Application.Wrappers;
 using Tickette.Domain.Common;
 
@@ -16,7 +16,7 @@ namespace Tickette.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController : ControllerBase
+    public class AuthController : BaseController
     {
         private readonly IIdentityServices _identityServices;
         private readonly ICommandDispatcher _commandDispatcher;
@@ -50,27 +50,31 @@ namespace Tickette.API.Controllers
         }
 
         [HttpPost("refresh-token")]
-        [Authorize]
-        public async Task<ResponseDto<object>> RefreshToken([FromBody] string refreshToken)
+        public async Task<ResponseDto<TokenRetrieval>> RefreshToken([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
         {
-            var result = await _identityServices.RefreshTokenAsync(refreshToken);
+            var result = await _identityServices.RefreshTokenAsync(request.RefreshToken, cancellationToken);
 
-            if (!result.Succeeded)
-            {
-                return ResponseHandler.ErrorResponse<object>(result);
-            }
+            return ResponseHandler.SuccessResponse(result, "Token refreshed successfully.");
+        }
 
-            return ResponseHandler.SuccessResponse<object>(result.Data, "Token refreshed successfully.");
+        [HttpPost("logout")]
+        public async Task<ActionResult<ResponseDto<bool>>> Logout([FromBody] LogoutCommand request,
+            CancellationToken token = default)
+        {
+            var userId = GetUserId();
+            request.UserId = Guid.Parse(userId);
+
+            var result = await _commandDispatcher.Dispatch<LogoutCommand, bool>(request, token);
+            return Ok(ResponseHandler.SuccessResponse(result, "Logout Successfully"));
         }
 
         // POST api/auth/login-google
         [HttpPost("sync-google-user")]
         public async Task<ActionResult<ResponseDto<TokenRetrieval>>> SyncGoogleUser(
-            [FromBody] LoginWithGoogleCommand request)
+            [FromBody] LoginWithGoogleCommand request,
+            CancellationToken cancellationToken)
         {
-            var result =
-                await _commandDispatcher.Dispatch<LoginWithGoogleCommand, TokenRetrieval>(request,
-                    CancellationToken.None);
+            var result = await _commandDispatcher.Dispatch<LoginWithGoogleCommand, TokenRetrieval>(request, cancellationToken);
 
             return Ok(ResponseHandler.SuccessResponse(result, "Google user synced successfully."));
         }

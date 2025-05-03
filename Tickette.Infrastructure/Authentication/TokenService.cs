@@ -46,7 +46,7 @@ public class TokenService : ITokenService
             issuer: _configuration["Jwt:Issuer"],
             audience: _configuration["Jwt:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddMonths(1), // Token expiry
+            expires: DateTime.UtcNow.AddMinutes(10), // Token expiry
             signingCredentials: credits);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
@@ -63,37 +63,6 @@ public class TokenService : ITokenService
 
         // Convert the byte array to a base64 string
         return Convert.ToBase64String(randomNumber);
-    }
-
-    public ClaimsPrincipal? GetPrincipalFromExpiredToken(string token)
-    {
-        var tokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateIssuerSigningKey = true,
-            ValidateLifetime = false, // We skip the lifetime validation here
-            ValidIssuer = _configuration["Jwt:Issuer"],
-            ValidAudience = _configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!))
-        };
-
-        var tokenHandler = new JwtSecurityTokenHandler();
-        try
-        {
-            var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out var securityToken);
-            if (securityToken is JwtSecurityToken jwtSecurityToken &&
-                jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
-            {
-                return principal;
-            }
-        }
-        catch
-        {
-            return null;
-        }
-
-        return null;
     }
 }
 
