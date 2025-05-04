@@ -5,7 +5,6 @@ using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Common.Models.Email;
-using Tickette.Application.Exceptions;
 using Tickette.Application.Factories;
 using Tickette.Application.Features.Orders.Common;
 using Tickette.Domain.Entities;
@@ -17,12 +16,15 @@ public record CreateOrderCommand
 {
     public Guid UserId { get; set; }
     public required Guid EventId { get; init; }
+    public required Guid EventDateId { get; init; }
     public required ICollection<TicketReservation> Tickets { get; set; }
 
     public string BuyerEmail { get; init; }
     public string BuyerName { get; init; }
     public string BuyerPhone { get; init; }
     public string? CouponCode { get; init; }
+
+    public bool HasSeatMap { get; set; } = false;
 }
 
 public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, CreateOrderResponse>
@@ -30,17 +32,14 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
     private readonly IApplicationDbContext _context;
     private readonly IReservationService _reservationService;
     private readonly IMessageRequestClient _messageRequestClient;
-    private readonly IReservationDbSyncService _reservationDbSyncService;
 
     public CreateOrderCommandHandler(
         IApplicationDbContext context,
         IReservationService reservationService,
-        IReservationDbSyncService reservationDbSyncService,
         IMessageRequestClient messageRequestClient)
     {
         _context = context;
         _reservationService = reservationService;
-        _reservationDbSyncService = reservationDbSyncService;
         _messageRequestClient = messageRequestClient;
     }
 
@@ -50,7 +49,14 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
         var order = Order.CreateOrder(query.EventId, query.UserId, query.BuyerEmail, query.BuyerName, query.BuyerPhone);
 
         string ticketDetailsHtml = string.Empty;
-        // Add order items
+
+        // Validate the ticket reservations
+        foreach (var ticket in query.Tickets)
+        {
+            await _reservationService.ValidateReservationAsync(query.UserId, ticket);
+        }
+
+        // Add tickets to order
         foreach (var ticket in query.Tickets)
         {
             var ticketInfo = await _context.Tickets
@@ -64,6 +70,12 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
 
                 var orderItem = OrderItem.Create(ticket.Id, ticketInfo.Price, ticket.Quantity, ticket.SectionName, ticket.SeatsChosen?.ToList());
                 order.AddOrderItem(orderItem);
+            }
+
+            // Reduce the ticket quantity in the database
+            if (ticketInfo is not null)
+            {
+                ticketInfo.ReduceTickets(ticket.Quantity);
             }
         }
 
@@ -87,20 +99,6 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Cre
         {
             OrderId = order.Id
         };
-
-        foreach (var ticket in query.Tickets)
-        {
-            var exist = await _reservationService.ValidateReservationAsync(query.UserId, ticket);
-
-            if (!exist)
-            {
-                // Try to validate the reservation in Db
-                var isDbValidateSuccess = await _reservationDbSyncService.IsTicketReservedInDatabaseAsync(query.UserId, ticket.Id);
-
-                if (!isDbValidateSuccess)
-                    throw new NotFoundTicketReservationException();
-            }
-        }
 
         // Send email
         var firstTicket = await _context.Tickets

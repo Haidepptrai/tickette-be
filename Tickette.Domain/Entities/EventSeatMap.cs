@@ -23,4 +23,30 @@ public sealed class EventSeatMap
     {
         return Tickets?.Where(t => t.Seats != null).SelectMany(t => t.Seats!) ?? [];
     }
+
+    public void MarkSeatsAsOrdered(IEnumerable<SeatOrder> reservations)
+    {
+        if (Tickets == null)
+            return;
+
+        // Use HashSet for performance since SeatOrder overrides Equals/GetHashCode
+        var seatOrders = reservations.ToHashSet();
+
+        foreach (var mapping in Tickets)
+        {
+            if (mapping.Seats == null) continue;
+
+            foreach (var seat in mapping.Seats)
+            {
+                // Create a SeatOrder with the same identifying properties
+                var current = new SeatOrder(seat.RowName, seat.Number);
+
+                if (seatOrders.Contains(current))
+                {
+                    seat.SetIsOrdered();
+                }
+            }
+        }
+    }
+
 }

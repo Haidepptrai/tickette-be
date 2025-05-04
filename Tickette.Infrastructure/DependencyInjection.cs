@@ -29,7 +29,6 @@ using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Interfaces.Prediction;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Common.Interfaces.Stripe;
-using Tickette.Application.Features.Orders.Command;
 using Tickette.Domain.Entities;
 using Tickette.Infrastructure.Authentication;
 using Tickette.Infrastructure.Authorization.Handlers;
@@ -261,8 +260,6 @@ public static class DependencyInjection
         builder.Services.AddMassTransit(x =>
         {
             MassTransitConfiguration.ConfigureConsumers(x);
-
-            x.AddRequestClient<TestCommand>(); // producers only needed in API
 
             x.UsingRabbitMq((context, cfg) =>
             {

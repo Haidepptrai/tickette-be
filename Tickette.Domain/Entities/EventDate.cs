@@ -81,28 +81,24 @@ public class EventDate : BaseEntity
             if (firstSelectedIndex == -1 || lastSelectedIndex == -1)
                 continue;
 
-            // ✅ Check for unselected seats between first and last
+            // Check for unselected seats between first and last
             for (int i = firstSelectedIndex + 1; i < lastSelectedIndex; i++)
             {
                 var seat = bookableSeats[i];
                 if (!selectedInRow.Contains(seat.Number))
-                    throw new InvalidSeatLogicSelection($"Unselected seat {seat.Number} found between selected seats.");
+                    throw new InvalidSeatLogicSelection($"You cannot leave seat {seat.Number} alone between selected seats.");
             }
 
-            // ✅ Check left edge
-            if (firstSelectedIndex > 0)
+            // Check left edge
+            if (firstSelectedIndex == 1)
             {
-                var leftSeat = bookableSeats[firstSelectedIndex - 1];
-                if (!selectedInRow.Contains(leftSeat.Number))
-                    throw new InvalidSeatLogicSelection($"Unselected seat {leftSeat.Number} found before selected seats.");
+                throw new InvalidSeatLogicSelection($"You are not allowed to leave one seat on the edge.");
             }
 
-            // ✅ Check right edge
-            if (lastSelectedIndex < bookableSeats.Count - 1)
+            // Check right edge
+            if (lastSelectedIndex == bookableSeats.Count - 1)
             {
-                var rightSeat = bookableSeats[lastSelectedIndex + 1];
-                if (!selectedInRow.Contains(rightSeat.Number))
-                    throw new InvalidSeatLogicSelection($"Unselected seat {rightSeat.Number} found after selected seats.");
+                throw new InvalidSeatLogicSelection($"You are not allowed to leave one seat on the edge.");
             }
         }
     }

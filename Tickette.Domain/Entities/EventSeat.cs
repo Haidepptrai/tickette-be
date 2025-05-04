@@ -32,7 +32,7 @@ public sealed class EventSeat
     public string GroupId { get; private set; } // It is used to group seats in the same row, for UI view only
 
     [JsonConstructor]
-    public EventSeat(double x, double y, int width, int height, string number, string rowName, Guid ticketId, string groupId)
+    public EventSeat(double x, double y, int width, int height, string number, string rowName, Guid ticketId, string groupId, bool isOrdered)
     {
         X = x;
         Y = y;
@@ -40,14 +40,9 @@ public sealed class EventSeat
         Height = height;
         Number = number;
         RowName = rowName;
-        IsOrdered = false;
+        IsOrdered = isOrdered;
         TicketId = ticketId;
         GroupId = groupId;
-    }
-
-    public static EventSeat CreateEventSeat(double x, double y, int width, int height, string number, string rowName, Guid ticketId, string groupId)
-    {
-        return new EventSeat(x, y, width, height, number, rowName, ticketId, groupId);
     }
 
     public void SetIsOrdered()

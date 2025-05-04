@@ -23,7 +23,7 @@ public class ReserveTickerConsumer : IConsumer<ReserveTicketCommand>
     public async Task Consume(ConsumeContext<ReserveTicketCommand> context)
     {
         var request = context.Message;
-        var errors = new ConcurrentBag<RedisReservationResult>();
+        var errors = new ConcurrentBag<RabbitMQMessageResult>();
 
         try
         {
@@ -32,17 +32,17 @@ public class ReserveTickerConsumer : IConsumer<ReserveTicketCommand>
         catch (SeatOrderedException ex)
         {
             //await _reservationService.ReleaseReservationAsync(request.UserId, request.Tickets);
-            errors.Add(RedisReservationResult.Fail(ex.Message, "SeatConflict"));
+            errors.Add(RabbitMQMessageResult.Fail(ex.Message, "SeatConflict"));
         }
         catch (TicketReservationException ex)
         {
             //await _reservationService.ReleaseReservationAsync(request.UserId, ticket);
-            errors.Add(RedisReservationResult.Fail(ex.Message, "InventoryIssue"));
+            errors.Add(RabbitMQMessageResult.Fail(ex.Message, "InventoryIssue"));
         }
         catch (Exception)
         {
             //await _reservationService.ReleaseReservationAsync(request.UserId, ticket);
-            errors.Add(RedisReservationResult.Fail("Unexpected error", "UnhandledException"));
+            errors.Add(RabbitMQMessageResult.Fail("Unexpected error", "UnhandledException"));
         }
 
 
@@ -52,7 +52,7 @@ public class ReserveTickerConsumer : IConsumer<ReserveTicketCommand>
         }
         else
         {
-            await context.RespondAsync(RedisReservationResult.Ok());
+            await context.RespondAsync(RabbitMQMessageResult.Ok());
         }
     }
 
