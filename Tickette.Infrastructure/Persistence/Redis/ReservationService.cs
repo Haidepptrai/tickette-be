@@ -170,36 +170,33 @@ public class ReservationService : IReservationService
 
             if (ticketReservationInformation.SeatsChosen != null)
             {
-                foreach (var seat in ticketReservationInformation.SeatsChosen)
-                {
-                    // 1. Get user-specific reservation key
-                    var reservationKey = RedisKeys.GetUserTicketReservationKey(ticketReservationInformation.Id, userId);
+                // 1. Get user-specific reservation key
+                var reservationKey = RedisKeys.GetUserTicketReservationKey(ticketReservationInformation.Id, userId);
 
-                    // 2. Fetch full metadata hash
-                    var hash = await db.HashGetAllAsync(reservationKey);
-                    if (hash.Length == 0)
-                        return false;
+                // 2. Fetch full metadata hash
+                var hash = await db.HashGetAllAsync(reservationKey);
+                if (hash.Length == 0)
+                    return false;
 
-                    var hashDict = hash.ToDictionary(x => x.Name.ToString(), x => x.Value.ToString());
+                var hashDict = hash.ToDictionary(x => x.Name.ToString(), x => x.Value.ToString());
 
-                    // 3. Basic field checks
-                    if (!hashDict.TryGetValue("reserved_at", out var reservedAtRaw) ||
-                        !long.TryParse(reservedAtRaw, out var reservedAt) ||
-                        nowUnix - reservedAt >= reservationTimeoutSeconds)
-                        return false;
+                // 3. Basic field checks
+                if (!hashDict.TryGetValue("reserved_at", out var reservedAtRaw) ||
+                    !long.TryParse(reservedAtRaw, out var reservedAt) ||
+                    nowUnix - reservedAt >= reservationTimeoutSeconds)
+                    return false;
 
-                    if (!hashDict.TryGetValue("seats", out var seatStr) || string.IsNullOrWhiteSpace(seatStr))
-                        return false;
+                if (!hashDict.TryGetValue("seats", out var seatStr) || string.IsNullOrWhiteSpace(seatStr))
+                    return false;
 
-                    var reservedSeats = seatStr.Split(',').Select(s => s.Trim().ToUpperInvariant()).ToHashSet();
-                    var requestedSeats = ticketReservationInformation.SeatsChosen
-                        .Select(s => $"{s.RowName}{s.SeatNumber}".ToUpperInvariant())
-                        .ToHashSet();
+                var reservedSeats = seatStr.Split(',').Select(s => s.Trim().ToUpperInvariant()).ToHashSet();
+                var requestedSeats = ticketReservationInformation.SeatsChosen
+                    .Select(s => $"{s.RowName}{s.SeatNumber}".ToUpperInvariant())
+                    .ToHashSet();
 
-                    // 4. Ensure requested seats are all in the reserved list
-                    if (!requestedSeats.SetEquals(reservedSeats))
-                        return false;
-                }
+                // 4. Ensure requested seats are all in the reserved list
+                if (!requestedSeats.SetEquals(reservedSeats))
+                    return false;
             }
             else
             {
@@ -287,14 +284,9 @@ public class ReservationService : IReservationService
 
         if (ticketReservationInfo.SeatsChosen != null)
         {
-            foreach (var seat in ticketReservationInfo.SeatsChosen)
-            {
-                var bookedSeatKey = RedisKeys.GetBookedSeatKey(ticketReservationInfo.Id, seat.RowName, seat.SeatNumber);
-
-
-                // Set permanent booked key
-                await db.StringSetAsync(bookedSeatKey, userId.ToString());
-            }
+            var userReservationKey = RedisKeys.GetUserTicketReservationKey(ticketReservationInfo.Id, userId);
+            // Delete reservation
+            await db.KeyDeleteAsync(userReservationKey);
         }
         else
         {

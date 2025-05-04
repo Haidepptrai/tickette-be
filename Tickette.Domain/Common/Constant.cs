@@ -2,8 +2,13 @@
 
 public static class Constant
 {
-    public static IReadOnlyList<string> APPLICATION_ROLES
-        => new List<string> { "Admin", "User", "Moderator", "Agent" };
+    public static IReadOnlyDictionary<Guid, string> APPLICATION_ROLES
+        => new Dictionary<Guid, string>
+        {
+            {Guid.Parse("e6f8d674-a563-42dd-8451-32acf2b7cf09"), "Admin" },
+            {Guid.Parse("7f6797a6-fbaa-4bc1-a93b-2f492161e734"),  "User" },
+            { Guid.Parse("d43610b7-5afd-47a2-b342-d032c2ae0047"), "Moderator" }
+        };
 
     public static string LOCAL_CONNECTION_STRING =
         "Host=localhost;Port=5432;Database=tickette-db;Username=HaiNguyen;Password=root";

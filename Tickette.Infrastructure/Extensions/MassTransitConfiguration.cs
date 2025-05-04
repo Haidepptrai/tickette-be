@@ -5,11 +5,11 @@ using Tickette.Infrastructure.Settings;
 
 namespace Tickette.Infrastructure.Extensions;
 
+// Declare this one because later we can expand it to WorkerService project
 public static class MassTransitConfiguration
 {
     public static void ConfigureConsumers(IBusRegistrationConfigurator x)
     {
-        x.AddConsumer<TestConsumer>();
         x.AddConsumer<EmailDispatcherConsumer>();
         x.AddConsumer<ReserveTickerConsumer>();
         x.AddConsumer<RemoveTicketReservationConsumer>();
@@ -24,13 +24,6 @@ public static class MassTransitConfiguration
             h.Password(rabbitMQSettings.Password);
         });
 
-        cfg.ReceiveEndpoint("test-command-queue", e =>
-        {
-            e.PrefetchCount = 1000;
-            e.ConcurrentMessageLimit = 1000;
-            e.ConfigureConsumer<TestConsumer>(context);
-        });
-
         cfg.ReceiveEndpoint("email-dispatcher", e =>
         {
             e.ConfigureConsumer<EmailDispatcherConsumer>(context);
@@ -42,6 +35,7 @@ public static class MassTransitConfiguration
             e.PrefetchCount = 300;
             e.ConcurrentMessageLimit = 300;
             e.ConfigureConsumer<ReserveTickerConsumer>(context);
+            e.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
         });
 
         cfg.ReceiveEndpoint(MessageQueueKeys.TicketReservationCancelled, e =>
@@ -52,6 +46,7 @@ public static class MassTransitConfiguration
         cfg.ReceiveEndpoint(MessageQueueKeys.TicketReservationConfirmed, e =>
         {
             e.ConfigureConsumer<ConfirmTicketReservationConsumer>(context);
+            e.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
         });
     }
 }

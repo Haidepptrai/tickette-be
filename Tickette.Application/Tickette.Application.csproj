@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <Folder Include="Features\Auth\Query\" />
+    <Folder Include="Features\Categories\Command\" />
     <Folder Include="Features\Categories\Common\" />
     <Folder Include="Features\ChatMessages\Command\" />
     <Folder Include="Features\ChatMessages\Common\" />

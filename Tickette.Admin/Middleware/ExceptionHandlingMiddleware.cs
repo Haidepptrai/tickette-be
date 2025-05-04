@@ -5,7 +5,7 @@ using Tickette.Application.Wrappers;
 using Tickette.Domain.Common;
 using Tickette.Domain.Common.Exceptions;
 
-namespace Tickette.API.Middleware;
+namespace Tickette.Admin.Middleware;
 
 public class ExceptionHandlingMiddleware
 {

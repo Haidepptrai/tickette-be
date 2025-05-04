@@ -11,8 +11,6 @@ using Tickette.Application.Features.Events.Common.Client;
 using Tickette.Application.Wrappers;
 using Tickette.Domain.Common;
 
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-
 namespace Tickette.API.Controllers
 {
     [Route("api/[controller]")]

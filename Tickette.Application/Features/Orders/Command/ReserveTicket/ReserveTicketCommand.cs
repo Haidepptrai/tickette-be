@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Messaging;
@@ -29,11 +28,11 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
 {
     private readonly IMessageRequestClient _requestClient;
     private readonly IApplicationDbContext _context;
-    private readonly IMemoryCache _memoryCache;
+    private readonly ICacheService _memoryCache;
 
     public ReserveTicketCommandHandler(
         IApplicationDbContext context,
-         IMessageRequestClient requestClient, IMemoryCache memoryCache)
+         IMessageRequestClient requestClient, ICacheService memoryCache)
     {
         _context = context;
         _requestClient = requestClient;
@@ -56,30 +55,39 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
 
         foreach (var ticket in request.Tickets)
         {
-            if (_memoryCache.TryGetValue<Ticket>(ticket.Id, out var cachedTicket))
+            var cachedTicket = _memoryCache.GetCacheValue<Ticket>(ticket.Id.ToString());
+
+            if (cachedTicket != null)
             {
                 if (request.HasSeatMap)
                 {
                     eventDate!.ValidateSelection(eventDate.SeatMap!, ticket.SeatsChosen!);
                 }
                 cachedTicket?.ValidateTicket(ticket.Quantity);
-
-                continue;
             }
+            else
+            {
+                var ticketEntity = await _context.Tickets
+                    .Include(t => t.EventDate) // optional, only if needed later
+                    .SingleOrDefaultAsync(t => t.Id == ticket.Id, cancellationToken);
 
-            var ticketEntity = await _context.Tickets
-                .Include(t => t.EventDate) // optional, only if needed later
-                .SingleOrDefaultAsync(t => t.Id == ticket.Id, cancellationToken);
+                if (ticketEntity is null)
+                    throw new NotFoundException("Ticket", ticket.Id);
 
-            if (ticketEntity is null)
-                throw new NotFoundException("Ticket", ticket.Id);
+                if (request.HasSeatMap)
+                {
+                    eventDate!.ValidateSelection(eventDate.SeatMap!, ticket.SeatsChosen!);
+                }
 
-            eventDate!.ValidateSelection(eventDate.SeatMap!, ticket.SeatsChosen!);
+                cachedTicket?.ValidateTicket(ticket.Quantity);
 
-            _memoryCache.Set(ticket.Id, ticketEntity, TimeSpan.FromMinutes(5));
+                ticketEntity.ValidateTicket(ticket.Quantity);
+
+                _memoryCache.SetCacheValue(ticketEntity.Id.ToString(), TimeSpan.FromMinutes(15));
+            }
         }
 
-        var response = await _requestClient.PublishAsync<ReserveTicketCommand, RedisReservationResult>(
+        var response = await _requestClient.PublishAsync<ReserveTicketCommand, RabbitMQMessageResult>(
             request, cancellationToken);
 
         if (!response.Success)
