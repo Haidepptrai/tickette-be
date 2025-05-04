@@ -230,8 +230,6 @@ public static class DependencyInjection
             .AsImplementedInterfaces()
             .WithScopedLifetime());
 
-
-
         // Register the custom handler and HttpContextAccessor
         builder.Services.AddScoped<IAuthorizationHandler, EventRoleHandler>();
         builder.Services.AddHttpContextAccessor();
@@ -245,8 +243,8 @@ public static class DependencyInjection
             dbContext.Database.Migrate();
 
             SeedDatabase.SeedCategories(dbContext);
-            SeedDatabase.SeedRoles(roleManager);
-            SeedDatabase.SeedRolesAndPermissions(dbContext).Wait();
+            SeedDatabase.SeedRolesAsync(roleManager);
+            SeedDatabase.SeedRolesAndPermissions(dbContext);
         }
     }
 

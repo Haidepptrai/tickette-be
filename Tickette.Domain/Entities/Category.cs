@@ -9,16 +9,21 @@ public sealed class Category : BaseEntity
 
     public ICollection<Event> Events { get; set; } = new List<Event>();
 
-    public Category(string name)
+    private Category(string name)
     {
         Name = name;
     }
 
-    public static Category CreateCategory(string name)
+    private Category(string name, Guid id) : this(name)
+    {
+        Id = id;
+    }
+
+    public static Category CreateCategory(Guid id, string name)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new MissingFieldException("Category name.");
 
-        return new Category(name);
+        return new Category(name, id);
     }
 }

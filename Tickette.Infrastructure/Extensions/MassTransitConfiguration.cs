@@ -5,6 +5,7 @@ using Tickette.Infrastructure.Settings;
 
 namespace Tickette.Infrastructure.Extensions;
 
+// Declare this one because later we can expand it to WorkerService project
 public static class MassTransitConfiguration
 {
     public static void ConfigureConsumers(IBusRegistrationConfigurator x)

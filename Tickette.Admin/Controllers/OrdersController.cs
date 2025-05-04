@@ -24,7 +24,7 @@ namespace Tickette.Admin.Controllers
 
         [HttpPost("user/order-history")]
         [SwaggerOperation("Get all orders of a specific user")]
-        [Authorize(Roles = Constant.APPLICATION_ROLE.Admin)]
+        [Authorize(Roles = $"{Constant.APPLICATION_ROLE.Admin},{Constant.APPLICATION_ROLE.Moderator}")]
         public async Task<ActionResult<ResponseDto<List<OrderedTicketGroupListDto>>>> Get([FromBody] ReviewOrdersQuery query, CancellationToken cancellation)
         {
             var result = await _queryDispatcher.Dispatch<ReviewOrdersQuery, PagedResult<OrderedTicketGroupListDto>>(query, cancellation);
