@@ -29,7 +29,6 @@ namespace Tickette.Admin
             builder.AddInMemoryCacheService();
             builder.AddStripeSettings();
             builder.AddS3Service();
-            builder.AddMachineLearningModel();
             builder.AddEmailService();
             builder.AddSignalRService();
             builder.AddCorsService();

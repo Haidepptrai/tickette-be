@@ -8,7 +8,6 @@ using Tickette.Application.Exceptions;
 using Tickette.Application.Features.Auth.Command;
 using Tickette.Application.Features.Users.Common;
 using Tickette.Application.Wrappers;
-using Tickette.Domain.Common.Exceptions;
 using Tickette.Domain.Entities;
 
 namespace Tickette.Infrastructure.Identity;
@@ -40,7 +39,9 @@ public class IdentityServices : IIdentityServices
         var existingUser = await _userManager.FindByEmailAsync(userEmail);
 
         if (existingUser != null)
-            throw new UserAlreadyExistException("User already exists.");
+        {
+            return Guid.Empty;
+        }
 
         var user = new User
         {

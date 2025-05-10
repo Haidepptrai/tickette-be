@@ -25,14 +25,11 @@ public class RemoveTicketReservationConsumer : IConsumer<RemoveReserveTicketComm
             var redisHandler = scope.ServiceProvider.GetRequiredService<IReservationService>();
             var dbSyncHandler = scope.ServiceProvider.GetRequiredService<IReservationDbSyncService>();
 
-            foreach (var ticket in request.Tickets)
-            {
-                // 1. Remove from Redis (temp reservation)
-                await redisHandler.ReleaseReservationAsync(request.UserId, ticket);
+            // 1. Remove from Redis (temp reservation)
+            await redisHandler.ReleaseReservationAsync(request.UserId, request.Tickets);
 
-                // 2. Remove from DB (permanent reservation)
-                //await dbSyncHandler.ReleaseReservationFromDatabaseAsync(request.UserId, ticket.Id, false);
-            }
+            // 2. Remove from DB (permanent reservation)
+            //await dbSyncHandler.ReleaseReservationFromDatabaseAsync(request.UserId, ticket.Id, false);
         }
         catch (Exception ex)
         {

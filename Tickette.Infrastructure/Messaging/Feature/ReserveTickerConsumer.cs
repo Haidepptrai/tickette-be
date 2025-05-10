@@ -28,20 +28,21 @@ public class ReserveTickerConsumer : IConsumer<ReserveTicketCommand>
         try
         {
             await _reservationService.ReserveTicketsAsync(request.UserId, request.Tickets);
+            //await _reservationDbSyncService.PersistReservationAsync(request.UserId, request.Tickets);
         }
         catch (SeatOrderedException ex)
         {
-            //await _reservationService.ReleaseReservationAsync(request.UserId, request.Tickets);
+            await _reservationService.ReleaseReservationAsync(request.UserId, request.Tickets);
             errors.Add(RabbitMQMessageResult.Fail(ex.Message, "SeatConflict"));
         }
         catch (TicketReservationException ex)
         {
-            //await _reservationService.ReleaseReservationAsync(request.UserId, ticket);
+            await _reservationService.ReleaseReservationAsync(request.UserId, request.Tickets);
             errors.Add(RabbitMQMessageResult.Fail(ex.Message, "InventoryIssue"));
         }
         catch (Exception)
         {
-            //await _reservationService.ReleaseReservationAsync(request.UserId, ticket);
+            await _reservationService.ReleaseReservationAsync(request.UserId, request.Tickets);
             errors.Add(RabbitMQMessageResult.Fail("Unexpected error", "UnhandledException"));
         }
 

@@ -97,4 +97,17 @@ public class StripePaymentService : IPaymentService
             throw new InvalidOperationException("An unexpected error occurred.", ex);
         }
     }
+
+    public async Task<bool> ValidatePayment(string paymentIntentId)
+    {
+        if (string.IsNullOrWhiteSpace(paymentIntentId))
+            throw new ArgumentException("Payment Intent ID cannot be null or empty.", nameof(paymentIntentId));
+
+        var service = new PaymentIntentService();
+
+        var paymentIntent = await service.GetAsync(paymentIntentId);
+
+        // Check if the payment intent is successful
+        return paymentIntent.Status == "succeeded";
+    }
 }

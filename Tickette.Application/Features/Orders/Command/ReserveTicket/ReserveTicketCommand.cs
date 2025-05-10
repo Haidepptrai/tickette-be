@@ -63,7 +63,7 @@ public class ReserveTicketCommandHandler : ICommandHandler<ReserveTicketCommand,
                 {
                     eventDate!.ValidateSelection(eventDate.SeatMap!, ticket.SeatsChosen!);
                 }
-                cachedTicket?.ValidateTicket(ticket.Quantity);
+                cachedTicket.ValidateTicket(ticket.Quantity);
             }
             else
             {

@@ -46,7 +46,7 @@ public class TokenService : ITokenService
             issuer: _configuration["Jwt:Issuer"],
             audience: _configuration["Jwt:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(10), // Token expiry
+            expires: DateTime.UtcNow.AddMinutes(30), // Token expiry - I am going to demo so set to 30 minutes
             signingCredentials: credits);
 
         return new JwtSecurityTokenHandler().WriteToken(token);

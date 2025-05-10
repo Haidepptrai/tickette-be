@@ -26,7 +26,6 @@ using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
 using Tickette.Application.Common.Interfaces.Email;
 using Tickette.Application.Common.Interfaces.Messaging;
-using Tickette.Application.Common.Interfaces.Prediction;
 using Tickette.Application.Common.Interfaces.Redis;
 using Tickette.Application.Common.Interfaces.Stripe;
 using Tickette.Domain.Entities;
@@ -44,7 +43,6 @@ using Tickette.Infrastructure.Identity;
 using Tickette.Infrastructure.Messaging;
 using Tickette.Infrastructure.Persistence;
 using Tickette.Infrastructure.Persistence.Redis;
-using Tickette.Infrastructure.Prediction;
 using Tickette.Infrastructure.Services;
 using Tickette.Infrastructure.Settings;
 
@@ -384,31 +382,6 @@ public static class DependencyInjection
         builder.Services.AddSingleton<IAmazonS3>(s3Client);
 
         builder.Services.TryAddScoped<IFileUploadService, S3FileUploadService>();
-    }
-
-    public static void AddMachineLearningModel(this IHostApplicationBuilder builder)
-    {
-        builder.Services.AddDbContext<TrainingDbContext>(options =>
-        {
-            options.UseNpgsql(
-                    builder.Configuration.GetConnectionString("TrainingAIConnection"),
-                    npgsqlOptions =>
-                    {
-                        npgsqlOptions.MigrationsAssembly(typeof(TrainingDbContext).Assembly.FullName);
-                    })
-                .UseSnakeCaseNamingConvention();
-        });
-
-        builder.Services.AddScoped<ITrainingModelService, TrainingModelService>();
-        builder.Services.AddScoped<IRecommendationService, RecommendationService>();
-
-        // Apply migrations during app initialization
-        using (var scope = builder.Services.BuildServiceProvider().CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<TrainingDbContext>();
-
-            dbContext.Database.Migrate();
-        }
     }
 
     public static void AddEmailService(this IHostApplicationBuilder builder)
