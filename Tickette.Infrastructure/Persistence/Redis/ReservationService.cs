@@ -119,17 +119,15 @@ public class ReservationService : IReservationService
 
                         if (result.Resp2Type == ResultType.Array)
                         {
-                            var resultArray = (RedisResult[])result;
+                            var resultArray = (RedisResult[])result!;
                             var errorCode = (int)(long)resultArray[0];
-                            var errorIndex = (int)(long)resultArray[1];
 
                             switch (errorCode)
                             {
                                 case -1:
-                                    throw new Exception($"Inventory key missing for ticket at index {errorIndex}");
+                                    throw new Exception("Inventory key missing for ticket");
                                 case -2:
-                                    throw new TicketReservationException(
-                                        $"Not enough inventory for ticket at index {errorIndex}");
+                                    throw new TicketReservationException("Not enough inventory for ticket");
                             }
                         }
 
@@ -227,52 +225,56 @@ public class ReservationService : IReservationService
     /// <summary>
     /// Releases a reservation and its seats
     /// </summary>
-    public async Task<bool> ReleaseReservationAsync(Guid userId, TicketReservation ticketReservationInfo)
+    public async Task<bool> ReleaseReservationAsync(Guid userId, ICollection<TicketReservation> tickets)
     {
         var db = _redis.GetDatabase(_redisSettings.DefaultDatabase);
-        var inventoryKey = RedisKeys.GetTicketQuantityKey(ticketReservationInfo.Id);
 
-        if (ticketReservationInfo.SeatsChosen != null && ticketReservationInfo.SeatsChosen.Any())
+        foreach (var ticket in tickets)
         {
-            var reservationKey = RedisKeys.GetUserTicketReservationKey(ticketReservationInfo.Id, userId);
-            var reservedSeatsKey = RedisKeys.GetTicketReservedSeatsKey(ticketReservationInfo.Id);
+            var inventoryKey = RedisKeys.GetTicketQuantityKey(ticket.Id);
 
-            // 1. Get seats from reservation hash
-            var seatField = await db.HashGetAsync(reservationKey, "seats");
-            var reservedSeats = seatField.IsNullOrEmpty
-                ? []
-                : seatField.ToString().Split(',').Select(s => s.Trim()).ToArray();
-
-            // 2. Remove seat labels from the global reserved set
-            if (reservedSeats.Length > 0)
+            if (ticket.SeatsChosen != null && ticket.SeatsChosen.Any())
             {
-                var redisSeats = reservedSeats.Select(s => (RedisValue)s).ToArray();
-                await db.SetRemoveAsync(reservedSeatsKey, redisSeats);
+                var reservationKey = RedisKeys.GetUserTicketReservationKey(ticket.Id, userId);
+                var reservedSeatsKey = RedisKeys.GetTicketReservedSeatsKey(ticket.Id);
+
+                // 1. Get seats from reservation hash
+                var seatField = await db.HashGetAsync(reservationKey, "seats");
+                var reservedSeats = seatField.IsNullOrEmpty
+                    ? []
+                    : seatField.ToString().Split(',').Select(s => s.Trim()).ToArray();
+
+                // 2. Remove seat labels from the global reserved set
+                if (reservedSeats.Length > 0)
+                {
+                    var redisSeats = reservedSeats.Select(s => (RedisValue)s).ToArray();
+                    await db.SetRemoveAsync(reservedSeatsKey, redisSeats);
+                }
+
+                // 3. Delete user reservation metadata
+                await db.KeyDeleteAsync(reservationKey);
+
+                var quantity = ticket.Quantity;
+                // 4. Restore ticket quantity
+                await db.StringIncrementAsync(inventoryKey, quantity);
             }
-
-            // 3. Delete user reservation metadata
-            await db.KeyDeleteAsync(reservationKey);
-
-            var quantity = ticketReservationInfo.Quantity;
-            // 4. Restore ticket quantity
-            await db.StringIncrementAsync(inventoryKey, quantity);
-        }
-        else
-        {
-            var reservationKey = RedisKeys.GetReservationKey(ticketReservationInfo.Id, userId);
-            RedisValue quantityValue = await db.HashGetAsync(reservationKey, "quantity");
-
-            if (quantityValue.IsNull)
+            else
             {
-                return true;
+                var reservationKey = RedisKeys.GetReservationKey(ticket.Id, userId);
+                RedisValue quantityValue = await db.HashGetAsync(reservationKey, "quantity");
+
+                if (quantityValue.IsNull)
+                {
+                    return true;
+                }
+
+                // Add back the quantity to the inventory
+                long quantity = (long)quantityValue;
+                await db.StringIncrementAsync(inventoryKey, quantity);
+
+                // Delete reservation
+                await db.KeyDeleteAsync(reservationKey);
             }
-
-            // Add back the quantity to the inventory
-            long quantity = (long)quantityValue;
-            await db.StringIncrementAsync(inventoryKey, quantity);
-
-            // Delete reservation
-            await db.KeyDeleteAsync(reservationKey);
         }
 
         return true;

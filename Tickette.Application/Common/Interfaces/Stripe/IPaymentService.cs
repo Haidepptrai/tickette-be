@@ -7,4 +7,6 @@ public interface IPaymentService
     Task<PaymentIntentResult> CreatePaymentIntentAsync(Payment payment);
 
     Task<PaymentIntentResult> UpdatePaymentIntentAsync(string paymentIntentId, decimal newAmount);
+
+    Task<bool> ValidatePayment(string paymentIntentId);
 }

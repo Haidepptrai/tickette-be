@@ -6,6 +6,7 @@ using Tickette.Application.Features.Orders.Command.CreateOrder;
 using Tickette.Application.Features.Orders.Command.RemoveReserveTicket;
 using Tickette.Application.Features.Orders.Command.ReserveTicket;
 using Tickette.Application.Features.Orders.Common;
+using Tickette.Application.Features.Orders.Query.CheckReservationValidation;
 using Tickette.Application.Features.Orders.Query.ReviewOrders;
 using Tickette.Application.Features.QRCode.Common;
 using Tickette.Application.Features.QRCode.Queries.ValidateQrCode;
@@ -62,12 +63,12 @@ public class OrdersController : BaseController
     [HttpPost("create")]
     [SwaggerOperation(summary: "Create order for the user after confirm payment")]
     [Authorize]
-    public async Task<ResponseDto<CreateOrderResponse>> CreateOrder([FromBody] CreateOrderCommand command, CancellationToken cancellation)
+    public async Task<ResponseDto<Unit>> CreateOrder([FromBody] CreateOrderCommand command, CancellationToken cancellation)
     {
         var userId = GetUserId();
         command.UserId = Guid.Parse(userId);
 
-        var response = await _commandDispatcher.Dispatch<CreateOrderCommand, CreateOrderResponse>(command, cancellation);
+        var response = await _commandDispatcher.Dispatch<CreateOrderCommand, Unit>(command, cancellation);
         return ResponseHandler.SuccessResponse(response, "Order created successfully");
     }
 
@@ -94,5 +95,16 @@ public class OrdersController : BaseController
 
         var response = await _commandDispatcher.Dispatch<RemoveReserveTicketCommand, Unit>(command, cancellation);
         return Ok(ResponseHandler.SuccessResponse(response, "Reservation removed successfully"));
+    }
+
+    [HttpPost("validate-reservation")]
+    [SwaggerOperation(summary: "Check if the tickets are reserved")]
+    [Authorize]
+    public async Task<ActionResult<ResponseDto<bool>>> CheckReservation([FromBody] CheckReservationValidationQuery request, CancellationToken cancellation)
+    {
+        var userId = GetUserId();
+        request.UserId = Guid.Parse(userId);
+        var response = await _queryDispatcher.Dispatch<CheckReservationValidationQuery, bool>(request, cancellation);
+        return Ok(ResponseHandler.SuccessResponse(response, "Reservation checked successfully"));
     }
 }

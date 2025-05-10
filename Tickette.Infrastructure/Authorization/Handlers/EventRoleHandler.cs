@@ -83,7 +83,7 @@ public class EventRoleHandler : AuthorizationHandler<EventRoleRequirement>
         }
 
         // 3. Check request body (for POST/PUT methods)
-        if (request.Method == HttpMethods.Post || request.Method == HttpMethods.Put)
+        if (request.Method == HttpMethods.Post || request.Method == HttpMethods.Put || request.Method == HttpMethods.Delete)
         {
             try
             {

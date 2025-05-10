@@ -1,4 +1,5 @@
 ﻿using Tickette.Domain.Common;
+using Tickette.Domain.Common.Exceptions;
 using Tickette.Domain.Enums;
 
 namespace Tickette.Domain.Entities;
@@ -55,14 +56,14 @@ public sealed class Coupon : BaseEntity
 
     public decimal CalculateDiscount(decimal originalPrice)
     {
-        if (!IsActive)
-        {
-            throw new InvalidOperationException("The coupon is not active.");
-        }
+        //if (!IsActive)
+        //{
+        //    throw new InvalidCouponException("The coupon is not active.");
+        //}
 
         if (DateTime.UtcNow > ExpiryDate || DateTime.UtcNow < StartValidDate)
         {
-            throw new InvalidOperationException("The coupon is not valid.");
+            throw new InvalidCouponException("The coupon is not valid.");
         }
 
         return DiscountType switch
@@ -86,11 +87,11 @@ public sealed class Coupon : BaseEntity
     public void UpdateCouponInformation(string code, decimal discountValue, DiscountType discountType, DateTime startValidDate,
         DateTime expiryDate)
     {
-        if (!IsActive) throw new Exception("Coupon is currently deactivated");
+        if (!IsActive) throw new InvalidCouponException("Coupon is currently deactivated");
 
         if (DateTime.UtcNow > expiryDate)
         {
-            throw new ArgumentException("Expiry date must be in the future.", nameof(expiryDate));
+            throw new InvalidCouponException("Expiry date must be in the future.");
         }
 
         if (discountValue <= 0)

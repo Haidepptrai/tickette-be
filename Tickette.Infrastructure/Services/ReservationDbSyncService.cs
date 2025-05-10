@@ -25,78 +25,80 @@ public class ReservationDbSyncService : IReservationDbSyncService
     /// Persists a reserved ticket and its details to the database.
     /// </summary>
     /// <param name="userId">The ID of the user who made the reservation</param>
-    /// <param name="ticketReservation">Ticket and seat details</param>
+    /// <param name="tickets">Ticket and seat details</param>
     /// <returns></returns>
-    public async Task<bool> PersistReservationAsync(Guid userId, TicketReservation ticketReservation)
+    public async Task<bool> PersistReservationAsync(Guid userId, ICollection<TicketReservation> tickets)
     {
         await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
         try
         {
-            var existingReservation = await _dbContext.Reservations
+            foreach (var ticket in tickets)
+            {
+                var existingReservation = await _dbContext.Reservations
                 .Include(r => r.Items)
                 .Where(r => r.UserId == userId && r.Status == ReservationStatus.Temporary && r.ExpiresAt <= DateTime.UtcNow)
                 .OrderByDescending(r => r.CreatedAt)
                 .FirstOrDefaultAsync();
 
-            if (existingReservation != null)
-            {
-                var itemToRemove = existingReservation.Items
-                    .FirstOrDefault(i => i.TicketId == ticketReservation.Id);
-
-                if (itemToRemove != null)
+                if (existingReservation != null)
                 {
-                    // Restore inventory
-                    var ticketInventory = await _dbContext.Tickets.SingleOrDefaultAsync(t => t.Id == ticketReservation.Id);
-                    if (ticketInventory != null)
-                    {
-                        ticketInventory.IncreaseTickets(itemToRemove.Quantity);
-                    }
+                    var itemToRemove = existingReservation.Items
+                        .FirstOrDefault(i => i.TicketId == ticket.Id);
 
-                    existingReservation.RemoveItem(itemToRemove);
-
-                    // If reservation has no items left, delete it
-                    if (!existingReservation.Items.Any())
+                    if (itemToRemove != null)
                     {
-                        _dbContext.Reservations.Remove(existingReservation);
+                        // Restore inventory
+                        var ticketInventory = await _dbContext.Tickets.SingleOrDefaultAsync(t => t.Id == ticket.Id);
+                        if (ticketInventory != null)
+                        {
+                            ticketInventory.IncreaseTickets(itemToRemove.Quantity);
+                        }
+
+                        existingReservation.RemoveItem(itemToRemove);
+
+                        // If reservation has no items left, delete it
+                        if (!existingReservation.Items.Any())
+                        {
+                            _dbContext.Reservations.Remove(existingReservation);
+                        }
                     }
                 }
-            }
 
-            // Create a new reservation
-            var newReservation = new Reservation(userId, DateTime.UtcNow.AddMinutes(1));
+                // Create a new reservation
+                var newReservation = new Reservation(userId, DateTime.UtcNow.AddMinutes(1));
 
-            newReservation.AddItem(
-                ticketId: ticketReservation.Id,
-                quantity: ticketReservation.Quantity,
-                hasAssignedSeats: ticketReservation.SeatsChosen != null
-            );
+                newReservation.AddItem(
+                    ticketId: ticket.Id,
+                    quantity: ticket.Quantity,
+                    hasAssignedSeats: ticket.SeatsChosen != null
+                );
 
-            if (ticketReservation.SeatsChosen != null)
-            {
-                var item = newReservation.Items.First();
-                foreach (var seat in ticketReservation.SeatsChosen)
+                if (ticket.SeatsChosen != null)
                 {
-                    item.AssignSeat(seat.RowName, seat.SeatNumber);
+                    var item = newReservation.Items.First();
+                    foreach (var seat in ticket.SeatsChosen)
+                    {
+                        item.AssignSeat(seat.RowName, seat.SeatNumber);
+                    }
                 }
+
+                // Decrease ticket inventory
+                var ticketEntity = await _dbContext.Tickets
+                    .SingleOrDefaultAsync(t => t.Id == ticket.Id);
+
+                if (ticketEntity == null)
+                {
+                    throw new NotFoundException("Ticket", ticket.Id);
+                }
+
+                ticketEntity.ReduceTickets(ticket.Quantity);
+
+                _dbContext.Reservations.Add(newReservation);
+                await _dbContext.SaveChangesAsync();
+
+                await transaction.CommitAsync();
             }
-
-            // Decrease ticket inventory
-            var tickets = await _dbContext.Tickets
-                .FromSqlRaw("SELECT * FROM \"tickets\" WHERE \"id\" = {0} FOR UPDATE", ticketReservation.Id)
-                .SingleOrDefaultAsync(t => t.Id == ticketReservation.Id);
-
-            if (tickets == null)
-            {
-                throw new NotFoundException("Ticket", ticketReservation.Id);
-            }
-
-            tickets.ReduceTickets(ticketReservation.Quantity);
-
-            _dbContext.Reservations.Add(newReservation);
-            await _dbContext.SaveChangesAsync();
-
-            await transaction.CommitAsync();
             return true;
         }
         catch

@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations;
 using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Common.Interfaces;
-using Tickette.Application.Common.Interfaces.Messaging;
 using Tickette.Application.Common.Models.Email;
 using Tickette.Application.Factories;
 
@@ -23,12 +22,10 @@ public record UserRegisterCommand
 public class UserRegisterCommandHandler : ICommandHandler<UserRegisterCommand, Guid>
 {
     private readonly IIdentityServices _identityServices;
-    private readonly IMessageRequestClient _messageRequestClient;
 
-    public UserRegisterCommandHandler(IIdentityServices identityServices, IMessageRequestClient messageRequestClient)
+    public UserRegisterCommandHandler(IIdentityServices identityServices)
     {
         _identityServices = identityServices;
-        _messageRequestClient = messageRequestClient;
     }
 
     public async Task<Guid> Handle(UserRegisterCommand command, CancellationToken cancellationToken)

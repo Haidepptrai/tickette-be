@@ -72,7 +72,7 @@ public class ReviewOrdersQueryHandler : IQueryHandler<ReviewOrdersQuery, PagedRe
 
                 case "used":
                     baseQuery = baseQuery.Where(o =>
-                        o.Items.Any(i => i.Ticket.EventDate.EndDate < now));
+                        o.Items.Any(i => i.IsScanned || i.Ticket.EventDate.EndDate < now));
                     break;
 
                 case "recent":
@@ -143,6 +143,7 @@ public class ReviewOrdersQueryHandler : IQueryHandler<ReviewOrdersQuery, PagedRe
                     Quantity = orderItem.Quantity,
                     TotalPrice = orderItem.Quantity * orderItem.Ticket.Price.Amount,
                     Currency = orderItem.Ticket.Price.Currency,
+                    SeatOrdered = orderItem.SeatsOrdered?.Select(s => new SeatOrder(s.RowName, s.SeatNumber)),
                     QrCode = GenerateQrCode(orderItem)
                 }
             }).ToList();
@@ -153,6 +154,8 @@ public class ReviewOrdersQueryHandler : IQueryHandler<ReviewOrdersQuery, PagedRe
                 EventName = eventInfo.Name,
                 EventBanner = eventInfo.Banner,
                 Address = address,
+                StartDate = eventInfo.EventDates.Min(e => e.StartDate),
+                EndDate = eventInfo.EventDates.Max(e => e.EndDate),
                 OrderItems = orderItems
             };
         }).Where(g => g.OrderItems.Any()) // Exclude any orders that got filtered to empty

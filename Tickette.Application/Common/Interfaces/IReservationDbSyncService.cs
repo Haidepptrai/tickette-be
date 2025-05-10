@@ -9,7 +9,7 @@ public interface IReservationDbSyncService
     /// </summary>
     /// <param name="userId">The ID of the user who made the reservation.</param>
     /// <param name="ticketReservation">Ticket and seat details.</param>
-    Task<bool> PersistReservationAsync(Guid userId, TicketReservation ticketReservation);
+    Task<bool> PersistReservationAsync(Guid userId, ICollection<TicketReservation> ticketReservation);
 
     /// <summary>
     /// Removes a persisted reservation from the database and marks it as cancelled.
