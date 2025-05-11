@@ -83,19 +83,34 @@ public class EventRoleHandler : AuthorizationHandler<EventRoleRequirement>
         }
 
         // 3. Check request body (for POST/PUT methods)
-        if (request.Method == HttpMethods.Post || request.Method == HttpMethods.Put || request.Method == HttpMethods.Delete)
+        if (HttpMethods.IsPost(request.Method) || HttpMethods.IsPut(request.Method) || HttpMethods.IsDelete(request.Method))
         {
             try
             {
-                request.EnableBuffering(); // Allows re-reading request body
-                using var reader = new StreamReader(request.Body, leaveOpen: true);
-                var bodyContent = await reader.ReadToEndAsync();
-                request.Body.Position = 0; // Reset stream position for middleware
-
-                using var bodyJson = JsonDocument.Parse(bodyContent);
-                if (bodyJson.RootElement.TryGetProperty("eventId", out var bodyEventId))
+                if (request.HasFormContentType)
                 {
-                    return bodyEventId.GetString();
+                    var form = await request.ReadFormAsync();
+                    if (form.TryGetValue("id", out var formEventId))
+                    {
+                        return formEventId.ToString();
+                    }
+                }
+
+                else
+                {
+                    request.EnableBuffering(); // Allows re-reading request body
+                    using var reader = new StreamReader(request.Body, leaveOpen: true);
+                    var bodyContent = await reader.ReadToEndAsync();
+                    request.Body.Position = 0; // Reset stream position for middleware
+
+                    if (!string.IsNullOrWhiteSpace(bodyContent))
+                    {
+                        using var bodyJson = JsonDocument.Parse(bodyContent);
+                        if (bodyJson.RootElement.TryGetProperty("eventId", out var bodyEventId))
+                        {
+                            return bodyEventId.GetString();
+                        }
+                    }
                 }
             }
             catch (JsonException)
@@ -104,6 +119,6 @@ public class EventRoleHandler : AuthorizationHandler<EventRoleRequirement>
             }
         }
 
-        return null; // No event ID found
+        return null;
     }
 }

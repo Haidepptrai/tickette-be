@@ -90,7 +90,10 @@ namespace Tickette.Admin
 
             app.UseCors("AllowDevelopment");
 
-            app.UseHttpsRedirection();
+            if (!app.Environment.IsDevelopment())
+            {
+                app.UseHttpsRedirection();
+            }
 
             app.MapControllers();
 

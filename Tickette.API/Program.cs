@@ -110,8 +110,10 @@ namespace Tickette.API
 
             app.MapHub<ChatSupportHub>("/chat-support");
 
-            app.UseHttpsRedirection();
-
+            if (!app.Environment.IsDevelopment())
+            {
+                app.UseHttpsRedirection();
+            }
             app.MapControllers();
 
             app.Run();

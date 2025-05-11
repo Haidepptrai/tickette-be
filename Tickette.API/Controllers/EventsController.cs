@@ -134,11 +134,11 @@ public class EventsController : BaseController
     }
 
     [HttpPost("update")]
-    [Authorize(Policy = CommitteeMemberKeys.ManagerAccess)]
     [SwaggerOperation(
         Summary = "Update Event",
         Description = "Update an existing Event, default will have approval status is 0"
     )]
+    [Authorize(Policy = CommitteeMemberKeys.ManagerAccess)]
     public async Task<ResponseDto<Guid>> UpdateEvent([FromForm] UpdateEventCommandDto commandDto, CancellationToken token)
     {
         // Extract the UserId from the JWT token
