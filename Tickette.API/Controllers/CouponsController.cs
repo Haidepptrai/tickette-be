@@ -1,12 +1,12 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using Tickette.Application.Common.Constants;
 using Tickette.Application.Common.CQRS;
 using Tickette.Application.Features.Coupons.Command.Client.CreateCoupon;
 using Tickette.Application.Features.Coupons.Command.Client.DeleteCoupon;
 using Tickette.Application.Features.Coupons.Command.Client.UpdateCoupon;
 using Tickette.Application.Features.Coupons.Common;
-using Tickette.Application.Features.Coupons.Query.CalculateDiscountQuery;
 using Tickette.Application.Features.Coupons.Query.Client.GetCouponList;
 using Tickette.Application.Wrappers;
 
@@ -43,7 +43,7 @@ namespace Tickette.API.Controllers
             Summary = "Create Coupon",
             Description = "Create a new coupon for an event"
         )]
-        //[Authorize(Policy = Constant.COMMITTEE_MEMBER_ROLES.EventOwner)]
+        [Authorize(Policy = CommitteeMemberKeys.ManagerAccess)]
         public async Task<ActionResult<ResponseDto<CouponResponse>>> CreateCoupon([FromBody] CreateCouponCommand command, CancellationToken cancellation = default)
         {
 
@@ -57,6 +57,7 @@ namespace Tickette.API.Controllers
             Summary = "Update Coupon",
             Description = "Update an existing coupon for an event"
         )]
+        [Authorize(Policy = CommitteeMemberKeys.ManagerAccess)]
         public async Task<ActionResult<ResponseDto<CouponResponse>>> UpdateCoupon([FromBody] UpdateCouponCommand command, CancellationToken cancellation = default)
         {
             var data = await _commandDispatcher.Dispatch<UpdateCouponCommand, CouponResponse>(command, cancellation);
@@ -70,24 +71,13 @@ namespace Tickette.API.Controllers
             Summary = "Delete Coupon",
             Description = "Delete an existing coupon for an event"
         )]
+        [Authorize(Policy = CommitteeMemberKeys.ManagerAccess)]
         public async Task<ActionResult<ResponseDto<bool>>> DeleteCoupon([FromBody] DeleteCouponCommand command, CancellationToken cancellation = default)
         {
             var data = await _commandDispatcher.Dispatch<DeleteCouponCommand, bool>(command, cancellation);
             if (!data) throw new Exception("Internal Server Error");
 
             var response = ResponseHandler.SuccessResponse(data, "Delete Coupon Successfully");
-            return Ok(response);
-        }
-
-        [HttpPost("calculate-discount")]
-        [SwaggerOperation(
-            Summary = "Calculate Discount",
-            Description = "Calculate discount based on the given coupon code"
-        )]
-        [Authorize(Policy = "EventOwnerPolicy")]
-        public async Task<IActionResult> CalculateDiscount([FromBody] CalculateDiscountQuery query, CancellationToken cancellation = default)
-        {
-            var response = await _queryDispatcher.Dispatch<CalculateDiscountQuery, ResponseDto<PriceDiscountInformationDto>>(query, cancellation);
             return Ok(response);
         }
     }

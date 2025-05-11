@@ -51,12 +51,13 @@ public class UpdateEventCommandCommandHandler : ICommandHandler<UpdateEventComma
             .Include(e => e.Committee)
             .Include(e => e.EventDates)
             .ThenInclude(ed => ed.Tickets)
+            .IgnoreQueryFilters()
             .SingleOrDefaultAsync(e => e.Id == command.Id, cancellationToken);
 
         if (eventToUpdate == null)
             throw new NotFoundException("Event", command.Id);
 
-        if (eventToUpdate.Status == ApprovalStatus.Approved || eventToUpdate.Status == ApprovalStatus.Pending)
+        if (eventToUpdate.Status is ApprovalStatus.Approved or ApprovalStatus.Pending)
             throw new InvalidOperationException("Event cannot be updated after approval or while wait for review.");
 
         var bannerUrl = command.BannerFile != null
