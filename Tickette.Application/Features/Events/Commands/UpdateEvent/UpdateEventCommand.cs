@@ -36,13 +36,11 @@ public class UpdateEventCommandCommandHandler : ICommandHandler<UpdateEventComma
 {
     private readonly IApplicationDbContext _context;
     private readonly IFileUploadService _fileUploadService;
-    private readonly IIdentityServices _identityServices;
 
-    public UpdateEventCommandCommandHandler(IApplicationDbContext context, IFileUploadService fileUploadService, IIdentityServices identityServices)
+    public UpdateEventCommandCommandHandler(IApplicationDbContext context, IFileUploadService fileUploadService)
     {
         _context = context;
         _fileUploadService = fileUploadService;
-        _identityServices = identityServices;
     }
 
     public async Task<Guid> Handle(UpdateEventCommand command, CancellationToken cancellationToken)
@@ -50,7 +48,7 @@ public class UpdateEventCommandCommandHandler : ICommandHandler<UpdateEventComma
         var eventToUpdate = await _context.Events
             .Include(e => e.Committee)
             .Include(e => e.EventDates)
-            .ThenInclude(ed => ed.Tickets)
+                .ThenInclude(ed => ed.Tickets)
             .IgnoreQueryFilters()
             .SingleOrDefaultAsync(e => e.Id == command.Id, cancellationToken);
 

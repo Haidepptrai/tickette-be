@@ -44,32 +44,36 @@ public class UpdateEventStatusHandler : ICommandHandler<UpdateEventStatusCommand
         // Update the event status
         eventToUpdate.ChangeStatus(command.Status, command.Reason);
 
-        var redisData = new Dictionary<string, string>();
-
-        foreach (var eventDate in eventToUpdate.EventDates)
+        if (command.Status != ApprovalStatus.Rejected || command.Status != ApprovalStatus.Resubmit)
         {
-            foreach (var ticket in eventDate.Tickets)
-            {
-                string inventoryKey = RedisKeys.GetTicketQuantityKey(ticket.Id);
+            var redisData = new Dictionary<string, string>();
 
-                // Only add if it doesn't already exist in Redis
-                var existingValue = await _redisService.GetAsync(inventoryKey);
-                if (existingValue == null || existingValue == "0")
+            foreach (var eventDate in eventToUpdate.EventDates)
+            {
+                foreach (var ticket in eventDate.Tickets)
                 {
-                    redisData[inventoryKey] = ticket.RemainingTickets.ToString();
+                    string inventoryKey = RedisKeys.GetTicketQuantityKey(ticket.Id);
+
+                    // Only add if it doesn't already exist in Redis
+                    var existingValue = await _redisService.GetAsync(inventoryKey);
+                    if (existingValue == null || existingValue == "0")
+                    {
+                        redisData[inventoryKey] = ticket.RemainingTickets.ToString();
+                    }
                 }
+
+
+                // Ensure all approved event tickets exist in Redis
+                await VerifyAllTicketsExistInRedis(eventToUpdate);
+            }
+
+            if (redisData.Count > 0)
+            {
+                await _redisService.SetBatchAsync(redisData);
             }
         }
 
-        if (redisData.Count > 0)
-        {
-            await _redisService.SetBatchAsync(redisData);
-        }
-
         await _context.SaveChangesAsync(cancellationToken);
-
-        // Ensure all approved event tickets exist in Redis
-        await VerifyAllTicketsExistInRedis(eventToUpdate);
 
         return command.EventId;
     }
