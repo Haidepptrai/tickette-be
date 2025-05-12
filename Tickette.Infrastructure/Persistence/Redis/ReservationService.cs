@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Polly;
 using RedLockNet;
 using StackExchange.Redis;
@@ -15,11 +16,13 @@ public class ReservationService : IReservationService
     private readonly IConnectionMultiplexer _redis;
     private readonly RedisSettings _redisSettings;
     private readonly LockManager _lockManager;
+    private readonly ILogger<ReservationService> _logger;
 
-    public ReservationService(IConnectionMultiplexer redis, IOptions<RedisSettings> redisSettings, LockManager lockManager)
+    public ReservationService(IConnectionMultiplexer redis, IOptions<RedisSettings> redisSettings, LockManager lockManager, ILogger<ReservationService> logger)
     {
         _redis = redis;
         _lockManager = lockManager;
+        _logger = logger;
         _redisSettings = redisSettings.Value;
     }
     private static readonly IAsyncPolicy _retryPolicy = Policy
@@ -184,17 +187,11 @@ public class ReservationService : IReservationService
                     nowUnix - reservedAt >= reservationTimeoutSeconds)
                     return false;
 
+
                 if (!hashDict.TryGetValue("seats", out var seatStr) || string.IsNullOrWhiteSpace(seatStr))
+                {
                     return false;
-
-                var reservedSeats = seatStr.Split(',').Select(s => s.Trim().ToUpperInvariant()).ToHashSet();
-                var requestedSeats = ticketReservationInformation.SeatsChosen
-                    .Select(s => $"{s.RowName}{s.SeatNumber}".ToUpperInvariant())
-                    .ToHashSet();
-
-                // 4. Ensure requested seats are all in the reserved list
-                if (!requestedSeats.SetEquals(reservedSeats))
-                    return false;
+                }
             }
             else
             {
@@ -251,8 +248,21 @@ public class ReservationService : IReservationService
                     await db.SetRemoveAsync(reservedSeatsKey, redisSeats);
                 }
 
+                var seatsReserved = await db.HashGetAsync(reservationKey, "seats");
+                var seatsReservedStr = seatsReserved.ToString().Split(',');
+
                 // 3. Delete user reservation metadata
-                await db.KeyDeleteAsync(reservationKey);
+                bool success = await db.KeyDeleteAsync(reservationKey);
+
+                if (success)
+                {
+                    // Remove each specified seat from the Redis set
+                    foreach (var seat in seatsReservedStr)
+                    {
+                        await db.SetRemoveAsync(reservedSeatsKey, seat);
+                        await db.StringIncrementAsync(inventoryKey);
+                    }
+                }
 
                 var quantity = ticket.Quantity;
                 // 4. Restore ticket quantity

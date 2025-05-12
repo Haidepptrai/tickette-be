@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Tickette.Application.Common;
 using Tickette.Application.Common.CQRS;
@@ -22,6 +23,7 @@ namespace Tickette.API.Controllers
 
         [HttpPost("create-payment-intent")]
         [SwaggerOperation(summary: "Create payment intent for the user reserved the tickets")]
+        [Authorize]
         public async Task<IActionResult> CreatePaymentIntent([FromBody] CreatePaymentIntentCommand command,
             CancellationToken cancellationToken)
         {
@@ -32,6 +34,7 @@ namespace Tickette.API.Controllers
 
         [HttpPost("update-payment-intent")]
         [SwaggerOperation(summary: "Update payment pricing after user apply their coupon")]
+        [Authorize]
         public async Task<ActionResult<ResponseDto<UpdatePaymentIntentResponse>>> UpdatePaymentTotalPrice([FromBody] UpdatePaymentIntentCommand command,
             CancellationToken cancellationToken)
         {

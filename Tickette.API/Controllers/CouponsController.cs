@@ -30,6 +30,7 @@ namespace Tickette.API.Controllers
             Summary = "List Coupons",
             Description = "List all coupons for an event, NO PAGINATION since it assume a small list of data"
         )]
+        [Authorize(Policy = CommitteeMemberKeys.RedeemAccess)]
         public async Task<ActionResult<ResponseDto<IEnumerable<CouponResponse>>>> GetCouponList([FromBody] GetCouponListQuery query, CancellationToken cancellation = default)
         {
             var data = await _queryDispatcher.Dispatch<GetCouponListQuery, IEnumerable<CouponResponse>>(query, cancellation);
@@ -43,7 +44,7 @@ namespace Tickette.API.Controllers
             Summary = "Create Coupon",
             Description = "Create a new coupon for an event"
         )]
-        [Authorize(Policy = CommitteeMemberKeys.ManagerAccess)]
+        [Authorize(Policy = CommitteeMemberKeys.RedeemAccess)]
         public async Task<ActionResult<ResponseDto<CouponResponse>>> CreateCoupon([FromBody] CreateCouponCommand command, CancellationToken cancellation = default)
         {
 
@@ -57,7 +58,7 @@ namespace Tickette.API.Controllers
             Summary = "Update Coupon",
             Description = "Update an existing coupon for an event"
         )]
-        [Authorize(Policy = CommitteeMemberKeys.ManagerAccess)]
+        [Authorize(Policy = CommitteeMemberKeys.RedeemAccess)]
         public async Task<ActionResult<ResponseDto<CouponResponse>>> UpdateCoupon([FromBody] UpdateCouponCommand command, CancellationToken cancellation = default)
         {
             var data = await _commandDispatcher.Dispatch<UpdateCouponCommand, CouponResponse>(command, cancellation);
@@ -71,7 +72,7 @@ namespace Tickette.API.Controllers
             Summary = "Delete Coupon",
             Description = "Delete an existing coupon for an event"
         )]
-        [Authorize(Policy = CommitteeMemberKeys.ManagerAccess)]
+        [Authorize(Policy = CommitteeMemberKeys.RedeemAccess)]
         public async Task<ActionResult<ResponseDto<bool>>> DeleteCoupon([FromBody] DeleteCouponCommand command, CancellationToken cancellation = default)
         {
             var data = await _commandDispatcher.Dispatch<DeleteCouponCommand, bool>(command, cancellation);

@@ -96,9 +96,10 @@ public class EventDate : BaseEntity
             }
 
             // Check right edge
-            if (lastSelectedIndex == bookableSeats.Count - 1)
+            if (lastSelectedIndex == bookableSeats.Count - 2 &&
+                !selectedInRow.Contains(bookableSeats.Last().Number))
             {
-                throw new InvalidSeatLogicSelection($"You are not allowed to leave one seat on the edge.");
+                throw new InvalidSeatLogicSelection($"You are not allowed to leave one seat on the right edge.");
             }
         }
     }
