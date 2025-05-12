@@ -202,6 +202,7 @@ public class EventsController : BaseController
 
     [HttpPost("detail-statistic")]
     [SwaggerOperation("Get event detail statistic")]
+    [Authorize(Policy = CommitteeMemberKeys.ManagerAccess)]
     public async Task<ResponseDto<EventDetailStatisticDto>> GetEventDetailStatistic(GetEventDetailStatisticQuery query, CancellationToken cancellationToken = default)
     {
         var result = await _queryDispatcher.Dispatch<GetEventDetailStatisticQuery, EventDetailStatisticDto>(query, cancellationToken);
@@ -210,7 +211,7 @@ public class EventsController : BaseController
     }
 
     [HttpPost("sales-dashboard")]
-    //[Authorize(Policy = CommitteeMemberKeys.ManagerAccess)]
+    [Authorize(Policy = CommitteeMemberKeys.ManagerAccess)]
     [SwaggerOperation(
         Summary = "Get Event Sales Dashboard",
         Description = "Get sales data for an event including total revenue, tickets sold, and sales by ticket type with filtering by time range"
