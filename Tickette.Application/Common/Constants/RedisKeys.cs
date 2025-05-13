@@ -28,4 +28,6 @@ public static class RedisKeys
 
     public static string GetBookedSeatKey(Guid ticketId, string row, string seat) =>
         $"booked:{ticketId}:seat:{row}-{seat}";
+
+    public static long GetBookedSeatExpireTimeInSeconds() => 15 * 60; // 15 minutes
 }

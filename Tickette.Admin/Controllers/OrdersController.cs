@@ -41,7 +41,7 @@ namespace Tickette.Admin.Controllers
 
         [HttpPost("qr-code-check")]
         [SwaggerOperation("Check QR code fraud")]
-        [Authorize(Roles = Constant.APPLICATION_ROLE.Admin)]
+        [Authorize(Roles = $"{Constant.APPLICATION_ROLE.Admin},{Constant.APPLICATION_ROLE.Moderator}")]
         public async Task<ActionResult<ResponseDto<DataRetrievedFromQrCode>>> CheckQrCode([FromBody] AdminCheckQrCodeFraudQuery query, CancellationToken cancellation)
         {
             var result = await _queryDispatcher.Dispatch<AdminCheckQrCodeFraudQuery, ResponseDto<DataRetrievedFromQrCode>>(query, cancellation);

@@ -167,7 +167,7 @@ public class ReservationService : IReservationService
             var db = _redis.GetDatabase(_redisSettings.DefaultDatabase);
             var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
-            const long reservationTimeoutSeconds = 1 * 60;
+            long reservationTimeoutSeconds = RedisKeys.GetBookedSeatExpireTimeInSeconds();
 
             if (ticketReservationInformation.SeatsChosen != null)
             {
