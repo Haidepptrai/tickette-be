@@ -18,6 +18,8 @@ public class StripePaymentService : IPaymentService
     public async Task<PaymentIntentResult> CreatePaymentIntentAsync(Payment payment)
     {
         var service = new PaymentIntentService();
+        long applicationFee = GetApplicationFeeAmount(payment.Currency);
+
         var options = new PaymentIntentCreateOptions
         {
             Amount = StripeCurrencyHelper.ToStripeAmount(payment.Amount, payment.Currency),
@@ -27,7 +29,7 @@ public class StripePaymentService : IPaymentService
             {
                 Destination = payment.EventOwnerStripeId
             },
-            ApplicationFeeAmount = 1
+            ApplicationFeeAmount = applicationFee
         };
 
         var paymentIntent = await service.CreateAsync(options);
@@ -110,4 +112,18 @@ public class StripePaymentService : IPaymentService
         // Check if the payment intent is successful
         return paymentIntent.Status == "succeeded";
     }
+
+    private long GetApplicationFeeAmount(string currency)
+    {
+        switch (currency.ToLowerInvariant())
+        {
+            case "usd":
+                return StripeCurrencyHelper.ToStripeAmount(1.00m, "usd");      // 100
+            case "vnd":
+                return StripeCurrencyHelper.ToStripeAmount(20000m, "vnd");    // 20000
+            default:
+                throw new NotSupportedException($"Currency '{currency}' is not supported for fee configuration.");
+        }
+    }
+
 }

@@ -19,6 +19,9 @@ public class ExpiredReservationCleanupService : BackgroundService
     private readonly TimeSpan _checkInterval = TimeSpan.FromMinutes(1);
     private readonly IServiceProvider _serviceProvider;
 
+    private const long ReservationExpirationTime = 900; // 15 minutes in seconds
+    // get this value from RedisKeys.GetBookedSeatExpireTimeInSeconds()
+    //RedisKeys.GetBookedSeatExpireTimeInSeconds()
 
     public ExpiredReservationCleanupService(
         ILogger<ExpiredReservationCleanupService> logger,
@@ -90,7 +93,7 @@ public class ExpiredReservationCleanupService : BackgroundService
             long quantity = (long)quantityValue;
 
             // Check if reservation has expired (15 minutes = 900 seconds)
-            if (now - reservedAt > 60)
+            if (now - reservedAt > ReservationExpirationTime)
             {
                 // Parse the ticket ID from the key
                 // Format is "Tickette:reservation:{ticketId}:{userId}"
@@ -171,7 +174,7 @@ public class ExpiredReservationCleanupService : BackgroundService
             long reservedAt = (long)reservedAtValue;
 
             // Check if seat reservation has expired (15 minutes = 900 seconds)
-            if (now - reservedAt > 60)
+            if (now - reservedAt > ReservationExpirationTime)
             {
                 // Format is "Tickette:seat_reservation:{ticketId}:{userId}"
                 var parts = keyStr.Split(':');

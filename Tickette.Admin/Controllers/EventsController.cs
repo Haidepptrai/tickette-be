@@ -96,10 +96,10 @@ public class EventsController : ControllerBase
         Summary = "Search Events",
         Description = "Search events by title"
     )]
-    [Authorize]
-    public async Task<ResponseDto<IEnumerable<Application.Features.Events.Common.Admin.AdminEventPreviewDto>>> SearchEvents(SearchEventsByNameQuery query, CancellationToken cancellationToken = default)
+    [Authorize(Roles = $"{Constant.APPLICATION_ROLE.Admin},{Constant.APPLICATION_ROLE.Moderator}")]
+    public async Task<ResponseDto<IEnumerable<AdminEventPreviewDto>>> SearchEvents(SearchEventsByNameQuery query, CancellationToken cancellationToken = default)
     {
-        var result = await _queryDispatcher.Dispatch<SearchEventsByNameQuery, PagedResult<Application.Features.Events.Common.Admin.AdminEventPreviewDto>>(query, cancellationToken);
+        var result = await _queryDispatcher.Dispatch<SearchEventsByNameQuery, PagedResult<AdminEventPreviewDto>>(query, cancellationToken);
         var meta = new PaginationMeta(result.PageNumber, result.PageSize, result.TotalCount, result.TotalPages);
 
         var response = ResponseHandler.PaginatedResponse(result.Items, meta, "Search events successfully");
@@ -117,7 +117,7 @@ public class EventsController : ControllerBase
 
     [HttpPost("statistic")]
     [SwaggerOperation(Summary = "Get all statistic counting of events", Description = "Get all counting of events for admin dashboard, include pending, approved, denied, upcoming (next 7 days). All event statistic within one month")]
-    [Authorize]
+    [Authorize(Roles = $"{Constant.APPLICATION_ROLE.Admin},{Constant.APPLICATION_ROLE.Moderator}")]
     public async Task<ResponseDto<EventsStatisticDto>> GetEventStatistic(CancellationToken token)
     {
         var query = new GetEventsStatisticQuery();
