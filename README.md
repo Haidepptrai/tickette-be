@@ -124,6 +124,40 @@ This command will start:
 
 > 🛑 Do **not** expose this project without configuring secure credentials in user secrets.
 
+> [!NOTE]
+> 🗃️ Inserting Dummy Data into Docker PostgreSQL
+<details>
+  <summary>
+    If you prefer to have dummy data in the PostgreSQL Docker when the application runs, follow the steps below after run Docker command
+  </summary>
+  
+  **Instructions**:
+  
+  1. Ensure your PostgreSQL container is running. By default, the container is named:
+  ```bash
+  local-database
+  ```
+  
+  2. Open a terminal session into the container:
+  ```bash
+  docker exec -it local-database bash
+   ```
+  
+  3. Access the PostgreSQL CLI inside the container:
+  ```bash
+  psql -U HaiNguyen -d tickette-db
+  ```
+
+  4. Once inside the psql prompt, you can manually execute SQL statements or import a file. To run an SQL file that you’ve mounted into the container (e.g. init.sql placed in /init-scripts):
+  ```bash
+  \i /docker-entrypoint-initdb.d/init.sql
+  ```
+
+  5. Verify the inserted data using standard SQL queries `(e.g., SELECT * FROM "events";)`.
+  
+  🔐 This method is useful when the container already exists and you do not want to recreate it from scratch.
+</details>
+
 ## 🖥️ Running Without Docker
 
 If you want to run the backend locally:
