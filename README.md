@@ -55,7 +55,7 @@ Then set values using `dotnet user-secrets set` or your editor of choice.
   "EmailSettings:UnsubscribeSecretKey": "<used for unsubscribe links>",
   "EmailSettings:SmtpServer": "smtp.gmail.com",
   "EmailSettings:SmtpPort": "587",
-  "EmailSettings:SenderPassword": "ldfb ifdy sqcf csco",
+  "EmailSettings:SenderPassword": "<application email password>",
   "EmailSettings:SenderName": "Tickette",
   "EmailSettings:SenderEmail": "<from email address>",
   "EmailSettings:ClientUrl": "http://localhost:3000",
